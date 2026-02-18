@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+.next/
+out/
+.npm
+.yarn
+*.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads & Generated
+backend/uploads/
+backend/fonts/*.ttf
+*.png
+*.jpg
+*.jpeg
+
+# Environment
+.env
+.env.local
+.env.production.local
+.env.development.local
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+*.pem
