@@ -1,433 +1,874 @@
-from flask import Flask, request, jsonify, send_file
-from flask_cors import CORS
-from PIL import Image, ImageDraw, ImageFont
+import os
 import io
 import base64
-import os
-import zipfile
+import json
 import mimetypes
 import random
-import math
+import time
+import threading
+
+from flask import Flask, request, jsonify, send_file
+from flask_cors import CORS
+from PIL import Image, ImageDraw  # <-- ImageDraw kita kembalikan ke sini
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 import requests
+import numpy as np
+from google import genai
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 
+# Import buatan sendiri
+from handwriting_analyzer import analyze_handwriting
+from handwriting_generator import HandwritingGenerator
+
+# ── SETUP & KONFIGURASI AWAL ─────────────────────────────────────────────────
+
+# Posisikan kode eksekusi di bawah SETELAH semua import selesai
+Image.MAX_IMAGE_PIXELS = None  # Matikan limit resolusi gambar untuk folio raksasa
+
 load_dotenv()
 
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    secure=True,
+)
+
+# Konfigurasi Gemini API (SDK Baru)
+ai_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "https://nama-domain-vercel-anda.vercel.app"}})
 
-UPLOAD_FOLDER = 'uploads/folios'
-FONT_FOLDER = 'fonts'
+# ── Rate limiting ────────────────────────────────────────────────────────────
+try:
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+
+    limiter = Limiter(
+        get_remote_address, app=app, default_limits=[], storage_uri="memory://"
+    )
+    RATE_LIMIT_ENABLED = True
+except ImportError:
+    # flask-limiter belum diinstall — jalankan: pip install flask-limiter
+    limiter = None
+    RATE_LIMIT_ENABLED = False
+    print("⚠️  flask-limiter not installed. Rate limiting disabled.")
+
+# ✅ PERBAIKAN Bug #5: CORS tidak terlalu terbuka, baca dari .env
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
+
+
+def apply_rate_limit(f, limit="15 per minute"):
+    """Decorator aman: terapkan rate limit hanya jika flask-limiter tersedia."""
+    if RATE_LIMIT_ENABLED and limiter:
+        return limiter.limit(limit)(f)
+    return f
+
+
+def rate_limit_strict(f):
+    """Rate limit ketat untuk endpoint berat (generate stream)."""
+    return apply_rate_limit(f, "10 per minute")
+
+
+def rate_limit_loose(f):
+    """Rate limit longgar untuk endpoint ringan (preview)."""
+    return apply_rate_limit(f, "30 per minute")
+
+
+UPLOAD_FOLDER = "uploads/folios"
+CACHE_FOLDER = "uploads/cache"
+FONT_FOLDER = "fonts"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(CACHE_FOLDER, exist_ok=True)
 os.makedirs(FONT_FOLDER, exist_ok=True)
-
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
 
 FOLIO_TEMPLATES = {}
+CACHE_FILE = "uploads/cache/folio_cache.json"
+
+_active_folios = set()
+_active_lock = threading.Lock()  # Melindungi _active_folios
+_folio_lock = threading.Lock()  # Melindungi FOLIO_TEMPLATES
+
+
+def save_folio_cache():
+    try:
+        with open(CACHE_FILE, "w") as f:
+            json.dump(FOLIO_TEMPLATES, f)
+    except Exception as e:
+        print("Cache save error:", e)
+
+
+def load_folio_cache():
+    if os.path.exists(CACHE_FILE):
+        try:
+            with open(CACHE_FILE, "r") as f:
+                cached = json.load(f)
+            # Hanya load cache yang file-nya masih ada
+            valid = {
+                k: v
+                for k, v in cached.items()
+                if v.startswith("http") or os.path.exists(v)
+            }
+            FOLIO_TEMPLATES.update(valid)
+        except Exception as e:
+            print("Failed to load cache:", e)
+
 
 def load_folio_templates():
     FOLIO_TEMPLATES.clear()
     for filename in os.listdir(UPLOAD_FOLDER):
-        if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+        if filename.lower().endswith((".png", ".jpg", ".jpeg")):
             FOLIO_TEMPLATES[filename] = os.path.join(UPLOAD_FOLDER, filename)
 
+
 load_folio_templates()
+load_folio_cache()
 
 AVAILABLE_FONTS = {
-    'indie_flower':   {'name': 'Indie Flower',      'file': 'IndieFlower-Regular.ttf',    'style': 'casual'},
-    'dancing_script': {'name': 'Dancing Script',    'file': 'DancingScript-Regular.ttf',  'style': 'elegant'},
-    'caveat':         {'name': 'Caveat',             'file': 'Caveat-Regular.ttf',         'style': 'playful'},
-    'patrick_hand':   {'name': 'Patrick Hand',      'file': 'PatrickHand-Regular.ttf',    'style': 'neat'},
-    'kalam':          {'name': 'Kalam',              'file': 'Kalam-Regular.ttf',          'style': 'natural'},
-    'reenie_beanie':  {'name': 'Reenie Beanie',     'file': 'ReenieBeanie-Regular.ttf',   'style': 'messy'},
-    'dekko':          {'name': 'Dekko',              'file': 'Dekko-Regular.ttf',          'style': 'ballpoint'},
-    'nanum_pen':      {'name': 'Nanum Pen Script',  'file': 'NanumPenScript-Regular.ttf', 'style': 'natural'},
-    'sriracha':       {'name': 'Sriracha',           'file': 'Sriracha-Regular.ttf',       'style': 'quick'},
+    "indie_flower": {
+        "name": "Indie Flower",
+        "file": "IndieFlower-Regular.ttf",
+        "style": "casual",
+    },
+    "dancing_script": {
+        "name": "Dancing Script",
+        "file": "DancingScript-Regular.ttf",
+        "style": "elegant",
+    },
+    "caveat": {"name": "Caveat", "file": "Caveat-Regular.ttf", "style": "playful"},
+    "patrick_hand": {
+        "name": "Patrick Hand",
+        "file": "PatrickHand-Regular.ttf",
+        "style": "neat",
+    },
+    "kalam": {"name": "Kalam", "file": "Kalam-Regular.ttf", "style": "natural"},
+    "reenie_beanie": {
+        "name": "Reenie Beanie",
+        "file": "ReenieBeanie-Regular.ttf",
+        "style": "messy",
+    },
+    "dekko": {"name": "Dekko", "file": "Dekko-Regular.ttf", "style": "ballpoint"},
+    "nanum_pen": {
+        "name": "Nanum Pen Script",
+        "file": "NanumPenScript-Regular.ttf",
+        "style": "natural",
+    },
+    "sriracha": {"name": "Sriracha", "file": "Sriracha-Regular.ttf", "style": "quick"},
 }
 
 
-def hex_to_rgb(hex_color):
-    hex_color = hex_color.lstrip('#')
-    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
-
-
-def vary_color(base_rgb, variation=12):
-    r, g, b = base_rgb
-    factor = random.gauss(0, variation * 0.5)
-    return (
-        max(0, min(255, int(r + factor))),
-        max(0, min(255, int(g + factor))),
-        max(0, min(255, int(b + factor))),
-    )
-
-
-class HandwritingGenerator:
-    def __init__(self, config, folio_path_or_url, font_path):
-        self.config = config
-        
-        # Cek apakah ini URL Cloudinary dari internet atau file lokal
-        if folio_path_or_url.startswith('http'):
-            response = requests.get(folio_path_or_url, stream=True)
-            self.folio_template = Image.open(response.raw).convert('RGB')
+def analyze_folio(image_path_or_url):
+    """Auto-detect garis folio dan return config yang optimal + confidence score"""
+    try:
+        if image_path_or_url.startswith("http"):
+            response = requests.get(image_path_or_url, stream=True, timeout=10)
+            try:
+                img_color = Image.open(response.raw).convert("RGB")
+            finally:
+                response.raw.close()
         else:
-            self.folio_template = Image.open(folio_path_or_url).convert('RGB')
-            
-        self.font_path = font_path
-        self.font = ImageFont.truetype(font_path, config['fontSize'])
-        self.base_color_rgb = hex_to_rgb(config.get('color', '#2b2b2b'))
-        self.word_spacing = int(config.get('wordSpacing', 8))
-        self.session_seed = random.random()
+            img_color = Image.open(image_path_or_url).convert("RGB")
 
-    def get_baseline_wobble(self, line_index):
-        """Kemiringan baseline per baris — terasa organik pakai sin + noise"""
-        wave = math.sin(line_index * 1.1 + self.session_seed * 20) * 1.5
-        return wave + random.uniform(-1.0, 1.0)
+        img = img_color.convert("L")
+        width, height = img.size
+        arr = np.array(img)
+        arr_color = np.array(img_color)
 
-    def add_humanizer_effect(self, draw, text, x, y, line_index=0):
-        # --- FITUR BARU: Efek Coretan (Typo) ---
-        # 5% kemungkinan program "salah tulis" pada kata yang panjangnya lebih dari 4 huruf
-        if len(text) > 4 and random.random() < 0.05:
-            # Potong kata secara acak seolah-olah baru ditulis setengah
-            typo_text = text[:random.randint(2, len(text)-1)]
-            bbox = draw.textbbox((0, 0), typo_text, font=self.font)
-            typo_width = bbox[2] - bbox[0]
-            
-            # Gambar kata yang salah
-            draw.text((x, y), typo_text, fill=self.base_color_rgb, font=self.font)
-            
-            # Buat garis coretan di tengah tulisan
-            strike_y = y + (self.config['fontSize'] // 2)
-            draw.line([(x - 5, strike_y + random.randint(-2, 2)), 
-                       (x + typo_width + 5, strike_y + random.randint(-2, 2))], 
-                      fill=self.base_color_rgb, width=3)
-            
-            # Geser spasi agar kata yang BENAR ditulis setelah coretan
-            x += typo_width + 20 
-        # ---------------------------------------
+        confidence_points = 0  # Akumulasi poin untuk confidence score
+        confidence_max = 0
 
-        cursor_x = x
-        available_width = self.config['maxWidth'] - x
-        baseline_wobble = self.get_baseline_wobble(line_index)
-        ink_level = random.uniform(0.65, 1.0)
-        """
-        Render satu baris dengan efek tulisan tangan:
-        1. Tekanan pena  — variasi warna (tekan kuat=gelap, ringan=terang)
-        2. Tinta habis   — karakter pudar sesekali, lalu pulih
-        3. Variasi size  — ukuran font berfluktuasi kecil per karakter
-        4. Baseline wobble — baris tidak lurus sempurna (naik-turun halus)
-        5. Variasi spasi kata — word_spacing + sedikit random
-        6. Variasi spasi huruf — char spacing kecil
-        """
-        cursor_x = x
-        available_width = self.config['maxWidth'] - x
-        baseline_wobble = self.get_baseline_wobble(line_index)
-        ink_level = random.uniform(0.65, 1.0)
+        # ── 1. DETEKSI GARIS HORIZONTAL ─────────────────────────────────────
+        confidence_max += 50
+        row_means = arr.mean(axis=1)
+        threshold = row_means.mean() - 8
+        line_rows = np.where(row_means < threshold)[0]
 
-        for char in text:
-            # 1. Jitter posisi
-            jitter_x = random.uniform(-1.2, 1.2)
-            progress = max(0.0, (cursor_x - x) / max(1, available_width))
-            jitter_y = random.uniform(-1.5, 1.5) + baseline_wobble * progress * 4
-
-            # 2. Variasi ukuran font
-            size_delta = random.choices(
-                [-3, -2, -1,  0,  0,  0,  0,  1,  2,  3],
-                weights=[1,   2,  4,  8,  8,  8,  8,  4,  2,  1]
-            )[0]
-            font_size = max(10, self.config['fontSize'] + size_delta)
-            char_font = ImageFont.truetype(self.font_path, font_size)
-
-            # 3. Variasi warna (tekanan + tinta habis)
-            if char.strip():
-                pressure = random.gauss(0, 10)
-                if ink_level < 0.25 and random.random() > 0.45:
-                    fade = random.uniform(40, 75)
-                    char_color = tuple(min(255, c + int(fade)) for c in self.base_color_rgb)
-                elif ink_level < 0.5 and random.random() > 0.55:
-                    fade = random.uniform(12, 32)
-                    char_color = tuple(min(255, c + int(fade + pressure)) for c in self.base_color_rgb)
+        lines = []
+        if len(line_rows) > 0:
+            group = [line_rows[0]]
+            for r in line_rows[1:]:
+                if r - group[-1] <= 3:
+                    group.append(r)
                 else:
-                    char_color = vary_color(self.base_color_rgb, int(abs(pressure) + 5))
+                    lines.append(int(np.mean(group)))
+                    group = [r]
+            lines.append(int(np.mean(group)))
+
+        if len(lines) < 2:
+            return None
+
+        line_gaps = [lines[i + 1] - lines[i] for i in range(len(lines) - 1)]
+        avg_gap = int(np.median(line_gaps))
+
+        # Makin banyak garis terdeteksi, makin tinggi confidence
+        line_confidence = min(50, int((len(lines) / 20) * 50))
+        confidence_points += line_confidence
+
+        # ── 2. DETEKSI GARIS VERTIKAL (MARGIN KIRI) ─────────────────────────
+        confidence_max += 20
+        col_means = arr.mean(axis=0)
+        col_threshold = col_means.mean() - 10
+
+        # Cari kolom gelap di area kiri (0-25% lebar gambar)
+        left_area = col_means[: int(width * 0.25)]
+        dark_cols = np.where(left_area < col_threshold)[0]
+
+        start_x = 60  # Default jika tidak ditemukan margin
+        if len(dark_cols) > 0:
+            # Ambil kolom paling kanan dari cluster garis vertikal di kiri
+            margin_col = int(dark_cols[-1])
+            # Tambah padding setelah garis margin
+            start_x = margin_col + int(width * 0.015)
+            confidence_points += 20
+
+        # ── 3. DETEKSI WARNA GARIS ──────────────────────────────────────────
+        confidence_max += 20
+        line_color = "gray"  # Default
+
+        if len(lines) > 0:
+            # Ambil sample pixel di sekitar garis pertama
+            sample_row = lines[0]
+            row_start = max(0, sample_row - 2)
+            row_end = min(height, sample_row + 2)
+            sample_pixels = arr_color[row_start:row_end, :, :]
+
+            avg_r = float(np.mean(sample_pixels[:, :, 0]))
+            avg_g = float(np.mean(sample_pixels[:, :, 1]))
+            avg_b = float(np.mean(sample_pixels[:, :, 2]))
+
+            # Klasifikasi warna garis
+            if avg_r > avg_b + 30 and avg_r > avg_g + 20:
+                line_color = "red"  # Buku tulis bergaris merah
+            elif avg_b > avg_r + 30 and avg_b > avg_g + 10:
+                line_color = "blue"  # Buku tulis bergaris biru
+            elif avg_r > 180 and avg_g > 180 and avg_b > 180:
+                line_color = "light"  # Garis sangat tipis / hampir putih
             else:
-                char_color = self.base_color_rgb
+                line_color = "gray"  # Folio standar bergaris abu
 
-            # 4. Render
-            draw.text(
-                (cursor_x + jitter_x, y + jitter_y),
-                char,
-                fill=char_color,
-                font=char_font
-            )
+            confidence_points += 20
 
-            # 5. Update cursor
-            bbox = draw.textbbox((0, 0), char, font=char_font)
-            char_width = bbox[2] - bbox[0]
+        # ── 4. DETEKSI TIPE KERTAS (LINED vs GRID) ──────────────────────────
+        confidence_max += 10
+        paper_type = "lined"  # Default
 
-            if char == ' ':
-                # Spasi kata: lebar asli + wordSpacing config + sedikit variasi
-                extra = self.word_spacing + random.uniform(-1.5, 3.0)
-                cursor_x += char_width + extra
-            else:
-                cursor_x += char_width + random.uniform(-0.5, 0.8)
+        # Grid hanya jika ada >8 kolom gelap yang TERSEBAR merata di seluruh lebar gambar
+        # bukan hanya di area kiri (yang berarti margin)
+        right_dark = np.where(col_means[int(width * 0.25) :] < col_threshold)[0]
+        if len(right_dark) > 8:
+            paper_type = "grid"
+        confidence_points += 10
+        confidence_points += 10
 
-            # 6. Drain & refill ink
-            ink_level -= random.uniform(0, 0.005)
-            if random.random() > 0.97:
-                ink_level = min(1.0, ink_level + random.uniform(0.3, 0.6))
-            ink_level = max(0.08, ink_level)
+        # ── 5. HITUNG CONFIDENCE SCORE ──────────────────────────────────────
+        confidence = int((confidence_points / confidence_max) * 100)
+        confidence = max(10, min(100, confidence))
 
-        return cursor_x
+        return {
+            "startX": start_x,
+            "startY": lines[0] + int(avg_gap * 0.5),
+            "lineHeight": avg_gap,
+            "maxWidth": int(width * 0.93),
+            "pageBottom": lines[-1] + int(avg_gap * 0.3),
+            "fontSize": int(avg_gap * 0.6),
+            # Info tambahan untuk frontend
+            "confidence": confidence,
+            "lineColor": line_color,
+            "paperType": paper_type,
+            "detectedLines": len(lines),
+        }
 
-    def calculate_text_width(self, text):
-        """Estimasi lebar teks termasuk wordSpacing"""
-        draw = ImageDraw.Draw(Image.new('RGB', (1, 1)))
-        bbox = draw.textbbox((0, 0), text, font=self.font)
-        base_width = bbox[2] - bbox[0]
-        extra = text.count(' ') * self.word_spacing
-        return base_width + extra
-
-    def split_into_pages(self, text):
-        pages, current_lines = [], []
-        y = self.config['startY']
-        line_index = 0
-
-        for paragraph in text.split('\n'):
-            if not paragraph.strip():
-                current_lines.append({'text': '', 'y': y, 'line_index': line_index})
-                y += self.config['lineHeight']
-                line_index += 1
-                if y > self.config['pageBottom']:
-                    pages.append(current_lines); current_lines = []
-                    y = self.config['startY']; line_index = 0
-                continue
-
-            current_line = ""
-            for word in paragraph.split(' '):
-                test = current_line + word + " "
-                if self.calculate_text_width(test) > (self.config['maxWidth'] - self.config['startX']) and current_line:
-                    current_lines.append({'text': current_line.strip(), 'y': y, 'line_index': line_index})
-                    current_line = word + " "
-                    y += self.config['lineHeight']; line_index += 1
-                    if y > self.config['pageBottom']:
-                        pages.append(current_lines); current_lines = []
-                        y = self.config['startY']; line_index = 0
-                else:
-                    current_line = test
-
-            if current_line.strip():
-                current_lines.append({'text': current_line.strip(), 'y': y, 'line_index': line_index})
-                y += self.config['lineHeight']; line_index += 1
-                if y > self.config['pageBottom']:
-                    pages.append(current_lines); current_lines = []
-                    y = self.config['startY']; line_index = 0
-
-        if current_lines:
-            pages.append(current_lines)
-        return pages
-
-    def apply_paper_texture(self, image):
-        """Noise halus agar terasa seperti kertas di-scan"""
-        data = list(image.getdata())
-        result = []
-        for px in data:
-            if isinstance(px, tuple) and len(px) >= 3:
-                n = random.randint(-4, 4)
-                result.append((max(0,min(255,px[0]+n)), max(0,min(255,px[1]+n)), max(0,min(255,px[2]+n))))
-            else:
-                result.append(px)
-        out = Image.new('RGB', image.size)
-        out.putdata(result)
-        return out
-
-    def generate_page(self, lines):
-        page = self.folio_template.copy()
-        draw = ImageDraw.Draw(page)
-        for line in lines:
-            if line['text']:
-                self.add_humanizer_effect(draw, line['text'], self.config['startX'], line['y'], line.get('line_index', 0))
-        return self.apply_paper_texture(page)
-
-    def generate_all_pages(self, text):
-        return [self.generate_page(lines) for lines in self.split_into_pages(text)]
+    except Exception as e:
+        print("Analyze folio error:", e)
+        return None
 
 
-# ── ROUTES ──────────────────────────────────────────────
+# ── ROUTES ──────────────────────────────────────────────────────────────────
 
-@app.route('/api/fonts', methods=['GET'])
+
+@app.route("/api/analyze-handwriting", methods=["POST"])
+def analyze_handwriting_endpoint():
+    """Analisis foto tulisan tangan user, return config yang disarankan."""
+    try:
+        if "image" not in request.files:
+            return jsonify({"error": "No image uploaded"}), 400
+
+        file = request.files["image"]
+        image_bytes = file.read()
+
+        if len(image_bytes) > 10 * 1024 * 1024:  # max 10MB
+            return jsonify({"error": "File terlalu besar, max 10MB"}), 400
+
+        result = analyze_handwriting(image_bytes)
+        return jsonify({"success": True, "config": result})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/preview", methods=["POST"])
+@rate_limit_loose
+def generate_preview():
+    """Generate 1 baris tulisan tangan untuk preview sidebar."""
+    try:
+        data = request.json
+        font_id = data.get("fontId", "indie_flower")
+        folio_id = data.get("folioId", "")
+        preview_text = data.get("text", "Halo Dunia, ini contoh tulisan.")[:60]
+
+        config = {
+            "startX": 80,
+            "startY": 140,
+            "lineHeight": 80,
+            "maxWidth": 900,
+            "pageBottom": 400,
+            "fontSize": int(data.get("fontSize", 60)),
+            "color": data.get("color", "#1a1a1a"),
+            "wordSpacing": int(data.get("wordSpacing", 8)),
+            "leftHanded": data.get("leftHanded", False),
+            "writeSpeed": float(data.get("writeSpeed", 0.5)),
+            "enableTypo": False,  # preview jangan ada typo
+            "slantAngle": float(data.get("slantAngle", 0)),
+            "tiredMode": False,
+            "showPageNumber": False,
+            "pageNumberFormat": "- {n} -",
+            "marginJitter": 0,
+            "folioEvenPath": None,
+        }
+
+        folio_path = FOLIO_TEMPLATES.get(folio_id)
+        if not folio_path:
+            # Fallback: pakai folio pertama yang ada
+            folio_path = next(iter(FOLIO_TEMPLATES.values()), None)
+        if not folio_path:
+            return jsonify({"error": "No folio available"}), 400
+
+        font_info = AVAILABLE_FONTS.get(font_id)
+        if not font_info:
+            return jsonify({"error": "Invalid font"}), 400
+        font_path = os.path.join(FONT_FOLDER, font_info["file"])
+        if not os.path.exists(font_path):
+            return jsonify({"error": "Font file not found"}), 400
+
+        generator = HandwritingGenerator(config, folio_path, font_path)
+
+        # Crop hanya area baris pertama — jauh lebih cepat dari full halaman
+        full_img = generator.folio_odd.copy()
+        crop_h = int(config["startY"] + config["fontSize"] * 2.5)
+        cropped = full_img.crop((0, 0, full_img.width, crop_h))
+
+        # Gambar 1 baris saja
+        text_layer = Image.new("RGBA", full_img.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(text_layer, "RGBA")
+        generator.add_humanizer_effect(
+            text_layer, draw, preview_text, config["startX"], config["startY"]
+        )
+
+        # Composite & crop
+        base = cropped.convert("RGBA")
+        text_crop = text_layer.crop((0, 0, full_img.width, crop_h))
+        result = Image.alpha_composite(base, text_crop).convert("RGB")
+
+        buf = io.BytesIO()
+        result.save(buf, format="JPEG", quality=85, optimize=True)
+        buf.seek(0)
+        b64 = base64.b64encode(buf.getvalue()).decode()
+
+        return jsonify({"success": True, "image": f"data:image/jpeg;base64,{b64}"})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/fonts", methods=["GET"])
 def get_fonts():
-    available = {k: v for k, v in AVAILABLE_FONTS.items()
-                 if os.path.exists(os.path.join(FONT_FOLDER, v['file']))}
-    return jsonify({'fonts': available})
+    available = {
+        k: v
+        for k, v in AVAILABLE_FONTS.items()
+        if os.path.exists(os.path.join(FONT_FOLDER, v["file"]))
+    }
+    return jsonify({"fonts": available})
 
-@app.route('/api/folios', methods=['GET'])
+
+@app.route("/api/folios", methods=["GET"])
 def get_folios():
     load_folio_templates()
     folios = []
-    
-    # 1. Load template lokal (jika ada)
+
+    # 1. Load template lokal
     for filename in FOLIO_TEMPLATES:
-        if not filename.startswith('http'):
+        if not filename.startswith("http"):
             name = filename
-            for ext in ['.jpg','.jpeg','.png','.JPG','.JPEG','.PNG']:
-                name = name.replace(ext, '')
-            folios.append({
-                'id': filename, 
-                'name': name.replace('_',' ').replace('-',' ').title(),
-                'preview': f'/api/folio/preview/{filename}'
-            })
-            
+            for ext in [".jpg", ".jpeg", ".png", ".JPG", ".JPEG", ".PNG"]:
+                name = name.replace(ext, "")
+            folios.append(
+                {
+                    "id": filename,
+                    "name": name.replace("_", " ").replace("-", " ").title(),
+                    "preview": f"/api/folio/preview/{filename}",
+                }
+            )
+
     # 2. Load template dari Cloudinary
     try:
         resources = cloudinary.api.resources(
-            type="upload", 
-            prefix="handwrite_folios/", 
-            max_results=30
+            type="upload", prefix="handwrite_folios/", max_results=30
         )
-        for res in resources.get('resources', []):
-            name = res['public_id'].split('/')[-1].replace('_', ' ').replace('-', ' ').title()
-            url = res['secure_url']
-            folios.append({
-                'id': url, 
-                'name': name, 
-                'preview': url
-            })
-            FOLIO_TEMPLATES[url] = url # Daftarkan ke dictionary
+        for res in resources.get("resources", []):
+            name = (
+                res["public_id"]
+                .split("/")[-1]
+                .replace("_", " ")
+                .replace("-", " ")
+                .title()
+            )
+            url = res["secure_url"]
+            folios.append({"id": url, "name": name, "preview": url})
+            FOLIO_TEMPLATES[url] = url
     except Exception as e:
         print("Cloudinary info:", e)
-        
-    return jsonify({'folios': folios})
 
-@app.route('/api/folio/preview/<filename>', methods=['GET'])
+    return jsonify({"folios": folios})
+
+
+@app.route("/api/folio/preview/<filename>", methods=["GET"])
 def get_folio_preview(filename):
     filepath = os.path.join(UPLOAD_FOLDER, secure_filename(filename))
     if os.path.exists(filepath):
         mt, _ = mimetypes.guess_type(filepath)
-        return send_file(filepath, mimetype=mt or 'image/jpeg')
-    return jsonify({'error': 'Folio not found'}), 404
+        return send_file(filepath, mimetype=mt or "image/jpeg")
+    return jsonify({"error": "Folio not found"}), 404
 
-@app.route('/api/folio/upload', methods=['POST'])
+
+@app.route("/api/folio/analyze/<path:folio_id>", methods=["GET"])
+def analyze_folio_route(folio_id):
+    from urllib.parse import unquote
+
+    folio_id = unquote(folio_id)
+    folio_path = FOLIO_TEMPLATES.get(folio_id)
+    if not folio_path:
+        return jsonify({"error": "Folio not found"}), 404
+
+    result = analyze_folio(folio_path)
+    if result:
+        # Pisahkan config dari metadata
+        config_keys = [
+            "startX",
+            "startY",
+            "lineHeight",
+            "maxWidth",
+            "pageBottom",
+            "fontSize",
+        ]
+        config = {k: result[k] for k in config_keys if k in result}
+        meta = {k: result[k] for k in result if k not in config_keys}
+        return jsonify({"success": True, "config": config, "meta": meta})
+    else:
+        return jsonify({"success": False, "message": "Garis tidak terdeteksi"}), 200
+
+
+ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+
+
+@app.route("/api/folio/upload", methods=["POST"])
 def upload_folio():
-    if 'folio' not in request.files:
-        return jsonify({'error': 'No file provided'}), 400
-    file = request.files['folio']
-    if not file.filename:
-        return jsonify({'error': 'No file selected'}), 400
-        
-    try:
-        # Lempar file langsung ke Cloudinary
-        upload_result = cloudinary.uploader.upload(file, folder="handwrite_folios")
-        secure_url = upload_result['secure_url']
-        
-        # Simpan URL ke memori agar bisa dipakai
-        FOLIO_TEMPLATES[secure_url] = secure_url
-        return jsonify({'success': True, 'filename': secure_url})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    if "folio" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
 
-@app.route('/api/generate', methods=['POST'])
-def generate_handwriting():
+    file = request.files["folio"]
+    if not file.filename:
+        return jsonify({"error": "No file selected"}), 400
+
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        return (
+            jsonify(
+                {
+                    "error": "Format file tidak didukung. Harap upload gambar JPG atau PNG."
+                }
+            ),
+            400,
+        )
+
+    # Cek magic bytes untuk memastikan file benar-benar gambar
+    file.seek(0)
+    header = file.read(8)
+    file.seek(0)
+    MAGIC_BYTES = {
+        b"\x89PNG": ".png",
+        b"\xff\xd8\xff": ".jpg",
+    }
+    is_valid = any(header.startswith(magic) for magic in MAGIC_BYTES)
+    if not is_valid:
+        return jsonify({"error": "File korup atau bukan gambar yang valid"}), 400
+
+    try:
+        upload_result = cloudinary.uploader.upload(file, folder="handwrite_folios")
+        secure_url = upload_result["secure_url"]
+        FOLIO_TEMPLATES[secure_url] = secure_url
+        save_folio_cache()
+        return jsonify({"success": True, "filename": secure_url})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/ai-writer", methods=["POST"])
+def ai_writer():
     try:
         data = request.json
-        text = data.get('text', '')
-        if not text.strip():
-            return jsonify({'error': 'No text provided'}), 400
-        if len(text) > 50000:
-            return jsonify({'error': 'Text too long. Max 50,000 characters.'}), 400
+        prompt = data.get("prompt", "")
+        if not prompt.strip():
+            return jsonify({"error": "Prompt tidak boleh kosong"}), 400
 
-        folio_id  = data.get('folioId', '')
-        font_id   = data.get('fontId', 'indie_flower')
-        
-        # --- TAMBAHKAN 3 BARIS INI ---
-        seed = data.get('seed')
-        if seed:
-            random.seed(seed)
-        config    = {
-            'startX': 100, 'startY': 130, 'lineHeight': 84,
-            'maxWidth': 2400, 'pageBottom': 4500,
-            'fontSize': 60, 'color': '#2b2b2b', 'wordSpacing': 8,
-            **data.get('config', {})
-        }
+        # System prompt: Paksa AI merespons tanpa Markdown (bintang/pagar) karena akan ditulis tangan
+        full_prompt = (
+            "Kamu adalah asisten pelajar. Tuliskan teks untuk tugas sekolah/kuliah berdasarkan instruksi berikut. "
+            "PENTING: Jangan gunakan formatting Markdown seperti **tebal**, *miring*, atau # heading, karena teks ini "
+            "akan dikonversi menjadi tulisan tangan biasa. Tulis dengan paragraf biasa.\n\n"
+            f"Instruksi: {prompt}"
+        )
 
-        folio_path = FOLIO_TEMPLATES.get(folio_id)
-        if not folio_path or not os.path.exists(folio_path):
-            return jsonify({'error': 'Invalid folio selected'}), 400
+        # Memanggil Gemini menggunakan SDK versi terbaru dan model Gemini 2.5 Flash
+        response = ai_client.models.generate_content(
+            model="gemini-2.5-flash", contents=full_prompt
+        )
 
-        font_info = AVAILABLE_FONTS.get(font_id)
-        if not font_info:
-            return jsonify({'error': 'Invalid font selected'}), 400
-
-        font_path = os.path.join(FONT_FOLDER, font_info['file'])
-        if not os.path.exists(font_path):
-            return jsonify({'error': f'Font file not found: {font_info["file"]}'}), 400
-
-        generator = HandwritingGenerator(config, folio_path, font_path)
-        pages     = generator.generate_all_pages(text)
-
-        result_pages = []
-        for idx, page in enumerate(pages):
-            buf = io.BytesIO()
-            page.save(buf, format='JPEG', quality=92, optimize=True)
-            buf.seek(0)
-            result_pages.append({
-                'page': idx + 1,
-                'image': f'data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode()}'
-            })
-
-        return jsonify({'success': True, 'totalPages': len(result_pages), 'pages': result_pages})
+        return jsonify({"success": True, "text": response.text})
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print("Gemini API Error:", e)
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/api/download/<int:page_num>', methods=['POST'])
+
+@app.route("/api/download/<int:page_num>", methods=["POST"])
 def download_page(page_num):
     try:
         data = request.json
-        raw  = data.get('imageData', '').split(',')[-1]
-        return send_file(io.BytesIO(base64.b64decode(raw)),
-                         mimetype='image/jpeg', as_attachment=True,
-                         download_name=f'tugas_halaman_{page_num}.jpg')
+        raw = data.get("imageData", "").split(",")[-1]
+        return send_file(
+            io.BytesIO(base64.b64decode(raw)),
+            mimetype="image/jpeg",
+            as_attachment=True,
+            download_name=f"tugas_halaman_{page_num}.jpg",
+        )
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({
-        'status': 'healthy',
-        'available_fonts': len([k for k,v in AVAILABLE_FONTS.items()
-                                  if os.path.exists(os.path.join(FONT_FOLDER, v['file']))]),
-        'available_folios': len(FOLIO_TEMPLATES)
-    })
 
-if __name__ == '__main__':
-    app.run(
-        debug=os.getenv('FLASK_DEBUG','False').lower() == 'true',
-        host='0.0.0.0',
-        port=int(os.getenv('PORT', 5000))
-    )
+@app.route("/api/download/zip", methods=["POST"])
+def download_zip():
+    """Buat ZIP dari semua halaman di server, kirim sebagai stream."""
+    import zipfile
 
-@app.route('/api/download/pdf', methods=['POST'])
-def download_pdf():
     try:
-        pages = request.json.get('pages', [])
+        data = request.json
+        pages = data.get("pages", [])
+
         if not pages:
-            return jsonify({'error': 'No pages'}), 400
+            return jsonify({"error": "No pages provided"}), 400
 
-        images = []
-        for p in pages:
-            # Decode base64 menjadi Image Pillow
-            img_data = base64.b64decode(p['image'].split(',')[1])
-            img = Image.open(io.BytesIO(img_data)).convert('RGB')
-            images.append(img)
+        if len(pages) > 100:
+            return jsonify({"error": "Maksimal 100 halaman per ZIP"}), 400
 
-        # Simpan gambar pertama, dan 'append' gambar sisanya sebagai PDF multi-halaman
         buf = io.BytesIO()
-        images[0].save(buf, format='PDF', save_all=True, append_images=images[1:], resolution=100.0)
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            for p in pages:
+                raw = p.get("image", "").split(",")[-1]
+                zf.writestr(f"halaman_{p['page']}.jpg", base64.b64decode(raw))
         buf.seek(0)
 
-        return send_file(buf, mimetype='application/pdf', as_attachment=True, download_name='tugas_handwriting.pdf')
+        return send_file(
+            buf,
+            mimetype="application/zip",
+            as_attachment=True,
+            download_name="Tugas_Handwriting.zip",
+        )
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/download/transparent", methods=["POST"])
+def download_transparent():
+    """Export tulisan tangan saja tanpa background folio (PNG transparan)."""
+    try:
+        data = request.json
+        raw = data.get("imageData", "").split(",")[-1]
+        img = Image.open(io.BytesIO(base64.b64decode(raw))).convert("RGBA")
+
+        # Hapus background putih/kertas — jadikan transparan
+        arr = np.array(img)
+        # Pixel yang sangat terang (kertas) → transparan
+        r, g, b = arr[:, :, 0], arr[:, :, 1], arr[:, :, 2]
+        luminance = 0.299 * r + 0.587 * g + 0.114 * b
+        mask = luminance > 220  # Threshold kertas
+        arr[mask, 3] = 0  # Jadikan transparan
+
+        result = Image.fromarray(arr)
+        buf = io.BytesIO()
+        result.save(buf, format="PNG")
+        buf.seek(0)
+        return send_file(
+            buf,
+            mimetype="image/png",
+            as_attachment=True,
+            download_name="tulisan_transparan.png",
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/generate/stream", methods=["POST"])
+@rate_limit_strict
+def generate_handwriting_stream():
+    """Streaming endpoint — kirim halaman satu per satu (Server-Sent Events)."""
+    try:
+        data = request.json
+        text = data.get("text", "")
+        if not text.strip():
+            return jsonify({"error": "No text provided"}), 400
+        if len(text) > 50000:
+            return (
+                jsonify({"error": "Teks terlalu panjang. Maksimal 50.000 karakter."}),
+                400,
+            )
+
+        folio_id = data.get("folioId", "")
+        font_id = data.get("fontId", "indie_flower")
+        seed = data.get("seed")
+        if seed is not None:
+            random.seed(seed)
+
+        config = {
+            "startX": 100,
+            "startY": 125,
+            "lineHeight": 83,
+            "maxWidth": 2205,
+            "pageBottom": 3320,
+            "fontSize": 60,
+            "color": "#2b2b2b",
+            "wordSpacing": 8,
+            "leftHanded": False,
+            "writeSpeed": 0.5,
+            "enableTypo": True,
+            "slantAngle": 0,
+            "tiredMode": False,
+            "showPageNumber": False,
+            "pageNumberFormat": "- {n} -",
+            "marginJitter": 6,
+            "folioEvenPath": None,
+            "watermarkText": "",  # [BARU] teks watermark diagonal tipis
+            **data.get("config", {}),
+        }
+
+        folio_path = FOLIO_TEMPLATES.get(folio_id)
+        if not folio_path:
+            return jsonify({"error": "Invalid folio selected"}), 400
+        if not folio_path.startswith("http") and not os.path.exists(folio_path):
+            return jsonify({"error": "Folio file not found"}), 400
+
+        folio_even_id = data.get("folioEvenId", "")
+        folio_even_path = FOLIO_TEMPLATES.get(folio_even_id)
+        if folio_even_path:
+            config["folioEvenPath"] = folio_even_path
+
+        font_info = AVAILABLE_FONTS.get(font_id)
+        if not font_info:
+            return jsonify({"error": "Invalid font selected"}), 400
+        font_path = os.path.join(FONT_FOLDER, font_info["file"])
+        if not os.path.exists(font_path):
+            return jsonify({"error": f"Font file not found: {font_info['file']}"}), 400
+
+        generator = HandwritingGenerator(config, folio_path, font_path)
+        all_page_lines = generator.split_into_pages(text)
+        generator.total_pages = len(all_page_lines)
+        total = len(all_page_lines)
+
+        def stream():
+            import json as _json
+
+            # Tandai folio sedang dipakai
+            with _active_lock:
+                _active_folios.add(folio_path)
+                if folio_even_path:
+                    _active_folios.add(folio_even_path)
+            try:
+                # Kirim total dulu
+                yield f"data: {_json.dumps({'type': 'total', 'totalPages': total})}\n\n"
+
+                # Generate berurutan agar efek Tinta Tembus (Show-through) & Tired Mode bekerja sempurna
+                for idx, lines in enumerate(all_page_lines):
+                    page_img = generator.generate_page(lines, idx + 1)
+                    buf = io.BytesIO()
+                    # Kompresi adaptif: makin banyak halaman makin hemat
+                    jpeg_quality = max(78, 92 - (total * 2)) if total > 5 else 92
+                    page_img.save(
+                        buf, format="JPEG", quality=jpeg_quality, optimize=True
+                    )
+                    buf.seek(0)
+                    b64 = base64.b64encode(buf.getvalue()).decode()
+                    payload = _json.dumps(
+                        {
+                            "type": "page",
+                            "page": idx + 1,
+                            "image": f"data:image/jpeg;base64,{b64}",
+                        }
+                    )
+                    yield f"data: {payload}\n\n"
+
+                yield f"data: {_json.dumps({'type': 'done'})}\n\n"
+            finally:
+                # Lepaskan tanda setelah streaming selesai atau terputus
+                with _active_lock:
+                    _active_folios.discard(folio_path)
+                    if folio_even_path:
+                        _active_folios.discard(folio_even_path)
+
+        return app.response_class(
+            stream(),
+            mimetype="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/cache/save", methods=["POST"])
+def cache_save():
+    """Simpan session_id + pages ke file JSON di disk agar RAM server tidak jebol."""
+    import re
+
+    try:
+        data = request.json
+        sid = data.get("sessionId", "")
+        pages = data.get("pages", [])
+        if not sid or not pages:
+            return jsonify({"error": "Missing sessionId or pages"}), 400
+        if not re.match(r"^[a-zA-Z0-9_-]{8,64}$", sid):
+            return jsonify({"error": "Invalid session ID format"}), 400
+
+        cache_path = os.path.join(CACHE_FOLDER, f"cache_{sid}.json")
+        with open(cache_path, "w") as f:
+            json.dump(pages, f)
+
+        # Hapus cache lama jika sudah lebih dari 50 file
+        cache_files = sorted(
+            [
+                f
+                for f in os.listdir(CACHE_FOLDER)
+                if f.startswith("cache_") and f.endswith(".json")
+            ],
+            key=lambda f: os.path.getmtime(os.path.join(CACHE_FOLDER, f)),
+        )
+        while len(cache_files) > 50:
+            os.remove(os.path.join(CACHE_FOLDER, cache_files.pop(0)))
+
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/cache/load/<session_id>", methods=["GET"])
+def cache_load(session_id):
+    """Load hasil generate dari file JSON di disk."""
+    cache_path = os.path.join(CACHE_FOLDER, f"cache_{secure_filename(session_id)}.json")
+    if not os.path.exists(cache_path):
+        return jsonify({"found": False}), 404
+
+    try:
+        with open(cache_path, "r") as f:
+            pages = json.load(f)
+        return jsonify({"found": True, "pages": pages})
+    except Exception:
+        return jsonify({"found": False}), 500
+
+
+@app.route("/health", methods=["GET"])
+@app.route("/api/health", methods=["GET"])
+def health_check():
+    return jsonify(
+        {
+            "status": "healthy",
+            "version": "1.2.0",
+            "rate_limiting": RATE_LIMIT_ENABLED,
+            "available_fonts": len(
+                [
+                    k
+                    for k, v in AVAILABLE_FONTS.items()
+                    if os.path.exists(os.path.join(FONT_FOLDER, v["file"]))
+                ]
+            ),
+            "available_folios": len(FOLIO_TEMPLATES),
+        }
+    )
+
+
+# ── FITUR BARU: BACKGROUND CLEANUP ───────────────────────────────────────────
+def cleanup_old_folios(folder_path, max_age_hours=24):
+    """
+    Mengecek dan menghapus file gambar di folder yang usianya lebih dari max_age_hours.
+    Fungsi ini berjalan terus-menerus di background (daemon thread) setiap 1 jam.
+    """
+    while True:
+        try:
+            now = time.time()
+            if os.path.exists(folder_path):
+                for filename in os.listdir(folder_path):
+                    # Hanya proses file gambar
+                    if not filename.lower().endswith((".png", ".jpg", ".jpeg")):
+                        continue
+
+                    filepath = os.path.join(folder_path, filename)
+
+                    # Cek apakah file ini sedang dipakai untuk generate
+                    with _active_lock:
+                        if filepath in _active_folios:
+                            continue  # Skip, jangan dihapus dulu
+
+                    # Cek umur file berdasarkan waktu terakhir dimodifikasi (modified time)
+                    file_modified_time = os.path.getmtime(filepath)
+                    age_in_hours = (now - file_modified_time) / 3600
+
+                    # Jika lebih dari 24 jam, hapus file tersebut
+                    if age_in_hours > max_age_hours:
+                        os.remove(filepath)
+                        print(f"🧹 [Cleanup] File folio lama dihapus: {filename}")
+
+                        # Hapus juga dari dictionary FOLIO_TEMPLATES jika ada
+                        with _folio_lock:
+                            keys_to_delete = [
+                                k for k, v in FOLIO_TEMPLATES.items() if v == filepath
+                            ]
+                            for k in keys_to_delete:
+                                del FOLIO_TEMPLATES[k]
+
+                # Update file cache JSON setelah penghapusan
+                save_folio_cache()
+
+        except Exception as e:
+            print(f"⚠️ [Cleanup Error]: {e}")
+
+        # Jeda selama 1 jam (3600 detik) sebelum mengecek kembali
+        time.sleep(3600)
+
+
+# Jalankan thread cleanup sebagai daemon (otomatis mati jika server Flask mati)
+cleanup_thread = threading.Thread(
+    target=cleanup_old_folios,
+    args=(UPLOAD_FOLDER, 24),  # 24 adalah batas usianya (dalam jam)
+    daemon=True,
+)
+cleanup_thread.start()
+# ─────────────────────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    app.run(
+        debug=os.getenv("FLASK_DEBUG", "False").lower() == "true",
+        host="0.0.0.0",
+        port=int(os.getenv("PORT", 5000)),
+    )

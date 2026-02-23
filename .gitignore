@@ -49,3 +49,19 @@ coverage/
 
 # Misc
 *.pem
+
+# Upload & cache files
+backend/uploads/folios/
+backend/uploads/cache/
+backend/uploads/folio_cache.json
+backend/__pycache__/
+backend/.env
+
+# Virtual environment
+.venv/
+venv/
+
+# Frontend
+frontend/.env.local
+frontend/.next/
+frontend/node_modules/

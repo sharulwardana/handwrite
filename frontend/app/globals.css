@@ -2,11 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+@media screen and (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important; /* Mencegah iOS Safari auto-zoom */
+  }
+}
+
+/* ── SELECTION ── */
+::selection {
+  background: rgba(139, 92, 246, 0.25);
+  color: inherit;
+}
+.dark ::selection {
+  background: rgba(139, 92, 246, 0.35);
+}
+
 /* ── BASE ── */
 * {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+:focus-visible {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
 body {
@@ -18,22 +45,61 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition:
+    background-color 0.4s ease,
+    color 0.4s ease;
 }
 
-/* ── SCROLLBAR ── */
+/* Transisi halus semua elemen saat ganti tema */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 0.25s;
+  transition-timing-function: ease;
+}
+
+/* Pengecualian: animasi & transform tidak ikut transition tema */
+.animate-spin,
+.animate-pulse,
+.animate-bounce,
+[class*="animate-"],
+[class*="transition-"] {
+  transition-property: none;
+}
+
+/* ── SCROLLBAR MODERN (ALA MAC) ── */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
+  margin: 4px 0; /* Memberi jarak agar tidak mentok atas/bawah */
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
-  border-radius: 99px;
+  background: rgba(156, 163, 175, 0.3); /* Abu-abu tipis untuk Light Mode */
+  border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.25);
+  background: rgba(156, 163, 175, 0.5);
+}
+
+/* Khusus Dark Mode: Putih transparan agar menyatu dengan background */
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Dukungan untuk browser Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+}
+.dark * {
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
 }
 
 /* ── ANIMATIONS ── */
@@ -68,6 +134,7 @@ body {
 /* ── RANGE SLIDER — light mode friendly ── */
 input[type="range"] {
   -webkit-appearance: none;
+  -moz-appearance: none;
   appearance: none;
   height: 5px;
   border-radius: 99px;
@@ -115,6 +182,7 @@ input[type="text"]:focus {
 
 input[type="number"] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
@@ -124,6 +192,8 @@ input[type="number"]::-webkit-inner-spin-button {
 /* ── COLOR PICKER ── */
 input[type="color"] {
   -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
   border: none;
   padding: 0;
   border-radius: 8px;
@@ -136,4 +206,21 @@ input[type="color"]::-webkit-color-swatch-wrapper {
 input[type="color"]::-webkit-color-swatch {
   border: none;
   border-radius: 6px;
+}
+
+/* ── SAFE AREA UNTUK MOBILE (iOS) ── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-pb {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* Textarea visibility di light mode */
+.light-textarea {
+  color: #1a1a1a;
+  background-color: #ffffff;
+}
+.dark .light-textarea {
+  color: #e5e7eb;
+  background-color: transparent;
 }
