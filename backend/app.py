@@ -26,7 +26,7 @@ from handwriting_generator import HandwritingGenerator
 # ── SETUP & KONFIGURASI AWAL ─────────────────────────────────────────────────
 
 # Posisikan kode eksekusi di bawah SETELAH semua import selesai
-Image.MAX_IMAGE_PIXELS = None  # Matikan limit resolusi gambar untuk folio raksasa
+Image.MAX_IMAGE_PIXELS = 100000000
 
 load_dotenv()
 
