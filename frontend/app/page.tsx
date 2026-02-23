@@ -131,8 +131,11 @@ function SidebarSection({
   const icon = t ? t.icon : "";
   const divider = t ? t.border : (isDark ? "border-[#ffffff08]" : "border-violet-100");
 
+  // Tambahkan variabel ini untuk mendeteksi apakah kita butuh overflow visible
+  const isOverflowVisible = className.includes("!overflow-visible");
+
   return (
-    <div className={`rounded-xl border backdrop-blur-sm overflow-hidden shadow-sm ${bg} ${border} ${className}`}>
+    <div className={`rounded-xl border backdrop-blur-sm shadow-sm ${bg} ${border} ${className} ${isOverflowVisible ? "" : "overflow-hidden"}`}>
       <button
         onClick={() => setOpen(!open)}
         className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-t-xl transition-all duration-200 ${open ? `border-b ${divider}` : "rounded-b-xl"} ${headerHover} hover:ring-1 ${isDark ? "hover:ring-white/5" : "hover:ring-violet-200"}`}
@@ -164,7 +167,7 @@ function SidebarSection({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-            style={{ overflow: "hidden" }}
+            style={{ overflow: isOverflowVisible ? "visible" : "hidden" }}
           >
             <div className="p-3.5 space-y-3">{children}</div>
           </motion.div>
@@ -721,6 +724,13 @@ export default function Home() {
             headers: { "Content-Type": "application/json" },
             body,
           });
+
+          // KODE BARU: Baca pesan error asli dari backend Python
+          if (!res.ok) {
+            const errData = await res.json().catch(() => null);
+            throw new Error(errData?.error || `Error ${res.status}: Gagal memproses data`);
+          }
+
           if (res.ok && res.body) break; // sukses, keluar dari loop
           throw new Error("Stream gagal");
         } catch (err) {
@@ -3163,34 +3173,6 @@ hidden md:flex flex-col border-r flex-shrink-0
                       style={{ width: `${Math.min(100, (text.length / 50000) * 100)}%` }} />
                   </div>
                 )}
-              </div>
-
-              {/* Generate bar — sticky, ikut naik saat keyboard muncul */}
-              <div
-                className={`flex-shrink-0 flex items-center gap-3 px-4 py-3 border-t ${c.divider} ${D ? "bg-[#09090b]/95" : "bg-white/95"} backdrop-blur-xl`}
-                style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}>
-                <div className="flex-1 min-w-0">
-                  {currentFont ? (
-                    <p className={`text-[12px] font-semibold truncate ${c.tp}`} style={{ fontFamily: FONT_FAMILY_MAP[currentFont.name] || currentFont.name }}>
-                      {currentFont.name}
-                    </p>
-                  ) : (
-                    <p className={`text-[11px] ${c.ts}`}>Pilih font di Pengaturan</p>
-                  )}
-                  <p className={`text-[10px] ${c.ts}`}>{wordCount} kata · {currentFolio?.name || "Pilih folio"}</p>
-                </div>
-                <button
-                  onClick={handleGenerate}
-                  disabled={isGenerating || !text.trim() || !selectedFolio}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all flex-shrink-0 shadow-lg active:scale-95 ${isGenerating || !text.trim() || !selectedFolio
-                    ? D ? "bg-white/4 text-white/20 cursor-not-allowed border border-[#ffffff06] shadow-none" : "bg-gray-100 text-gray-300 cursor-not-allowed border border-gray-200 shadow-none"
-                    : `bg-gradient-to-r ${c.accent} text-white shadow-violet-500/30`
-                    }`}>
-                  {isGenerating
-                    ? <><Loader2 className="w-4 h-4 animate-spin" /><span>{Math.round(generateProgress)}%</span></>
-                    : <><Sparkles className="w-4 h-4" /><span>Generate{estimatedPages > 1 ? ` (${estimatedPages})` : ""}</span></>
-                  }
-                </button>
               </div>
             </div>
           )}
