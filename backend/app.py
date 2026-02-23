@@ -451,6 +451,11 @@ def analyze_folio_route(folio_id):
 
     folio_id = unquote(folio_id)
     folio_path = FOLIO_TEMPLATES.get(folio_id)
+
+    # KODE BARU: Bypass multi-worker Railway
+    if not folio_path and str(folio_id).startswith("http"):
+        folio_path = folio_id
+
     if not folio_path:
         return jsonify({"error": "Folio not found"}), 404
 
@@ -666,6 +671,11 @@ def generate_handwriting_stream():
         }
 
         folio_path = FOLIO_TEMPLATES.get(folio_id)
+
+        # KODE BARU: Bypass memory worker, izinkan jika folio adalah URL valid
+        if not folio_path and str(folio_id).startswith("http"):
+            folio_path = folio_id
+
         if not folio_path:
             return jsonify({"error": "Invalid folio selected"}), 400
         if not folio_path.startswith("http") and not os.path.exists(folio_path):
@@ -673,6 +683,11 @@ def generate_handwriting_stream():
 
         folio_even_id = data.get("folioEvenId", "")
         folio_even_path = FOLIO_TEMPLATES.get(folio_even_id)
+
+        # KODE BARU: Bypass memory untuk folio genap
+        if not folio_even_path and str(folio_even_id).startswith("http"):
+            folio_even_path = folio_even_id
+
         if folio_even_path:
             config["folioEvenPath"] = folio_even_path
 
