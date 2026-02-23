@@ -58,10 +58,7 @@ except ImportError:
     print("⚠️  flask-limiter not installed. Rate limiting disabled.")
 
 # Ubah baris ini di app.py
-raw_origins = os.getenv(
-    "ALLOWED_ORIGINS", "http://localhost:3000,https://handwrite-ai.vercel.app"
-)
-allowed_origins = [o.strip() for o in raw_origins.split(",")]
+allowed_origins = ["http://localhost:3000", "https://handwrite-ai.vercel.app"]
 CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
 
 
@@ -132,41 +129,6 @@ def load_folio_templates():
 load_folio_templates()
 load_folio_cache()
 
-
-def resolve_folio_path(folio_id: str):
-    """
-    Cari path/URL folio dari folio_id.
-
-    Urutan lookup:
-    1. Jika folio_id adalah URL HTTPS (Cloudinary) → langsung pakai sebagai path,
-       sekaligus registrasi ke FOLIO_TEMPLATES agar request berikutnya lebih cepat.
-    2. Jika ada di FOLIO_TEMPLATES (file lokal) → pakai dari sana.
-    3. Tidak ketemu → return None.
-
-    Ini mengatasi bug: setelah server Railway restart, Cloudinary URLs hilang
-    dari FOLIO_TEMPLATES karena tidak di-persist, sehingga generate selalu 400.
-    """
-    if not folio_id:
-        return None
-
-    # ── Kasus 1: URL Cloudinary langsung ────────────────────────────────────
-    if folio_id.startswith("https://"):
-        # Registrasi otomatis supaya cache terisi untuk request berikutnya
-        with _folio_lock:
-            if folio_id not in FOLIO_TEMPLATES:
-                FOLIO_TEMPLATES[folio_id] = folio_id
-                save_folio_cache()
-        return folio_id
-
-    # ── Kasus 2: Ada di FOLIO_TEMPLATES (file lokal atau URL yang sudah di-cache) ──
-    path = FOLIO_TEMPLATES.get(folio_id)
-    if path:
-        return path
-
-    # ── Kasus 3: Tidak ketemu ────────────────────────────────────────────────
-    return None
-
-
 AVAILABLE_FONTS = {
     "indie_flower": {
         "name": "Indie Flower",
@@ -207,9 +169,8 @@ def analyze_folio(image_path_or_url):
             response = requests.get(image_path_or_url, stream=True, timeout=10)
             try:
                 img_color = Image.open(response.raw).convert("RGB")
-                img_color.load()  # Force load sebelum stream ditutup
             finally:
-                response.close()  # Tutup seluruh response, bukan hanya raw
+                response.raw.close()
         else:
             img_color = Image.open(image_path_or_url).convert("RGB")
 
@@ -302,6 +263,7 @@ def analyze_folio(image_path_or_url):
         if len(right_dark) > 8:
             paper_type = "grid"
         confidence_points += 10
+        confidence_points += 10
 
         # ── 5. HITUNG CONFIDENCE SCORE ──────────────────────────────────────
         confidence = int((confidence_points / confidence_max) * 100)
@@ -379,7 +341,7 @@ def generate_preview():
             "folioEvenPath": None,
         }
 
-        folio_path = resolve_folio_path(folio_id)
+        folio_path = FOLIO_TEMPLATES.get(folio_id)
         if not folio_path:
             # Fallback: pakai folio pertama yang ada
             folio_path = next(iter(FOLIO_TEMPLATES.values()), None)
@@ -488,7 +450,7 @@ def analyze_folio_route(folio_id):
     from urllib.parse import unquote
 
     folio_id = unquote(folio_id)
-    folio_path = resolve_folio_path(folio_id)
+    folio_path = FOLIO_TEMPLATES.get(folio_id)
     if not folio_path:
         return jsonify({"error": "Folio not found"}), 404
 
@@ -562,11 +524,6 @@ def ai_writer():
         prompt = data.get("prompt", "")
         if not prompt.strip():
             return jsonify({"error": "Prompt tidak boleh kosong"}), 400
-        if len(prompt) > 2000:
-            return (
-                jsonify({"error": "Prompt terlalu panjang, maksimal 2000 karakter"}),
-                400,
-            )
 
         # System prompt: Paksa AI merespons tanpa Markdown (bintang/pagar) karena akan ditulis tangan
         full_prompt = (
@@ -708,21 +665,14 @@ def generate_handwriting_stream():
             **data.get("config", {}),
         }
 
-        folio_path = resolve_folio_path(folio_id)
+        folio_path = FOLIO_TEMPLATES.get(folio_id)
         if not folio_path:
-            return (
-                jsonify(
-                    {
-                        "error": "Invalid folio selected. Coba refresh halaman dan pilih folio kembali."
-                    }
-                ),
-                400,
-            )
+            return jsonify({"error": "Invalid folio selected"}), 400
         if not folio_path.startswith("http") and not os.path.exists(folio_path):
             return jsonify({"error": "Folio file not found"}), 400
 
         folio_even_id = data.get("folioEvenId", "")
-        folio_even_path = resolve_folio_path(folio_even_id) if folio_even_id else None
+        folio_even_path = FOLIO_TEMPLATES.get(folio_even_id)
         if folio_even_path:
             config["folioEvenPath"] = folio_even_path
 
@@ -778,10 +728,25 @@ def generate_handwriting_stream():
                     if folio_even_path:
                         _active_folios.discard(folio_even_path)
 
+        # CORS header harus ditambahkan MANUAL di streaming response
+        # karena Flask-CORS tidak otomatis inject ke app.response_class()
+        origin = request.headers.get("Origin", "")
+        cors_origin = (
+            origin
+            if origin in allowed_origins
+            else (allowed_origins[-1] if allowed_origins else "*")
+        )
+
         return app.response_class(
             stream(),
             mimetype="text/event-stream",
-            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+                "Access-Control-Allow-Origin": cors_origin,
+                "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Expose-Headers": "Content-Type",
+            },
         )
 
     except Exception as e:
