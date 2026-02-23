@@ -759,15 +759,17 @@ export default function Home() {
               const newPage: GeneratedPage = { page: msg.page, image: msg.image };
               collectedPages.push(newPage);
               setStreamedPages([...collectedPages]);
+              setActivePageIndex(0); // Fix: selalu reset ke halaman pertama saat streaming
               setGenerateProgress(Math.round((msg.page / Math.max(1, totalPages)) * 100));
+              console.log("[SSE] Page received:", msg.page, "image length:", msg.image?.length);
               if (msg.page === 1) {
                 toast.success("✨ Halaman pertama selesai!", { id: tid, duration: 2000 });
                 setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 200);
               }
             }
             if (msg.type === "done") {
-              setGeneratedPages(collectedPages);
               setActivePageIndex(0);
+              setGeneratedPages(collectedPages);
               setStreamedPages([]);
               setGenerateProgress(100);
               toast.success(`✅ ${collectedPages.length} halaman selesai!`, { duration: 3000 });
@@ -1319,27 +1321,7 @@ export default function Home() {
           </button>
 
           {fontDropdownOpen && Object.keys(fonts).length > 0 && (
-            <div
-              className={`fixed z-[9999] rounded-xl border shadow-2xl overflow-hidden ${c.dropdown}`}
-              style={{
-                top: (() => {
-                  const el = fontDropdownRef.current;
-                  if (!el) return 0;
-                  const rect = el.getBoundingClientRect();
-                  return rect.bottom + 4;
-                })(),
-                left: (() => {
-                  const el = fontDropdownRef.current;
-                  if (!el) return 0;
-                  return el.getBoundingClientRect().left;
-                })(),
-                width: (() => {
-                  const el = fontDropdownRef.current;
-                  if (!el) return 240;
-                  return el.getBoundingClientRect().width;
-                })(),
-              }}
-            >
+            <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border z-50 overflow-hidden ${c.dropdown}`}>
               <div className="max-h-52 overflow-y-auto py-1">
                 {Object.entries(fonts).map(([key, font]) => (
                   <button key={key}
@@ -2872,7 +2854,10 @@ hidden md:flex flex-col border-r flex-shrink-0
 
                   // STATE 2: Ada Halaman (Selesai atau Streaming)
                   if (generatedPages.length > 0 || streamedPages.length > 0) {
-                    const page = generatedPages.length > 0 ? generatedPages[activePageIndex] : streamedPages[streamedPages.length - 1];
+                    const safeIndex = Math.min(activePageIndex, Math.max(0, generatedPages.length - 1));
+                    const page = generatedPages.length > 0
+                      ? generatedPages[safeIndex]
+                      : streamedPages[streamedPages.length - 1];
                     if (!page) return null;
                     return (
                       <motion.div
