@@ -58,7 +58,10 @@ except ImportError:
     print("⚠️  flask-limiter not installed. Rate limiting disabled.")
 
 # Ubah baris ini di app.py
-allowed_origins = ["http://localhost:3000", "https://handwrite-ai.vercel.app"]
+raw_origins = os.getenv(
+    "ALLOWED_ORIGINS", "http://localhost:3000,https://handwrite-ai.vercel.app"
+)
+allowed_origins = [o.strip() for o in raw_origins.split(",")]
 CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
 
 
@@ -204,8 +207,9 @@ def analyze_folio(image_path_or_url):
             response = requests.get(image_path_or_url, stream=True, timeout=10)
             try:
                 img_color = Image.open(response.raw).convert("RGB")
+                img_color.load()  # Force load sebelum stream ditutup
             finally:
-                response.raw.close()
+                response.close()  # Tutup seluruh response, bukan hanya raw
         else:
             img_color = Image.open(image_path_or_url).convert("RGB")
 
@@ -297,7 +301,6 @@ def analyze_folio(image_path_or_url):
         right_dark = np.where(col_means[int(width * 0.25) :] < col_threshold)[0]
         if len(right_dark) > 8:
             paper_type = "grid"
-        confidence_points += 10
         confidence_points += 10
 
         # ── 5. HITUNG CONFIDENCE SCORE ──────────────────────────────────────
@@ -559,6 +562,11 @@ def ai_writer():
         prompt = data.get("prompt", "")
         if not prompt.strip():
             return jsonify({"error": "Prompt tidak boleh kosong"}), 400
+        if len(prompt) > 2000:
+            return (
+                jsonify({"error": "Prompt terlalu panjang, maksimal 2000 karakter"}),
+                400,
+            )
 
         # System prompt: Paksa AI merespons tanpa Markdown (bintang/pagar) karena akan ditulis tangan
         full_prompt = (

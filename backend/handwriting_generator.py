@@ -84,7 +84,9 @@ class HandwritingGenerator:
         # Random kecil per baris
         wobble = wave + random.uniform(-0.3, 0.3)
         # Fatigue: setiap 3-4 baris, baseline sedikit turun (gravitasi tangan)
-        fatigue_drift = (line_index % random.randint(3, 5)) * random.uniform(0.1, 0.4)
+        fatigue_drift = min(
+            2.0, (line_index % random.randint(3, 5)) * random.uniform(0.08, 0.25)
+        )
         return (wobble + fatigue_drift) * (-1.4 if self.left_handed else 1.0)
 
     def make_typo_version(self, word):
@@ -321,8 +323,11 @@ class HandwritingGenerator:
                 _drop_cap_done = True
             # ────────────────────────────────────────────────────────────────
 
-            # Tambahan: Gunakan font dari cache jika sudah pernah di-load
+            # Gunakan font dari cache, batasi max 30 ukuran agar tidak memory leak
             if font_size not in self.font_cache:
+                if len(self.font_cache) > 30:
+                    oldest = next(iter(self.font_cache))
+                    del self.font_cache[oldest]
                 self.font_cache[font_size] = ImageFont.truetype(
                     self.font_path, font_size
                 )
@@ -464,24 +469,17 @@ class HandwritingGenerator:
 
             # --- FITUR BARU: Efek Bolpoin Realistis (Mblobor & Ketebalan Ekstra) ---
             if char.strip():
-                # 1. Micro-bolding: Jika tekanan tangan sedang kuat, bolpoin sedikit lebih tebal (ditimpa tipis)
+                # 1. Micro-bolding: Jika tekanan tangan sedang kuat, bolpoin sedikit lebih tebal
                 if pen_pressure > 5 and random.random() < 0.25:
                     bold_offset = random.choice([0.5, 1.0])
-                    use_skew = getattr(self, "slant_angle", 0) != 0
-                    if use_skew and "skewed_img" in locals():
-                        text_layer.paste(
-                            skewed_img,
-                            (paste_x + int(bold_offset), paste_y),
-                            skewed_img,
-                        )
-                    elif not use_skew:
-                        draw.text(
-                            (cursor_x + jitter_x + bold_offset, y_baseline),
-                            char,
-                            fill=fill_color,
-                            font=char_font,
-                            anchor="ls",
-                        )
+                    if getattr(self, "slant_angle", 0) != 0:
+                        skewed_now = locals().get("skewed_img")
+                        if skewed_now is not None:
+                            text_layer.paste(
+                                skewed_now,
+                                (paste_x + int(bold_offset), paste_y),
+                                skewed_now,
+                            )
                     else:
                         draw.text(
                             (cursor_x + jitter_x + bold_offset, y_baseline),

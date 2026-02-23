@@ -122,7 +122,7 @@ def _estimate_slant(gray):
                 continue
             angle = np.degrees(np.arctan2(y2 - y1, x2 - x1))
             # ✅ PERBAIKAN BUG: hanya filter abs(angle) > 60 — stroke mendekati vertikal
-            if abs(angle) > 60:
+            if abs(abs(angle) - 90) < 25:  # Hanya stroke mendekati vertikal (65°–90°)
                 angles.append(angle)
 
         if not angles:
@@ -304,7 +304,7 @@ def _estimate_ink_color(img, gray):
         # Rumus luminance ITU-R BT.601 yang benar: 0.299*R + 0.587*G + 0.114*B
         # Karena urutan array adalah BGR, penulisannya jadi terbalik:
         luminance = 0.114 * colors[:, 0] + 0.587 * colors[:, 1] + 0.299 * colors[:, 2]
-        dark_pixels = colors[luminance < 140]
+        dark_pixels = colors[luminance < 110]  # Lebih ketat, hanya ambil tinta gelap
 
         if len(dark_pixels) == 0:
             dark_pixels = colors  # Fallback kalau ternyata tintanya warna terang

@@ -1319,7 +1319,27 @@ export default function Home() {
           </button>
 
           {fontDropdownOpen && Object.keys(fonts).length > 0 && (
-            <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border z-50 overflow-hidden ${c.dropdown}`}>
+            <div
+              className={`fixed z-[9999] rounded-xl border shadow-2xl overflow-hidden ${c.dropdown}`}
+              style={{
+                top: (() => {
+                  const el = fontDropdownRef.current;
+                  if (!el) return 0;
+                  const rect = el.getBoundingClientRect();
+                  return rect.bottom + 4;
+                })(),
+                left: (() => {
+                  const el = fontDropdownRef.current;
+                  if (!el) return 0;
+                  return el.getBoundingClientRect().left;
+                })(),
+                width: (() => {
+                  const el = fontDropdownRef.current;
+                  if (!el) return 240;
+                  return el.getBoundingClientRect().width;
+                })(),
+              }}
+            >
               <div className="max-h-52 overflow-y-auto py-1">
                 {Object.entries(fonts).map(([key, font]) => (
                   <button key={key}
