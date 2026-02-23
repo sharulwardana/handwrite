@@ -735,6 +735,16 @@ def generate_handwriting_stream():
                     )
                     yield f"data: {payload}\n\n"
 
+                    # --- KODE BARU: PEMBERSIH RAM OTOMATIS ---
+                    import gc
+
+                    del page_img
+                    del buf
+                    del b64
+                    del payload
+                    gc.collect()  # Paksa Python mengosongkan RAM saat itu juga
+                    # -----------------------------------------
+
                 yield f"data: {_json.dumps({'type': 'done'})}\n\n"
             finally:
                 # Lepaskan tanda setelah streaming selesai atau terputus
