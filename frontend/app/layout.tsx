@@ -2,9 +2,22 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-    title: "HandWrite AI \u2013 Text to Handwriting",
+    title: "HandWrite AI – Text to Handwriting",
     description: "Converter teks menjadi tulisan tangan realistis di atas folio. Powered by Python & Pillow.",
     keywords: ["handwriting", "tulisan tangan", "folio", "AI", "converter"],
+    icons: {
+        icon: [
+            { url: "/favicon.ico", sizes: "any" },
+            { url: "/favicon_32.png", sizes: "32x32", type: "image/png" },
+            { url: "/favicon_16.png", sizes: "16x16", type: "image/png" },
+            { url: "/icon.svg", type: "image/svg+xml" },
+        ],
+        apple: [
+            { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+        ],
+        shortcut: "/favicon.ico",
+    },
+    manifest: "/site.webmanifest",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

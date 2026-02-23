@@ -1,0 +1,21 @@
+{
+  "name": "HandWrite AI",
+  "short_name": "HandWrite",
+  "description": "Converter teks menjadi tulisan tangan realistis",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0d14",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "/favicon_32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
