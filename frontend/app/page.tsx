@@ -194,7 +194,18 @@ function ToggleSwitch({
 }
 
 /* ─── MAIN ───────────────────────────────────────────── */
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+// Perbaikan: Memastikan API_URL selalu memiliki protokol yang benar
+const getApiUrl = () => {
+  const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  // Jika URL tidak dimulai dengan http, tambahkan https:// secara otomatis
+  if (url && !url.startsWith('http')) {
+    return `https://${url}`;
+  }
+  // Hapus trailing slash jika ada agar tidak double slash saat dipanggil
+  return url.replace(/\/$/, "");
+};
+
+const API_URL = getApiUrl();
 
 export default function Home() {
 

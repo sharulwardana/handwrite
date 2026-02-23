@@ -57,8 +57,8 @@ except ImportError:
     RATE_LIMIT_ENABLED = False
     print("⚠️  flask-limiter not installed. Rate limiting disabled.")
 
-# ✅ PERBAIKAN Bug #5: CORS tidak terlalu terbuka, baca dari .env
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+# Ubah baris ini di app.py
+allowed_origins = ["http://localhost:3000", "https://handwrite-ai.vercel.app"]
 CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
 
 
