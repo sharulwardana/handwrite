@@ -91,8 +91,9 @@ FOLIO_TEMPLATES = {}
 CACHE_FILE = "uploads/cache/folio_cache.json"
 
 _active_folios = set()
-_active_lock = threading.Lock()  # Melindungi _active_folios
-_folio_lock = threading.Lock()  # Melindungi FOLIO_TEMPLATES
+_active_lock = threading.Lock()
+_folio_lock = threading.Lock()
+generation_lock = threading.Lock()  # <--- TAMBAHKAN BARIS INI
 
 
 def save_folio_cache():
@@ -705,53 +706,54 @@ def generate_handwriting_stream():
 
         def stream():
             import json as _json
+            import gc
 
-            # Tandai folio sedang dipakai
-            with _active_lock:
-                _active_folios.add(folio_path)
-                if folio_even_path:
-                    _active_folios.add(folio_even_path)
-            try:
-                # Kirim total dulu
-                yield f"data: {_json.dumps({'type': 'total', 'totalPages': total})}\n\n"
-
-                # Generate berurutan agar efek Tinta Tembus (Show-through) & Tired Mode bekerja sempurna
-                for idx, lines in enumerate(all_page_lines):
-                    page_img = generator.generate_page(lines, idx + 1)
-                    buf = io.BytesIO()
-                    # Kompresi adaptif: makin banyak halaman makin hemat
-                    jpeg_quality = max(78, 92 - (total * 2)) if total > 5 else 92
-                    page_img.save(
-                        buf, format="JPEG", quality=jpeg_quality, optimize=True
-                    )
-                    buf.seek(0)
-                    b64 = base64.b64encode(buf.getvalue()).decode()
-                    payload = _json.dumps(
-                        {
-                            "type": "page",
-                            "page": idx + 1,
-                            "image": f"data:image/jpeg;base64,{b64}",
-                        }
-                    )
-                    yield f"data: {payload}\n\n"
-
-                    # --- KODE BARU: PEMBERSIH RAM OTOMATIS ---
-                    import gc
-
-                    del page_img
-                    del buf
-                    del b64
-                    del payload
-                    gc.collect()  # Paksa Python mengosongkan RAM saat itu juga
-                    # -----------------------------------------
-
-                yield f"data: {_json.dumps({'type': 'done'})}\n\n"
-            finally:
-                # Lepaskan tanda setelah streaming selesai atau terputus
+            # --- KODE BARU: SISTEM ANTREAN KETAT (MENCEGAH OOM) ---
+            with generation_lock:
+                # Tandai folio sedang dipakai
                 with _active_lock:
-                    _active_folios.discard(folio_path)
+                    _active_folios.add(folio_path)
                     if folio_even_path:
-                        _active_folios.discard(folio_even_path)
+                        _active_folios.add(folio_even_path)
+                try:
+                    # Kirim total dulu
+                    yield f"data: {_json.dumps({'type': 'total', 'totalPages': total})}\n\n"
+
+                    # Generate berurutan agar efek Tinta Tembus & Tired Mode bekerja sempurna
+                    for idx, lines in enumerate(all_page_lines):
+                        page_img = generator.generate_page(lines, idx + 1)
+                        buf = io.BytesIO()
+
+                        # Kompresi adaptif
+                        jpeg_quality = max(78, 92 - (total * 2)) if total > 5 else 92
+                        page_img.save(
+                            buf, format="JPEG", quality=jpeg_quality, optimize=True
+                        )
+                        buf.seek(0)
+                        b64 = base64.b64encode(buf.getvalue()).decode()
+                        payload = _json.dumps(
+                            {
+                                "type": "page",
+                                "page": idx + 1,
+                                "image": f"data:image/jpeg;base64,{b64}",
+                            }
+                        )
+                        yield f"data: {payload}\n\n"
+
+                        # PEMBERSIH RAM OTOMATIS
+                        del page_img
+                        del buf
+                        del b64
+                        del payload
+                        gc.collect()
+
+                    yield f"data: {_json.dumps({'type': 'done'})}\n\n"
+                finally:
+                    # Lepaskan tanda setelah streaming selesai atau terputus
+                    with _active_lock:
+                        _active_folios.discard(folio_path)
+                        if folio_even_path:
+                            _active_folios.discard(folio_even_path)
 
         # CORS header harus ditambahkan MANUAL di streaming response
         # karena Flask-CORS tidak otomatis inject ke app.response_class()
