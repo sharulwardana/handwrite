@@ -150,47 +150,51 @@ div[class*="border-"] {
   animation: scaleIn 0.2s ease-out both;
 }
 
-/* ── RANGE SLIDER — light mode friendly ── */
+/* ── RANGE SLIDER iOS 26 (KAPSUL LIQUID) ── */
 input[type="range"] {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  height: 5px;
+  height: 24px; /* Kapsul tebal */
   border-radius: 99px;
   outline: none;
   cursor: pointer;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Dark mode thumb */
+/* Thumb (Gelembung penarik) */
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 22px; /* Area sentuh diperbesar */
-  height: 22px; /* Area sentuh diperbesar */
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: #38bdf8;
+  background: #ffffff;
   cursor: pointer;
-  border: 3px solid rgba(255, 255, 255, 0.25); /* Border disesuaikan */
-  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.45);
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.2),
+    0 1px 1px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+  /* Trik padding margin agar thumb berada di dalam kapsul */
+  margin: 2px;
 }
 
-input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.18);
-  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.55);
+/* Animasi saat thumb ditekan/ditahan */
+input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.2); /* Membesar sedikit saat jari menahan (iOS Feel) */
 }
 
 input[type="range"]::-moz-range-thumb {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: #38bdf8;
+  background: #ffffff;
   cursor: pointer;
-  border: 3px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.45);
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
+
+/* Ubah tinggi di styling inline React agar match */
 
 /* ── TEXTAREA & NUMBER INPUT ── */
 textarea:focus,
