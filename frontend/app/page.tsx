@@ -1550,15 +1550,15 @@ export default function Home() {
 
     header: D
       ? "bg-[#0A0A0C]/50 border-b border-[#ffffff08] backdrop-blur-xl supports-[backdrop-filter]:bg-[#0A0A0C]/30"
-      : "bg-white/60 border-b border-violet-100/50 backdrop-blur-xl supports-[backdrop-filter]:bg-white/40 shadow-sm",
+      : "glass-panel border-b border-violet-100/50 shadow-sm", // Liquid Glass diterapkan di sini!
 
     sidebar: D
       ? "bg-[#0A0A0C]/30 border-r border-[#ffffff0a] backdrop-blur-3xl supports-[backdrop-filter]:bg-[#0A0A0C]/20"
-      : "bg-white/40 border-r border-violet-100/60 backdrop-blur-3xl supports-[backdrop-filter]:bg-white/30",
+      : "glass-panel border-r border-violet-100/60", // Liquid Glass diterapkan di sini!
 
     card: D
       ? "bg-[#13131f] border-[#ffffff0d] shadow-[0_2px_16px_rgba(0,0,0,0.4)] backdrop-blur-sm transition-colors"
-      : "bg-white/90 border-violet-200 shadow-[0_4px_20px_rgba(139,92,246,0.18)] backdrop-blur-sm transition-colors",
+      : "glass-panel border-violet-200 shadow-[0_4px_20px_rgba(139,92,246,0.18)] transition-colors", // Liquid Glass diterapkan di sini!
 
     cardHover: D
       ? "hover:border-violet-500/30 hover:shadow-[0_4px_24px_rgba(139,92,246,0.15)] transition-all duration-300"
@@ -2133,9 +2133,9 @@ export default function Home() {
           >
             {/* 1. Badge */}
             <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } }}>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#ffffff08] border border-[#ffffff15] mb-8 shadow-xl backdrop-blur-md">
-                <Sparkles className="w-4 h-4 text-violet-400" />
-                <span className="text-xs font-bold uppercase tracking-widest text-gray-300">Teknologi Humanizer AI</span>
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border mb-8 shadow-xl backdrop-blur-md ${isDark ? "bg-[#ffffff08] border-[#ffffff15]" : "glass-panel border-violet-200"}`}>
+                <Sparkles className={`w-4 h-4 ${isDark ? "text-violet-400" : "text-violet-600"}`} />
+                <span className={`text-xs font-bold uppercase tracking-widest ${isDark ? "text-gray-300" : "text-violet-700"}`}>Teknologi Humanizer AI</span>
               </div>
             </motion.div>
 
@@ -2151,7 +2151,7 @@ export default function Home() {
 
             {/* 3. Deskripsi */}
             <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } }}>
-              <p className={`text-base sm:text-xl mb-12 max-w-2xl mx-auto leading-relaxed text-gray-400`}>
+              <p className={`text-base sm:text-xl mb-12 max-w-2xl mx-auto leading-relaxed ${isDark ? "text-gray-400" : "text-gray-600 font-medium"}`}>
                 Gak perlu lagi pegal atau begadang menyalin teks. Ubah ketikan panjangmu menjadi tulisan tangan bolpoin super realistis di atas kertas folio, langsung dari browser.
               </p>
             </motion.div>
@@ -2175,22 +2175,22 @@ export default function Home() {
             </motion.div>
 
             {/* 6. Fitur List */}
-            <motion.div variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { delay: 0.5, duration: 1 } } }} className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-12 opacity-60">
+            <motion.div variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { delay: 0.5, duration: 1 } } }} className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-12">
               <div className="flex flex-col items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center"><Zap className="w-5 h-5 text-gray-300" /></div>
-                <div className="text-xs font-semibold text-gray-400">Real-time Preview</div>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-white/5" : "bg-violet-100 shadow-sm"}`}><Zap className={`w-5 h-5 ${isDark ? "text-gray-300" : "text-violet-600"}`} /></div>
+                <div className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-700"}`}>Real-time Preview</div>
               </div>
               <div className="flex flex-col items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center"><FileDown className="w-5 h-5 text-gray-300" /></div>
-                <div className="text-xs font-semibold text-gray-400">Export PDF & Word</div>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-white/5" : "bg-violet-100 shadow-sm"}`}><FileDown className={`w-5 h-5 ${isDark ? "text-gray-300" : "text-violet-600"}`} /></div>
+                <div className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-700"}`}>Export PDF & Word</div>
               </div>
               <div className="flex flex-col items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center"><BookOpen className="w-5 h-5 text-gray-300" /></div>
-                <div className="text-xs font-semibold text-gray-400">Flipbook 3D Mode</div>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-white/5" : "bg-violet-100 shadow-sm"}`}><BookOpen className={`w-5 h-5 ${isDark ? "text-gray-300" : "text-violet-600"}`} /></div>
+                <div className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-700"}`}>Flipbook 3D Mode</div>
               </div>
               <div className="flex flex-col items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center"><Bot className="w-5 h-5 text-gray-300" /></div>
-                <div className="text-xs font-semibold text-gray-400">AI Anti-Plagiasi</div>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-white/5" : "bg-violet-100 shadow-sm"}`}><Bot className={`w-5 h-5 ${isDark ? "text-gray-300" : "text-violet-600"}`} /></div>
+                <div className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-700"}`}>AI Anti-Plagiasi</div>
               </div>
             </motion.div>
 
