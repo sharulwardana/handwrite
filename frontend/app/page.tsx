@@ -4,8 +4,9 @@ import {
   FileText, Download, Settings, Sparkles, Image as ImageIcon,
   Moon, Sun, ZoomIn, ZoomOut, ChevronDown, Package, RefreshCw, X,
   PanelLeftClose, PanelLeftOpen, Maximize2, FileDown,
-  Clock, Trash2, Eye, CheckCircle2, Loader2, PenTool, Save, Copy,
-  Clipboard, Wifi, WifiOff, Menu, Bot, Mic, LogIn, LogOut, User // <-- Tambahkan Bot dan Mic
+  Clock, Trash2, CheckCircle2, Loader2, PenTool, Save, Copy,
+  Link, Clipboard, Wifi, WifiOff, Menu, Bot, Mic, LogIn, LogOut,
+  Zap, MessageCircle, BookOpen
 } from "lucide-react";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 import toast, { Toaster } from "react-hot-toast";
@@ -17,6 +18,11 @@ import { Document, Packer, Paragraph, ImageRun } from "docx";
 import ReactCrop, { type Crop, type PixelCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
+import * as mammoth from "mammoth";
+import HTMLFlipBook from "react-pageflip";
+import { QRCodeSVG } from "qrcode.react";
+// Kita manipulasi tipenya menjadi "any" agar TypeScript React 18 tidak protes
+const FlipBook = HTMLFlipBook as any;
 
 /* ─── TYPES ─────────────────────────────────────────── */
 interface Font { name: string; file: string; style: string }
@@ -46,15 +52,16 @@ interface SavedPreset {
 
 /* ─── CONSTANTS ──────────────────────────────────────── */
 const FONT_FAMILY_MAP: Record<string, string> = {
-  "Indie Flower": "'Indie Flower', cursive",
-  "Dancing Script": "'Dancing Script', cursive",
-  "Caveat": "'Caveat', cursive",
+  // --- FONT BARU (Super Rapi & Support Angka/Simbol) ---
+  "Virgil": "'Virgil', cursive",
+  "Architects Daughter": "'Architects Daughter', cursive",
+  "Gochi Hand": "'Gochi Hand', cursive",
+
+  // --- FONT LAMA (Yang paling bagus dan dipertahankan) ---
   "Patrick Hand": "'Patrick Hand', cursive",
   "Kalam": "'Kalam', cursive",
-  "Reenie Beanie": "'Reenie Beanie', cursive",
-  "Dekko": "'Dekko', cursive",
-  "Nanum Pen Script": "'Nanum Pen Script', cursive",
-  "Sriracha": "'Sriracha', cursive",
+  "Indie Flower": "'Indie Flower', cursive",
+  "Caveat": "'Caveat', cursive",
 };
 
 const INK_PRESETS = [
@@ -78,6 +85,7 @@ const DEFAULT_CONFIG = {
   fontSize: 25, color: "#1a1a1a", wordSpacing: 8,
   marginJitter: 6,
   enableDropCap: false,
+  paperTexture: false,
 };
 
 /* ─── SIDEBAR SECTION COMPONENT ─────────────────────── */
@@ -210,38 +218,121 @@ const getApiUrl = () => {
 
 const API_URL = getApiUrl();
 
+// === KOMPONEN BEFORE/AFTER SLIDER ===
+function BeforeAfterSlider() {
+  const [sliderPosition, setSliderPosition] = useState(50);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleMove = (clientX: number) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+    setSliderPosition((x / rect.width) * 100);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    handleMove(e.clientX);
+    const handleMouseMove = (me: MouseEvent) => handleMove(me.clientX);
+    const handleMouseUp = () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    handleMove(e.touches[0].clientX);
+    const handleTouchMove = (te: TouchEvent) => handleMove(te.touches[0].clientX);
+    const handleTouchEnd = () => {
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('touchend', handleTouchEnd);
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative w-full max-w-4xl mx-auto h-[250px] sm:h-[350px] rounded-3xl overflow-hidden cursor-ew-resize shadow-[0_24px_64px_rgba(139,92,246,0.15)] border border-[#ffffff15] select-none group bg-[#0A0A0C]"
+      onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
+    >
+      {/* Gambar AFTER (Tulisan Tangan) - Lapisan Bawah */}
+      <div
+        className="absolute inset-0 bg-white flex items-center justify-center p-8 sm:p-12"
+        style={{ backgroundImage: "radial-gradient(#8b5cf630 1px, transparent 1px)", backgroundSize: "28px 28px" }}
+      >
+        <p className="font-['Caveat',cursive] text-2xl sm:text-4xl text-[#1a3a7c] leading-relaxed opacity-90 text-left w-full max-w-3xl">
+          "Pendidikan adalah senjata paling ampuh yang bisa kamu gunakan untuk mengubah dunia. Setiap huruf yang kamu tulis adalah bukti bahwa kamu peduli pada masa depanmu."
+        </p>
+      </div>
+
+      {/* Gambar BEFORE (Teks Ketikan) - Lapisan Atas yang Terpotong */}
+      <div
+        className="absolute inset-0 bg-[#0A0A0C] flex items-center justify-center p-8 sm:p-12 border-r-[3px] border-violet-500 overflow-hidden shadow-[10px_0_20px_rgba(0,0,0,0.5)]"
+        style={{ width: `${sliderPosition}%` }}
+      >
+        <div className="w-full max-w-3xl absolute left-8 sm:left-12 pr-8">
+          <p className="font-mono text-sm sm:text-lg text-gray-300 leading-relaxed text-left">
+            "Pendidikan adalah senjata paling ampuh yang bisa kamu gunakan untuk mengubah dunia. Setiap huruf yang kamu tulis adalah bukti bahwa kamu peduli pada masa depanmu."
+          </p>
+        </div>
+      </div>
+
+      {/* Garis & Tombol Slider */}
+      <div
+        className="absolute top-0 bottom-0 w-0.5 flex items-center justify-center pointer-events-none transition-transform"
+        style={{ left: `calc(${sliderPosition}% - 1px)` }}
+      >
+        <div className="w-10 h-10 bg-white rounded-full shadow-[0_0_20px_rgba(139,92,246,0.5)] flex items-center justify-center text-violet-600 transition-transform group-hover:scale-110">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l-4 4 4 4m8-8l4 4-4 4" />
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
 
   // Cek apakah user sudah login saat web dibuka
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
+    supabase.auth.getUser().then(({ data, error }) => {
+      if (!error && data?.user) {
+        setUser(data.user);
+        setShowEditor(true); // Langsung ke editor kalau sudah login
+      }
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) setShowEditor(true); // <--- Tambahkan ini juga
     });
 
     return () => { authListener.subscription.unsubscribe(); };
   }, []);
 
-  // ── Ambil Riwayat dari Cloud ──
+  // ── Ambil Riwayat & Energi dari Cloud ──
   useEffect(() => {
-    if (!user) return; // Kalau belum login, jangan lakukan apa-apa
+    if (!user) return;
 
-    const fetchCloudHistory = async () => {
-      const { data, error } = await supabase
+    const fetchCloudData = async () => {
+      // 1. Ambil Riwayat
+      const { data: histData } = await supabase
         .from('user_history')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(20);
 
-      if (data && !error) {
-        // Ubah format data dari Supabase agar cocok dengan UI kita
-        const cloudHistory = data.map((d: any) => ({
+      if (histData) {
+        const cloudHistory = histData.map((d: any) => ({
           id: d.id,
           timestamp: new Date(d.created_at).getTime(),
           text: d.text_content,
@@ -252,14 +343,29 @@ export default function Home() {
           folioName: d.config.folioName || d.config.folioId,
           pageCount: d.config.pageCount || 1,
           textPreview: d.text_content.slice(0, 80) + (d.text_content.length > 80 ? "..." : ""),
-          thumbnail: "" // Kita kosongkan thumbnail di cloud agar database tidak penuh
+          thumbnail: ""
         }));
-
         setHistory(cloudHistory);
+      }
+
+      // 2. Ambil Energi (KODE BARU)
+      const { data: creditData } = await supabase
+        .from('user_credits')
+        .select('energy_balance')
+        .eq('email', user.email)
+        .single();
+
+      if (creditData) {
+        setEnergy(creditData.energy_balance);
+        localStorage.setItem("hw_energy", creditData.energy_balance.toString());
+      } else {
+        // Jika user belum ada di tabel credits, daftarkan dengan saldo default 5
+        await supabase.from('user_credits').insert([{ email: user.email, energy_balance: 5 }]);
+        setEnergy(5);
       }
     };
 
-    fetchCloudHistory();
+    fetchCloudData();
   }, [user]);
 
   const handleLogin = async () => {
@@ -275,6 +381,8 @@ export default function Home() {
   };
   const [inputText, setInputText] = useState("");
   const [text, setText] = useState("");
+  const [energy, setEnergy] = useState<number>(5); // Modal awal 5 Energi untuk user gratis
+  const [showQrisModal, setShowQrisModal] = useState(false);
   const [selectedFont, setSelectedFont] = useState("indie_flower");
 
   // ── Mencegah Lag saat mengetik (Debounce) ──
@@ -368,6 +476,9 @@ export default function Home() {
   const pinchStartDistRef = useRef<number | null>(null);
   const pinchStartZoomRef = useRef<number>(100);
   const [mobileZoom, setMobileZoom] = useState(100);
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [targetUserEmail, setTargetUserEmail] = useState("");
+  const [addAmount, setAddAmount] = useState(100);
 
   // Fungsi untuk mengekstrak area yang di-crop menjadi file gambar baru
   const getCroppedImg = async (image: HTMLImageElement, crop: PixelCrop): Promise<File> => {
@@ -396,9 +507,43 @@ export default function Home() {
   const fontDropdownRef = useRef<HTMLDivElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const bookRef = useRef<any>(null);
 
   // ── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => { setSeed(Date.now()); }, []);
+
+  // Efek untuk membaca parameter URL Kolaborasi
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const shareId = params.get("share");
+
+    if (shareId) {
+      const loadSharedConfig = async () => {
+        const tid = toast.loading("Menerapkan pengaturan dari teman... ✨");
+        try {
+          const { data, error } = await supabase
+            .from("shared_configs")
+            .select("*")
+            .eq("id", shareId)
+            .single();
+
+          if (error || !data) throw error;
+
+          setText(data.text);
+          setInputText(data.text);
+          if (data.config) updateConfig(data.config);
+          if (data.folio_id) setSelectedFolio(data.folio_id);
+          if (data.font_id) setSelectedFont(data.font_id);
+
+          toast.success("Pengaturan teman berhasil ditiru!", { id: tid });
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (err) {
+          toast.error("Gagal memuat atau link sudah kadaluarsa.", { id: tid });
+        }
+      };
+      loadSharedConfig();
+    }
+  }, []);
 
   useEffect(() => {
     if (!selectedFolio || !selectedFont) return;
@@ -425,9 +570,19 @@ export default function Home() {
             writeSpeed,
           }),
         });
+
+        // Mencegah parsing JSON jika response error (seperti 400 Bad Request)
+        if (!res.ok) {
+          console.warn("Backend belum siap merender preview (Folio/Font belum tersedia).");
+          setIsLoadingPreview(false);
+          return;
+        }
+
         const data = await res.json();
         if (data.image) setLivePreviewUrl(data.image);
-      } catch { }
+      } catch (err) {
+        console.warn("Gagal terhubung ke API Preview.");
+      }
       finally { setIsLoadingPreview(false); }
     }, 800);
   }, [selectedFont, selectedFolio, config.color, config.fontSize, config.wordSpacing, slantAngle, writeSpeed]);
@@ -552,6 +707,8 @@ export default function Home() {
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("hw_theme");
+    const savedEnergy = localStorage.getItem("hw_energy");
+    if (savedEnergy !== null) setEnergy(parseInt(savedEnergy));
     if (savedTheme) {
       setIsDark(savedTheme === "dark");
     } else {
@@ -565,6 +722,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => { localStorage.setItem("hw_config", JSON.stringify(config)); }, [config]);
+  useEffect(() => { localStorage.setItem("hw_energy", energy.toString()); }, [energy]);
   useEffect(() => { localStorage.setItem("hw_lastFont", selectedFont); }, [selectedFont]);
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -692,6 +850,14 @@ export default function Home() {
   const handleGenerate = useCallback(async () => {
     if (!text.trim()) { toast.error("Masukkan teks dulu!"); return; }
     if (!selectedFolio) { toast.error("Pilih folio dulu!"); return; }
+    // ── KODE RAHASIA DEVELOPER (GOD MODE) ──
+    const isDeveloper = user?.email === "sharulwrdn10@gmail.com"; // GANTI DENGAN EMAIL ASLI ANDA
+
+    // Cek apakah energi cukup (Developer bebas batas)
+    if (!isDeveloper && energy < estimatedPages) {
+      setShowQrisModal(true);
+      return;
+    }
 
     setIsGenerating(true);
     setIsStreaming(true);
@@ -771,7 +937,6 @@ export default function Home() {
               setStreamedPages([...collectedPages]);
               setActivePageIndex(0); // Fix: selalu reset ke halaman pertama saat streaming
               setGenerateProgress(Math.round((msg.page / Math.max(1, totalPages)) * 100));
-              console.log("[SSE] Page received:", msg.page, "image length:", msg.image?.length);
               if (msg.page === 1) {
                 toast.success("✨ Halaman pertama selesai!", { id: tid, duration: 2000 });
                 setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 200);
@@ -782,8 +947,28 @@ export default function Home() {
               setGeneratedPages(collectedPages);
               setStreamedPages([]);
               setGenerateProgress(100);
+
+              // ── POTONG ENERGI DI UI & DATABASE (Kecuali Developer) ──
+              if (user?.email !== "sharulwrdn10@gmail.com") {
+                // Hitung sisa energi: Energi saat ini dikurangi jumlah halaman yang baru dibuat
+                const deduction = collectedPages.length;
+                const newBalance = Math.max(0, energy - deduction);
+
+                // 1. Update di layar (UI)
+                setEnergy(newBalance);
+
+                // 2. Update di Database Supabase
+                if (user?.email) {
+                  await supabase
+                    .from('user_credits')
+                    .update({ energy_balance: newBalance })
+                    .eq('email', user.email);
+                }
+              }
+
               toast.success(`✅ ${collectedPages.length} halaman selesai!`, { duration: 3000 });
 
+              // Simpan ke Cache & History (Sisa kode di bawahnya tetap sama)
               try {
                 await fetch(`${API_URL}/api/cache/save`, {
                   method: "POST", headers: { "Content-Type": "application/json" },
@@ -837,7 +1022,7 @@ export default function Home() {
       setTimeout(() => setGenerateProgress(0), 1500);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text, selectedFolio, selectedFont, config, seed, useDoubleFolio, selectedFolioEven,
+  }, [text, selectedFolio, selectedFont, config, seed, energy, useDoubleFolio, selectedFolioEven,
     leftHanded, writeSpeed, enableTypo, slantAngle, tiredMode, showPageNumber,
     pageNumberFormat, watermarkText, history, currentFont, currentFolio, sessionId, API_URL]);
 
@@ -850,12 +1035,14 @@ export default function Home() {
       }
       if (e.key === "ArrowRight" && !isGenerating && generatedPages.length > 0) {
         e.preventDefault();
-        setActivePageIndex(i => Math.min(generatedPages.length - 1, i + 1));
+        if (bookRef.current?.pageFlip) bookRef.current.pageFlip().flipNext();
+        else setActivePageIndex(i => Math.min(generatedPages.length - 1, i + 1));
         return;
       }
       if (e.key === "ArrowLeft" && !isGenerating && generatedPages.length > 0) {
         e.preventDefault();
-        setActivePageIndex(i => Math.max(0, i - 1));
+        if (bookRef.current?.pageFlip) bookRef.current.pageFlip().flipPrev();
+        else setActivePageIndex(i => Math.max(0, i - 1));
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
@@ -869,6 +1056,7 @@ export default function Home() {
   }, [isGenerating, text, selectedFolio, handleGenerate]);
 
   // ── Downloads ────────────────────────────────────────────────────────────────
+  // ── FUNGSI SHARE HALAMAN ──
   const handleSharePage = async (page: GeneratedPage) => {
     if (!navigator.share || !navigator.canShare) {
       handleDownloadSingle(page);
@@ -891,6 +1079,64 @@ export default function Home() {
     }
   };
 
+  // ── FUNGSI SHARE LINK PUBLIK ──
+  const handleSharePublicLink = async () => {
+    if (!text.trim()) {
+      toast.error("Ketikan teksnya terlebih dahulu!");
+      return;
+    }
+    const tid = toast.loading("Merakit link awan... ☁️");
+    try {
+      const { data, error } = await supabase
+        .from("shared_configs")
+        .insert([{
+          text: text, config: config, folio_id: selectedFolio, font_id: selectedFont
+        }])
+        .select("id")
+        .single();
+
+      if (error) throw error;
+
+      const shareUrl = `${window.location.origin}/?share=${data.id}`;
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success("Link tercopy! Bagikan ke temanmu 🚀", { id: tid, duration: 4000 });
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal membuat link kolaborasi.", { id: tid });
+    }
+  };
+
+  // ── FUNGSI UPDATE ENERGI (KHUSUS ADMIN) ──
+  const handleAdminUpdateEnergy = async () => {
+    if (user?.email !== "sharulwrdn10@gmail.com") {
+      toast.error("Akses ditolak: Anda bukan admin.");
+      return;
+    }
+    if (!targetUserEmail) {
+      toast.error("Masukkan email user target!");
+      return;
+    }
+
+    const tid = toast.loading("Mengirim energi ke database... ⚡");
+    try {
+      const { error } = await supabase
+        .from("user_credits")
+        .upsert({
+          email: targetUserEmail.toLowerCase().trim(),
+          energy_balance: addAmount,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      toast.success(`Berhasil! ${targetUserEmail} sekarang punya ${addAmount} energi.`, { id: tid });
+      setTargetUserEmail("");
+      setShowAdminModal(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal update. Pastikan koneksi database aman.", { id: tid });
+    }
+  };
   const handleLoadDemo = () => {
     setInputText(DEMO_TEXT);
     setText(DEMO_TEXT);
@@ -959,22 +1205,48 @@ export default function Home() {
     }
   };
 
-  const handleExportPdf = async () => {
+  const handleExportPdf = async (quality: "low" | "high") => {
     if (!generatedPages.length) return;
     setIsExportingPdf(true);
-    const tid = toast.loading("Merakit PDF...");
+    const tid = toast.loading(quality === "low" ? "Merakit PDF (Hemat Kuota)..." : "Merakit PDF (Resolusi Tinggi)...");
+
     try {
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
+
       for (let i = 0; i < generatedPages.length; i++) {
         if (i > 0) pdf.addPage();
-        pdf.addImage(generatedPages[i].image, "JPEG", 0, 0, pdfWidth, pdfHeight);
+
+        let imgData = generatedPages[i].image;
+
+        // Jika mode Hemat Kuota, kompres ukuran gambar di Canvas HTML5 sebelum masuk ke PDF
+        if (quality === "low") {
+          const img = new window.Image();
+          img.src = imgData;
+          await new Promise((resolve) => { img.onload = resolve; });
+
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width * 0.45; // Perkecil dimensi jadi 45% dari aslinya
+          canvas.height = img.height * 0.45;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            imgData = canvas.toDataURL("image/jpeg", 0.6); // Kualitas JPEG 60%
+          }
+        }
+
+        // Terapkan kompresi internal jsPDF ("FAST" = ringan, "SLOW" = kualitas tinggi)
+        pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, quality === "low" ? "FAST" : "SLOW");
       }
-      pdf.save("Tugas_Handwriting_AI.pdf");
+
+      pdf.save(`Tugas_TulisanTangan_${quality === "low" ? "Hemat" : "HD"}.pdf`);
       toast.success("PDF berhasil didownload!", { id: tid });
-    } catch { toast.error("Gagal membuat PDF", { id: tid }); }
-    finally { setIsExportingPdf(false); }
+    } catch {
+      toast.error("Gagal membuat PDF", { id: tid });
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   const handleExportDocx = async () => {
@@ -1178,16 +1450,16 @@ export default function Home() {
   const D = isDark;
   const c = useMemo(() => ({
     page: D
-      ? "bg-[#09090b]"
-      : "bg-gradient-to-br from-violet-200 via-indigo-100 to-purple-200",
+      ? "bg-[#0A0A0C]" // Deep Space pekat
+      : "bg-[#FAFAFB]", // Putih bersih modern
 
     header: D
-      ? "bg-[#0d0d14]/90 border-[#ffffff0d] backdrop-blur-2xl shadow-[0_1px_0_rgba(255,255,255,0.04)]"
-      : "bg-gradient-to-r from-violet-50/95 via-white/95 to-indigo-50/95 border-violet-300/80 backdrop-blur-2xl shadow-[0_1px_0_rgba(139,92,246,0.18)]",
+      ? "bg-[#0A0A0C]/50 border-b border-[#ffffff08] backdrop-blur-xl supports-[backdrop-filter]:bg-[#0A0A0C]/30"
+      : "bg-white/60 border-b border-violet-100/50 backdrop-blur-xl supports-[backdrop-filter]:bg-white/40 shadow-sm",
 
     sidebar: D
-      ? "bg-[#0d0d14]/85 border-[#ffffff0a] backdrop-blur-xl shadow-[4px_0_24px_rgba(139,92,246,0.08)]"
-      : "bg-gradient-to-b from-violet-100 via-indigo-50 to-purple-100 border-violet-300/80 backdrop-blur-xl shadow-[4px_0_24px_rgba(139,92,246,0.12)]",
+      ? "bg-[#0A0A0C]/40 border-r border-[#ffffff08] backdrop-blur-2xl"
+      : "bg-white/50 border-r border-violet-100/50 backdrop-blur-2xl",
 
     card: D
       ? "bg-[#13131f] border-[#ffffff0d] shadow-[0_2px_16px_rgba(0,0,0,0.4)] backdrop-blur-sm transition-colors"
@@ -1494,14 +1766,13 @@ export default function Home() {
           )}
         </div>
 
-        {/* Toggle Drop Cap — ditambahkan setelah Nomor Halaman */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mt-4">
           <div>
-            <p className={`text-[10.5px] font-semibold uppercase tracking-widest ${c.label}`}>Drop Cap</p>
-            <p className={`text-[10px] mt-0.5 ${c.ts}`}>{enableDropCap ? "Huruf pertama paragraf lebih besar" : "Ukuran huruf seragam"}</p>
+            <p className={`text-[10.5px] font-semibold uppercase tracking-widest ${c.label}`}>Tekstur Kertas</p>
+            <p className={`text-[10px] mt-0.5 ${c.ts}`}>{config.paperTexture ? "Ada bayangan & lipatan" : "Kertas datar bersih"}</p>
           </div>
-          <ToggleSwitch value={enableDropCap} onChange={setEnableDropCap}
-            colorClass="bg-pink-500 border-pink-400" isDark={D} />
+          <ToggleSwitch value={config.paperTexture ?? false} onChange={(v) => updateConfig({ ...config, paperTexture: v })}
+            colorClass="bg-stone-500 border-stone-400" isDark={D} />
         </div>
       </SidebarSection>
 
@@ -1689,7 +1960,10 @@ export default function Home() {
 
       <button onClick={() => setShowConfig(!showConfig)}
         className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-xs font-medium transition-all ${showConfig ? c.btnActive : c.btn}`}>
-        <div className="flex items-center gap-2"><Settings className="w-3.5 h-3.5" /><span>Advanced Config</span></div>
+        <div className="flex items-center gap-2">
+          <Settings className="w-3.5 h-3.5" />
+          <span>Advanced Config</span>
+        </div>
         <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showConfig ? "rotate-180" : ""}`} />
       </button>
 
@@ -1725,1727 +1999,2114 @@ export default function Home() {
   return (
     <div className={`min-h-screen ${c.page} transition-colors duration-300`} style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}>
 
-      <Toaster position="top-right" toastOptions={{
+      <Toaster position="top-center" toastOptions={{
         duration: 3000,
         style: {
-          background: D ? "#1a1a28" : "#1f2937", color: "#fff",
-          padding: "12px 16px", borderRadius: "12px",
-          fontSize: "13.5px", fontWeight: "500",
-          border: D ? "1px solid rgba(255,255,255,0.08)" : "none",
-          boxShadow: "0 12px 40px rgba(0,0,0,0.35)",
+          background: D ? "rgba(10, 10, 12, 0.85)" : "rgba(255, 255, 255, 0.85)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          color: D ? "#fff" : "#111",
+          padding: "14px 24px",
+          borderRadius: "999px", // Bentuk kapsul Dynamic Island
+          fontSize: "13px",
+          fontWeight: "600",
+          letterSpacing: "0.2px",
+          border: D ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(139,92,246,0.15)",
+          boxShadow: D ? "0 20px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.02)" : "0 20px 40px rgba(139,92,246,0.15)",
         },
       }} />
 
-      {/* ── MESH GRADIENT BACKGROUND ── */}
-      <div className="fixed inset-0 pointer-events-none z-[-1]">
-        {isDark ? (
-          <div className="absolute inset-0"
-            style={{
-              background: "radial-gradient(ellipse 80% 50% at 20% 0%, #3b0764 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 100%, #1e1b4b 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 50% 50%, #0f0a1e 0%, #09090b 100%)"
-            }} />
-        ) : (
-          <div className="absolute inset-0"
-            style={{
-              background: "radial-gradient(ellipse 80% 50% at 20% 0%, #a78bfa 0%, transparent 55%), radial-gradient(ellipse 60% 40% at 80% 100%, #818cf8 0%, transparent 55%), radial-gradient(ellipse 50% 60% at 50% 50%, #c4b5fd 0%, #ddd6fe 100%)"
-            }} />
-        )}
-      </div>
+      {/* --- TAMBAHKAN KODE INI MULAI DARI SINI --- */}
+      {!showEditor && !user ? (
+        /* ══ LANDING PAGE SECTION ══ */
+        <div className="relative min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 text-center overflow-x-hidden">
+          {/* Background Ambient Glow */}
+          <div className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none">
+            <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/20 blur-[150px] animate-pulse" />
+            <div className="absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-600/20 blur-[150px]" />
+          </div>
 
-      {/* ── MODAL CROPPER FOTO TULISAN TANGAN ── */}
-      <AnimatePresence>
-        {isCropping && cropImgSrc && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsCropping(false)} />
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              className={`relative w-full max-w-2xl rounded-2xl p-5 border shadow-2xl flex flex-col ${isDark ? "bg-[#18181b] border-[#ffffff14]" : "bg-white border-gray-200"}`} style={{ maxHeight: '90vh' }}>
-
-              <div className="flex items-center justify-between mb-4 flex-shrink-0">
-                <div>
-                  <h3 className={`font-bold text-lg ${c.tp}`}>Potong Area Tulisan</h3>
-                  <p className={`text-xs ${c.ts}`}>Buang area meja/background agar AI fokus membaca tulisanmu.</p>
-                </div>
-                <button onClick={() => setIsCropping(false)} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${c.btn}`}>
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="flex-1 min-h-0 overflow-auto rounded-xl border border-dashed border-gray-500/30 bg-black/10 flex items-center justify-center p-2">
-                <ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} onComplete={(c) => setCompletedCrop(c)}>
-                  <img ref={cropImgRef} src={cropImgSrc} alt="Crop me" className="max-h-[55vh] w-auto object-contain rounded" />
-                </ReactCrop>
-              </div>
-
-              <div className="flex justify-end gap-3 mt-5 flex-shrink-0">
-                <button onClick={() => setIsCropping(false)} className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${c.btn}`}>
-                  Batal
-                </button>
-                <button onClick={async () => {
-                  if (cropImgRef.current && completedCrop?.width && completedCrop?.height) {
-                    try {
-                      // 1. Ekstrak gambar
-                      const croppedFile = await getCroppedImg(cropImgRef.current, completedCrop);
-                      // 2. Tutup Modal
-                      setIsCropping(false);
-                      setCropImgSrc("");
-                      setCrop(undefined); // Reset state crop
-                      // 3. Kirim ke Backend untuk dianalisis
-                      handleAnalyzeHandwriting(croppedFile);
-                    } catch (e) { toast.error("Gagal memotong gambar"); }
-                  } else {
-                    toast.error("Tarik kotak untuk memilih area tulisan!");
-                  }
-                }} className={`px-6 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r ${c.accent} text-white shadow-lg hover:scale-105 active:scale-95 transition-all`}>
-                  <div className="flex items-center gap-2"><Sparkles className="w-4 h-4" /> Analisis AI</div>
-                </button>
+          {/* Staggered Container */}
+          <motion.div
+            initial="hidden"
+            animate="show"
+            variants={{
+              hidden: { opacity: 0 },
+              show: { opacity: 1, transition: { staggerChildren: 0.15 } }
+            }}
+            className="relative z-10 w-full max-w-5xl mx-auto flex flex-col items-center mt-12 mb-20"
+          >
+            {/* 1. Badge */}
+            <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } }}>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#ffffff08] border border-[#ffffff15] mb-8 shadow-xl backdrop-blur-md">
+                <Sparkles className="w-4 h-4 text-violet-400" />
+                <span className="text-xs font-bold uppercase tracking-widest text-gray-300">Teknologi Humanizer AI</span>
               </div>
             </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
-      {/* ── MODAL KONFIRMASI ANALISIS TULISAN TANGAN ── */}
-      <AnimatePresence>
-        {pendingHwConfig && (
-          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPendingHwConfig(null)} />
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              className={`relative w-full max-w-sm rounded-2xl p-5 border shadow-2xl ${isDark ? "bg-[#18181b] border-[#ffffff14]" : "bg-white border-gray-200"}`}>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-violet-500/20 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-violet-500" />
-                </div>
-                <div>
-                  <h3 className={`font-semibold ${c.tp}`}>Hasil Analisis AI</h3>
-                  <p className={`text-[11px] ${c.ts}`}>Karakter tulisanmu berhasil dideteksi.</p>
-                </div>
-              </div>
-
-              <div className={`space-y-2.5 mb-5 p-3.5 rounded-xl border ${c.pillBorder} ${c.pill} shadow-inner`}>
-                <div className="flex items-center justify-between text-xs">
-                  <span className={c.ts}>Kemiringan:</span>
-                  <span className={`font-mono font-bold ${c.tp}`}>{pendingHwConfig.slantAngle}°</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className={c.ts}>Spasi & Ukuran:</span>
-                  <span className={`font-mono font-bold ${c.tp}`}>{pendingHwConfig.wordSpacing}px · {pendingHwConfig.fontSize}px</span>
-                </div>
-
-                {/* Menampilkan Warna Tinta Hasil Deteksi AI */}
-                {pendingHwConfig.color && (
-                  <div className={`pt-2 mt-2 border-t ${c.divider} flex items-center justify-between text-xs`}>
-                    <span className={c.ts}>Warna Pulpen:</span>
-                    <div className="flex items-center gap-2">
-                      <span className={`font-mono font-semibold uppercase ${c.tp}`}>{pendingHwConfig.color}</span>
-                      <div
-                        className="w-5 h-5 rounded-full ring-2 ring-black/10 shadow-sm"
-                        style={{ backgroundColor: pendingHwConfig.color, border: '1px solid rgba(255,255,255,0.2)' }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <button onClick={() => setPendingHwConfig(null)} className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${c.btn}`}>
-                  Batal
-                </button>
-                <button onClick={() => {
-                  updateConfig({ ...config, ...pendingHwConfig });
-                  if (pendingHwConfig.slantAngle !== undefined) setSlantAngle(pendingHwConfig.slantAngle);
-                  setPendingHwConfig(null);
-                  toast.success("Gaya tulisan tanganmu diterapkan!");
-                }}
-                  className={`flex-1 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r ${c.accent} text-white shadow-lg`}>
-                  Terapkan
-                </button>
-              </div>
+            {/* 2. Headline */}
+            <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } }}>
+              <h1 className={`text-5xl sm:text-6xl md:text-8xl font-black mb-6 tracking-tight leading-[1.1] ${c.tp}`}>
+                Tugas Tulis Tangan <br />
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-400 via-indigo-400 to-cyan-400">
+                  Selesai dalam 5 Detik.
+                </span>
+              </h1>
             </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
-      {/* ── MODAL AI WRITER ── */}
-      <AnimatePresence>
-        {showAiModal && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isAiDrafting && setShowAiModal(false)} />
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              className={`relative w-full max-w-lg rounded-2xl p-5 border shadow-2xl ${isDark ? "bg-[#18181b] border-[#ffffff14]" : "bg-white border-gray-200"}`}>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
-                    <Bot className="w-4 h-4 text-indigo-500" />
-                  </div>
-                  <h3 className={`font-bold ${c.tp}`}>Asisten AI</h3>
-                </div>
-                <button onClick={() => { setShowAiModal(false); setAiDraftResult(""); }} className={c.ts}><X className="w-4 h-4" /></button>
-              </div>
-              <textarea
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder="Contoh: Buatkan esai 3 paragraf tentang sejarah kemerdekaan Indonesia..."
-                className={`w-full h-28 p-3 rounded-xl text-sm border focus:ring-2 focus:ring-indigo-500/50 resize-none ${c.input}`}
-              />
+            {/* 3. Deskripsi */}
+            <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } }}>
+              <p className={`text-base sm:text-xl mb-12 max-w-2xl mx-auto leading-relaxed text-gray-400`}>
+                Gak perlu lagi pegal atau begadang menyalin teks. Ubah ketikan panjangmu menjadi tulisan tangan bolpoin super realistis di atas kertas folio, langsung dari browser.
+              </p>
+            </motion.div>
 
-              {/* Preview hasil AI sebelum dikirim ke editor */}
-              {aiDraftResult && (
-                <div className={`mt-3 rounded-xl border overflow-hidden ${D ? "border-[#ffffff10]" : "border-gray-200"}`}>
-                  <div className={`flex items-center justify-between px-3 py-2 border-b ${D ? "bg-white/4 border-[#ffffff08]" : "bg-gray-50 border-gray-100"}`}>
-                    <span className={`text-[11px] font-semibold ${c.ts}`}>Hasil AI</span>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(aiDraftResult);
-                          toast.success("Teks AI disalin!");
-                        }}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all border ${c.btn}`}>
-                        <Copy className="w-3 h-3" />Salin
-                      </button>
-                      <button
-                        onClick={() => setAiDraftResult("")}
-                        className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${D ? "text-white/30 hover:text-white/60" : "text-gray-300 hover:text-gray-500"}`}>
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                  <div className={`p-3 max-h-40 overflow-y-auto scrollbar-thin text-xs leading-relaxed ${c.tm}`}>
-                    {aiDraftResult}
-                  </div>
-                  <div className={`px-3 py-2 border-t ${D ? "border-[#ffffff08]" : "border-gray-100"}`}>
-                    <button
-                      onClick={() => {
-                        const aiText = (text.length > 0 ? "\n\n" : "") + aiDraftResult.trim();
-                        setInputText(prev => prev + aiText);
-                        setText(prev => prev + aiText);
-                        setAiDraftResult("");
-                        setShowAiModal(false);
-                        setAiPrompt("");
-                        toast.success("Teks berhasil ditambahkan ke editor! ✨");
-                      }}
-                      className={`w-full py-2 rounded-xl text-xs font-bold bg-gradient-to-r ${c.accent} text-white hover:opacity-90 active:scale-95 transition-all`}>
-                      Kirim ke Editor →
-                    </button>
-                  </div>
-                </div>
-              )}
-              <button
-                disabled={!aiPrompt.trim() || isAiDrafting}
-                onClick={async () => {
-                  setIsAiDrafting(true);
-                  try {
-                    const res = await fetch(`${API_URL}/api/ai-writer`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ prompt: aiPrompt })
-                    });
+            {/* 4. Interaktif Before/After Slider */}
+            <motion.div variants={{ hidden: { opacity: 0, scale: 0.95, y: 30 }, show: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 25 } } }} className="w-full mb-16">
+              <BeforeAfterSlider />
+              <p className="text-[11px] text-gray-500 mt-4 uppercase tracking-widest font-bold">Geser slider untuk melihat keajaiban 👆</p>
+            </motion.div>
 
-                    const data = await res.json();
-
-                    if (data.success) {
-                      setAiDraftResult(data.text.trim());
-                      toast.success("Teks AI siap! Cek preview di bawah. ✨");
-                    } else {
-                      throw new Error(data.error || "Gagal menghubungi AI");
-                    }
-                  } catch (e: unknown) {
-                    const err = e as Error;
-                    toast.error(err.message);
-                  } finally {
-                    setIsAiDrafting(false);
-                  }
-                }}
-                className={`w-full mt-4 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r ${c.accent} text-white transition-all flex justify-center items-center gap-2 ${isAiDrafting ? "opacity-70" : "hover:scale-[1.02] active:scale-95"}`}>
-                {isAiDrafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                {isAiDrafting ? "AI Sedang Menulis..." : "Buat Teks"}
+            {/* 5. Tombol Aksi */}
+            <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } }} className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto px-6">
+              <button onClick={handleLogin} className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white text-black font-black text-lg shadow-[0_0_40px_rgba(255,255,255,0.3)] transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
+                <LogIn className="w-5 h-5" />
+                Mulai Gratis Sekarang
+              </button>
+              <button onClick={() => setShowEditor(true)} className={`w-full sm:w-auto px-8 py-4 rounded-2xl border font-bold text-lg transition-all hover:bg-white/10 active:scale-95 border-[#ffffff15] text-white flex items-center justify-center gap-2`}>
+                <PenTool className="w-5 h-5 opacity-70" />
+                Coba Demo Editor
               </button>
             </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
-      {/* ── MOBILE SIDEBAR OVERLAY ── */}
-      <AnimatePresence>
-        {mobileSidebarOpen && (
-          <>
-            <motion.div
-              key="mob-backdrop"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden"
-              onClick={() => setMobileSidebarOpen(false)}
-            />
-            <motion.aside
-              key="mob-drawer"
-              initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className={`fixed top-0 left-0 bottom-0 w-[300px] md:w-[320px] max-w-[85vw] z-[70] overflow-y-auto border-r ${c.sidebar}`}
-            >
-              <div className={`sticky top-0 flex items-center justify-between px-4 h-14 border-b ${c.divider} ${D ? "bg-[#121217]/90" : "bg-white/90"} backdrop-blur-md z-10`}>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                    <PenTool className="w-3 h-3 text-white" />
-                  </div>
-                  <span className={`text-[13px] font-semibold ${c.tp}`}>Pengaturan</span>
-                </div>
-                <button onClick={() => setMobileSidebarOpen(false)}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${c.btn}`}>
-                  <X className="w-4 h-4" />
-                </button>
+            {/* 6. Fitur List */}
+            <motion.div variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { delay: 0.5, duration: 1 } } }} className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-12 opacity-60">
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center"><Zap className="w-5 h-5 text-gray-300" /></div>
+                <div className="text-xs font-semibold text-gray-400">Real-time Preview</div>
               </div>
-              {renderSidebarContent()}
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* ── ONBOARDING TOUR ── */}
-      {showOnboarding && (
-        <div className="fixed inset-0 z-[200] pointer-events-none">
-          {/* Overlay gelap — lebih terang di step 0 (welcome) */}
-          <motion.div
-            className="absolute inset-0 pointer-events-auto"
-            animate={{ backgroundColor: onboardingStep === 0 ? "rgba(0,0,0,0.7)" : "rgba(0,0,0,0.55)" }}
-            transition={{ duration: 0.3 }}
-            onClick={() => { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); }}
-          />
-
-          {/* Spotlight ring — muncul di step 1, 2, 3 */}
-          {onboardingStep > 0 && (() => {
-            const targetId = ONBOARDING_SPOTLIGHT[onboardingStep]?.selector;
-            const el = targetId ? document.getElementById(targetId) : null;
-            const rect = el?.getBoundingClientRect();
-            if (!rect) return null;
-            return (
-              <motion.div
-                key={targetId}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3 }}
-                className="absolute pointer-events-none rounded-2xl"
-                style={{
-                  top: rect.top - 6,
-                  left: rect.left - 6,
-                  width: rect.width + 12,
-                  height: rect.height + 12,
-                  boxShadow: "0 0 0 4px #7C3AED, 0 0 0 9999px rgba(0,0,0,0.55)",
-                  border: "2px solid rgba(139,92,246,0.8)",
-                }}
-              />
-            );
-          })()}
-
-          <div className="absolute pointer-events-auto left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-            style={{ maxWidth: "340px", width: "90vw" }}>
-            <div className={`rounded-2xl border shadow-2xl p-5 ${isDark
-              ? "bg-[#0d0d14] border-[#ffffff10] shadow-[0_24px_64px_rgba(0,0,0,0.8)]"
-              : "bg-white border-violet-100 shadow-[0_24px_64px_rgba(139,92,246,0.15)]"}`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex gap-1.5">
-                  {[0, 1, 2, 3].map(i => (
-                    <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === onboardingStep ? "w-6 bg-violet-500" : i < onboardingStep ? "w-3 bg-violet-300" : "w-3 bg-gray-300 dark:bg-white/10"}`} />
-                  ))}
-                </div>
-                <button onClick={() => { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); }}
-                  className={`text-[11px] px-2 py-1 rounded-lg transition-colors ${isDark ? "text-white/40 hover:text-white/70 hover:bg-white/5" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}>
-                  Skip
-                </button>
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center"><FileDown className="w-5 h-5 text-gray-300" /></div>
+                <div className="text-xs font-semibold text-gray-400">Export PDF & Word</div>
               </div>
-              <div className="text-3xl mb-2">{[["✍️"], ["🎨"], ["📝"], ["🚀"]][onboardingStep]}</div>
-              <h3 className={`text-sm font-bold mb-1.5 ${isDark ? "text-white" : "text-gray-900"}`}>
-                {["Selamat datang di HandWrite AI! 🎉", "Pilih & Atur Gaya Tulisan", "Ketik atau Tempel Teks", "Generate & Download"][onboardingStep]}
-              </h3>
-              <p className={`text-[12px] leading-relaxed mb-4 ${isDark ? "text-white/60" : "text-gray-500"}`}>
-                {["Ubah teks apapun jadi tulisan tangan realistis di atas folio dalam hitungan detik.", "Di sidebar kiri, pilih font, kemiringan, warna tinta, efek typo, dan banyak lagi untuk tulisan yang benar-benar terasa manusiawi.", "Paste teks tugasmu di area utama. Bisa sampai 50.000 karakter! Gunakan Ctrl+Enter untuk langsung Generate.", "Klik Generate dan halaman muncul satu per satu secara real-time. Download sebagai JPG, ZIP, PDF, atau Word."][onboardingStep]}
-              </p>
-              <div className="flex gap-2">
-                {onboardingStep > 0 && (
-                  <button onClick={() => setOnboardingStep(s => s - 1)}
-                    className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all ${isDark ? "border-white/10 text-white/60 hover:bg-white/5" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
-                    ← Kembali
-                  </button>
-                )}
-                <button onClick={() => { if (onboardingStep < 3) setOnboardingStep(s => s + 1); else { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); } }}
-                  className="flex-1 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 transition-all">
-                  {onboardingStep < 3 ? "Lanjut →" : "Mulai Sekarang! 🚀"}
-                </button>
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center"><BookOpen className="w-5 h-5 text-gray-300" /></div>
+                <div className="text-xs font-semibold text-gray-400">Flipbook 3D Mode</div>
               </div>
-            </div>
-          </div>
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center"><Bot className="w-5 h-5 text-gray-300" /></div>
+                <div className="text-xs font-semibold text-gray-400">AI Anti-Plagiasi</div>
+              </div>
+            </motion.div>
+
+          </motion.div>
         </div>
-      )}
+      ) : (
+        <>
+          {/* ── MESH GRADIENT BACKGROUND ── */}
+          <div className="fixed inset-0 pointer-events-none z-[-1]">
+            {isDark ? (
+              <div className="absolute inset-0"
+                style={{
+                  background: "radial-gradient(ellipse 80% 50% at 20% 0%, #3b0764 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 100%, #1e1b4b 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 50% 50%, #0f0a1e 0%, #09090b 100%)"
+                }} />
+            ) : (
+              <div className="absolute inset-0"
+                style={{
+                  background: "radial-gradient(ellipse 80% 50% at 20% 0%, #a78bfa 0%, transparent 55%), radial-gradient(ellipse 60% 40% at 80% 100%, #818cf8 0%, transparent 55%), radial-gradient(ellipse 50% 60% at 50% 50%, #c4b5fd 0%, #ddd6fe 100%)"
+                }} />
+            )}
+          </div>
 
-      {/* ── KEYBOARD SHORTCUT MODAL ── */}
-      <AnimatePresence>
-        {showShortcuts && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setShowShortcuts(false)} />
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              className={`relative w-full max-w-sm rounded-2xl p-5 border shadow-2xl ${D ? "bg-[#18181b] border-[#ffffff14]" : "bg-white border-gray-200"}`}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className={`font-bold text-base ${c.tp}`}>⌨️ Keyboard Shortcuts</h3>
-                <button onClick={() => setShowShortcuts(false)}
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center ${c.btn}`}>
-                  <X className="w-3.5 h-3.5" />
-                </button>
+          {/* ── MODAL CROPPER FOTO TULISAN TANGAN ── */}
+          <AnimatePresence>
+            {isCropping && cropImgSrc && (
+              <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsCropping(false)} />
+                <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                  className={`relative w-full max-w-2xl rounded-2xl p-5 border shadow-2xl flex flex-col ${isDark ? "bg-[#18181b] border-[#ffffff14]" : "bg-white border-gray-200"}`} style={{ maxHeight: '90vh' }}>
+
+                  <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                    <div>
+                      <h3 className={`font-bold text-lg ${c.tp}`}>Potong Area Tulisan</h3>
+                      <p className={`text-xs ${c.ts}`}>Buang area meja/background agar AI fokus membaca tulisanmu.</p>
+                    </div>
+                    <button onClick={() => setIsCropping(false)} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${c.btn}`}>
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="flex-1 min-h-0 overflow-auto rounded-xl border border-dashed border-gray-500/30 bg-black/10 flex items-center justify-center p-2">
+                    <ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} onComplete={(c) => setCompletedCrop(c)}>
+                      <img ref={cropImgRef} src={cropImgSrc} alt="Crop me" className="max-h-[55vh] w-auto object-contain rounded" />
+                    </ReactCrop>
+                  </div>
+
+                  <div className="flex justify-end gap-3 mt-5 flex-shrink-0">
+                    <button onClick={() => setIsCropping(false)} className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${c.btn}`}>
+                      Batal
+                    </button>
+                    <button onClick={async () => {
+                      if (cropImgRef.current && completedCrop?.width && completedCrop?.height) {
+                        try {
+                          // 1. Ekstrak gambar
+                          const croppedFile = await getCroppedImg(cropImgRef.current, completedCrop);
+                          // 2. Tutup Modal
+                          setIsCropping(false);
+                          setCropImgSrc("");
+                          setCrop(undefined); // Reset state crop
+                          // 3. Kirim ke Backend untuk dianalisis
+                          handleAnalyzeHandwriting(croppedFile);
+                        } catch (e) { toast.error("Gagal memotong gambar"); }
+                      } else {
+                        toast.error("Tarik kotak untuk memilih area tulisan!");
+                      }
+                    }} className={`px-6 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r ${c.accent} text-white shadow-lg hover:scale-105 active:scale-95 transition-all`}>
+                      <div className="flex items-center gap-2"><Sparkles className="w-4 h-4" /> Analisis AI</div>
+                    </button>
+                  </div>
+                </motion.div>
               </div>
-              <div className="space-y-1.5">
-                {[
-                  { keys: ["Ctrl", "Enter"], label: "Generate tulisan" },
-                  { keys: ["←", "→"], label: "Navigasi halaman" },
-                  { keys: ["Esc"], label: "Tutup modal / Fullscreen" },
-                  { keys: ["Ctrl", "Z"], label: "Undo config" },
-                ].map((s, i) => (
-                  <div key={i} className={`flex items-center justify-between px-3 py-2.5 rounded-xl ${D ? "bg-white/4" : "bg-gray-50"}`}>
-                    <span className={`text-xs ${c.tm}`}>{s.label}</span>
-                    <div className="flex items-center gap-1">
-                      {s.keys.map((k, ki) => (
-                        <span key={ki}>
-                          <kbd className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold border ${D ? "bg-[#09090b] border-[#ffffff15] text-violet-400" : "bg-white border-gray-200 text-violet-600 shadow-sm"}`}>
-                            {k}
-                          </kbd>
-                          {ki < s.keys.length - 1 && (
-                            <span className={`mx-0.5 text-[10px] ${c.ts}`}>+</span>
-                          )}
-                        </span>
+            )}
+          </AnimatePresence>
+
+          {/* ── MODAL KONFIRMASI ANALISIS TULISAN TANGAN ── */}
+          <AnimatePresence>
+            {pendingHwConfig && (
+              <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPendingHwConfig(null)} />
+                <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                  className={`relative w-full max-w-sm rounded-2xl p-5 border shadow-2xl ${isDark ? "bg-[#18181b] border-[#ffffff14]" : "bg-white border-gray-200"}`}>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-violet-500/20 flex items-center justify-center">
+                      <Sparkles className="w-5 h-5 text-violet-500" />
+                    </div>
+                    <div>
+                      <h3 className={`font-semibold ${c.tp}`}>Hasil Analisis AI</h3>
+                      <p className={`text-[11px] ${c.ts}`}>Karakter tulisanmu berhasil dideteksi.</p>
+                    </div>
+                  </div>
+
+                  <div className={`space-y-2.5 mb-5 p-3.5 rounded-xl border ${c.pillBorder} ${c.pill} shadow-inner`}>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className={c.ts}>Kemiringan:</span>
+                      <span className={`font-mono font-bold ${c.tp}`}>{pendingHwConfig.slantAngle}°</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className={c.ts}>Spasi & Ukuran:</span>
+                      <span className={`font-mono font-bold ${c.tp}`}>{pendingHwConfig.wordSpacing}px · {pendingHwConfig.fontSize}px</span>
+                    </div>
+
+                    {/* Menampilkan Warna Tinta Hasil Deteksi AI */}
+                    {pendingHwConfig.color && (
+                      <div className={`pt-2 mt-2 border-t ${c.divider} flex items-center justify-between text-xs`}>
+                        <span className={c.ts}>Warna Pulpen:</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`font-mono font-semibold uppercase ${c.tp}`}>{pendingHwConfig.color}</span>
+                          <div
+                            className="w-5 h-5 rounded-full ring-2 ring-black/10 shadow-sm"
+                            style={{ backgroundColor: pendingHwConfig.color, border: '1px solid rgba(255,255,255,0.2)' }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button onClick={() => setPendingHwConfig(null)} className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${c.btn}`}>
+                      Batal
+                    </button>
+                    <button onClick={() => {
+                      updateConfig({ ...config, ...pendingHwConfig });
+                      if (pendingHwConfig.slantAngle !== undefined) setSlantAngle(pendingHwConfig.slantAngle);
+                      setPendingHwConfig(null);
+                      toast.success("Gaya tulisan tanganmu diterapkan!");
+                    }}
+                      className={`flex-1 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r ${c.accent} text-white shadow-lg`}>
+                      Terapkan
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* ── MODAL AI WRITER ── */}
+          <AnimatePresence>
+            {showAiModal && (
+              <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isAiDrafting && setShowAiModal(false)} />
+                <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                  className={`relative w-full max-w-lg rounded-2xl p-5 border shadow-2xl ${isDark ? "bg-[#18181b] border-[#ffffff14]" : "bg-white border-gray-200"}`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
+                        <Bot className="w-4 h-4 text-indigo-500" />
+                      </div>
+                      <h3 className={`font-bold ${c.tp}`}>Asisten AI</h3>
+                    </div>
+                    <button onClick={() => { setShowAiModal(false); setAiDraftResult(""); }} className={c.ts}><X className="w-4 h-4" /></button>
+                  </div>
+                  <textarea
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    placeholder="Contoh: Buatkan esai 3 paragraf tentang sejarah kemerdekaan Indonesia..."
+                    className={`w-full h-28 p-3 rounded-xl text-sm border focus:ring-2 focus:ring-indigo-500/50 resize-none ${c.input}`}
+                  />
+
+                  {/* Preview hasil AI sebelum dikirim ke editor */}
+                  {aiDraftResult && (
+                    <div className={`mt-3 rounded-xl border overflow-hidden ${D ? "border-[#ffffff10]" : "border-gray-200"}`}>
+                      <div className={`flex items-center justify-between px-3 py-2 border-b ${D ? "bg-white/4 border-[#ffffff08]" : "bg-gray-50 border-gray-100"}`}>
+                        <span className={`text-[11px] font-semibold ${c.ts}`}>Hasil AI</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(aiDraftResult);
+                              toast.success("Teks AI disalin!");
+                            }}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all border ${c.btn}`}>
+                            <Copy className="w-3 h-3" />Salin
+                          </button>
+                          <button
+                            onClick={() => setAiDraftResult("")}
+                            className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${D ? "text-white/30 hover:text-white/60" : "text-gray-300 hover:text-gray-500"}`}>
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className={`p-3 max-h-40 overflow-y-auto scrollbar-thin text-xs leading-relaxed ${c.tm}`}>
+                        {aiDraftResult}
+                      </div>
+                      <div className={`px-3 py-2 border-t ${D ? "border-[#ffffff08]" : "border-gray-100"}`}>
+                        <button
+                          onClick={() => {
+                            const aiText = (text.length > 0 ? "\n\n" : "") + aiDraftResult.trim();
+                            setInputText(prev => prev + aiText);
+                            setText(prev => prev + aiText);
+                            setAiDraftResult("");
+                            setShowAiModal(false);
+                            setAiPrompt("");
+                            toast.success("Teks berhasil ditambahkan ke editor! ✨");
+                          }}
+                          className={`w-full py-2 rounded-xl text-xs font-bold bg-gradient-to-r ${c.accent} text-white hover:opacity-90 active:scale-95 transition-all`}>
+                          Kirim ke Editor →
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  <button
+                    disabled={!aiPrompt.trim() || isAiDrafting}
+                    onClick={async () => {
+                      setIsAiDrafting(true);
+                      try {
+                        const res = await fetch(`${API_URL}/api/ai-writer`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ prompt: aiPrompt })
+                        });
+
+                        const data = await res.json();
+
+                        if (data.success) {
+                          setAiDraftResult(data.text.trim());
+                          toast.success("Teks AI siap! Cek preview di bawah. ✨");
+                        } else {
+                          throw new Error(data.error || "Gagal menghubungi AI");
+                        }
+                      } catch (e: unknown) {
+                        const err = e as Error;
+                        toast.error(err.message);
+                      } finally {
+                        setIsAiDrafting(false);
+                      }
+                    }}
+                    className={`w-full mt-4 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r ${c.accent} text-white transition-all flex justify-center items-center gap-2 ${isAiDrafting ? "opacity-70" : "hover:scale-[1.02] active:scale-95"}`}>
+                    {isAiDrafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    {isAiDrafting ? "AI Sedang Menulis..." : "Buat Teks"}
+                  </button>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* ── MOBILE SIDEBAR OVERLAY ── */}
+          <AnimatePresence>
+            {mobileSidebarOpen && (
+              <>
+                <motion.div
+                  key="mob-backdrop"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden"
+                  onClick={() => setMobileSidebarOpen(false)}
+                />
+                <motion.aside
+                  key="mob-drawer"
+                  initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
+                  transition={{ type: "spring", damping: 28, stiffness: 300 }}
+                  className={`fixed top-0 left-0 bottom-0 w-[300px] md:w-[320px] max-w-[85vw] z-[70] overflow-y-auto border-r ${c.sidebar}`}
+                >
+                  <div className={`sticky top-0 flex items-center justify-between px-4 h-14 border-b ${c.divider} ${D ? "bg-[#121217]/90" : "bg-white/90"} backdrop-blur-md z-10`}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                        <PenTool className="w-3 h-3 text-white" />
+                      </div>
+                      <span className={`text-[13px] font-semibold ${c.tp}`}>Pengaturan</span>
+                    </div>
+                    <button onClick={() => setMobileSidebarOpen(false)}
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center ${c.btn}`}>
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {renderSidebarContent()}
+                </motion.aside>
+              </>
+            )}
+          </AnimatePresence>
+
+          {/* ── ONBOARDING TOUR ── */}
+          {showOnboarding && (
+            <div className="fixed inset-0 z-[200] pointer-events-none">
+              {/* Overlay gelap — lebih terang di step 0 (welcome) */}
+              <motion.div
+                className="absolute inset-0 pointer-events-auto"
+                animate={{ backgroundColor: onboardingStep === 0 ? "rgba(0,0,0,0.7)" : "rgba(0,0,0,0.55)" }}
+                transition={{ duration: 0.3 }}
+                onClick={() => { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); }}
+              />
+
+              {/* Spotlight ring — muncul di step 1, 2, 3 */}
+              {onboardingStep > 0 && (() => {
+                const targetId = ONBOARDING_SPOTLIGHT[onboardingStep]?.selector;
+                const el = targetId ? document.getElementById(targetId) : null;
+                const rect = el?.getBoundingClientRect();
+                if (!rect) return null;
+                return (
+                  <motion.div
+                    key={targetId}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="absolute pointer-events-none rounded-2xl"
+                    style={{
+                      top: rect.top - 6,
+                      left: rect.left - 6,
+                      width: rect.width + 12,
+                      height: rect.height + 12,
+                      boxShadow: "0 0 0 4px #7C3AED, 0 0 0 9999px rgba(0,0,0,0.55)",
+                      border: "2px solid rgba(139,92,246,0.8)",
+                    }}
+                  />
+                );
+              })()}
+
+              <div className="absolute pointer-events-auto left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+                style={{ maxWidth: "340px", width: "90vw" }}>
+                <div className={`rounded-2xl border shadow-2xl p-5 ${isDark
+                  ? "bg-[#0d0d14] border-[#ffffff10] shadow-[0_24px_64px_rgba(0,0,0,0.8)]"
+                  : "bg-white border-violet-100 shadow-[0_24px_64px_rgba(139,92,246,0.15)]"}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex gap-1.5">
+                      {[0, 1, 2, 3].map(i => (
+                        <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === onboardingStep ? "w-6 bg-violet-500" : i < onboardingStep ? "w-3 bg-violet-300" : "w-3 bg-gray-300 dark:bg-white/10"}`} />
                       ))}
                     </div>
+                    <button onClick={() => { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); }}
+                      className={`text-[11px] px-2 py-1 rounded-lg transition-colors ${isDark ? "text-white/40 hover:text-white/70 hover:bg-white/5" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}>
+                      Skip
+                    </button>
                   </div>
-                ))}
-              </div>
-              <button
-                onClick={() => { setShowShortcuts(false); setShowOnboarding(true); setOnboardingStep(0); }}
-                className={`w-full mt-4 py-2 rounded-xl text-xs font-medium border transition-all ${c.btn}`}>
-                Lihat Tutorial Onboarding
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* ── FULLSCREEN ── */}
-      {fullscreenPage && (
-        <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4 backdrop-blur-sm"
-          onClick={() => setFullscreenPage(null)}>
-          <button className="absolute top-4 right-4 w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all"
-            onClick={() => setFullscreenPage(null)}>
-            <X className="w-5 h-5" />
-          </button>
-          <div className="text-center" onClick={(e) => e.stopPropagation()}>
-            <p className="text-white/35 text-[11px] mb-3 tracking-widest uppercase">
-              Halaman {fullscreenPage.page} · ESC untuk tutup
-            </p>
-            <img src={fullscreenPage.image} alt="" className="max-h-[88vh] max-w-[92vw] rounded-xl shadow-2xl object-contain" />
-            <div className="flex justify-center gap-3 mt-4">
-              <button onClick={() => handleDownloadSingle(fullscreenPage)}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-all">
-                <Download className="w-4 h-4" />Download
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── HEADER ── */}
-      <header className={`${c.header} border-b sticky top-0 z-50 transition-colors duration-200`}>
-        {isGenerating && (
-          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-violet-500/10">
-            <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-all duration-500"
-              style={{ width: `${generateProgress}%` }} />
-          </div>
-        )}
-        <div className="w-full max-w-[1400px] 2xl:max-w-[1600px] 3xl:max-w-[2000px] 4xl:max-w-[2400px] mx-auto px-3 sm:px-4 lg:px-6 3xl:px-12 h-14 flex items-center justify-between gap-2">
-
-          {/* LEFT: toggle + logo */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)}
-              className={`hidden lg:flex w-8 h-8 rounded-lg items-center justify-center transition-all ${c.btn}`}>
-              {sidebarOpen ? <PanelLeftClose className="w-3.5 h-3.5" /> : <PanelLeftOpen className="w-3.5 h-3.5" />}
-            </button>
-            <button onClick={() => setMobileSidebarOpen(true)}
-              className={`flex md:hidden w-8 h-8 rounded-lg items-center justify-center transition-all ${c.btn}`}>
-              <Menu className="w-3.5 h-3.5" />
-            </button>
-
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-violet-500/30">
-                <PenTool className="w-3.5 h-3.5 text-white" />
-              </div>
-              <div className="flex items-baseline gap-1.5">
-                <span className="font-bold text-sm bg-gradient-to-r from-violet-500 to-indigo-400 bg-clip-text text-transparent hidden xs:block">HandWrite AI</span>
-                <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-mono border ${D ? "border-violet-500/30 bg-violet-500/10 text-violet-400" : "border-violet-300 bg-violet-50 text-violet-600"}`}>v1.2</span>
-              </div>
-            </div>
-          </div>
-
-          {/* CENTER: status pill */}
-          <div className="hidden sm:flex flex-1 justify-center">
-            {isGenerating ? (
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${D ? "bg-violet-500/10 border border-violet-500/20" : "bg-violet-50 border border-violet-200"}`}>
-                <Loader2 className="w-3.5 h-3.5 text-violet-500 animate-spin" />
-                <span className={`text-xs font-medium ${D ? "text-violet-400" : "text-violet-700"}`}>
-                  Generating {Math.round(generateProgress)}%
-                </span>
-              </div>
-            ) : generatedPages.length > 0 ? (
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${D ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-50 border border-emerald-200"}`}>
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                <span className={`text-xs font-medium ${D ? "text-emerald-400" : "text-emerald-700"}`}>
-                  {generatedPages.length} halaman siap
-                </span>
-              </div>
-            ) : text.trim() ? (
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${D ? "bg-white/5 border-[#ffffff10]" : "bg-gray-50 border-gray-200"}`}>
-                <Clock className={`w-3.5 h-3.5 ${c.ts}`} />
-                <span className={`text-xs ${c.ts}`}>
-                  ~{estimatedPages} hal · {estimatedTimeLabel}
-                </span>
-              </div>
-            ) : null}
-          </div>
-
-          {/* RIGHT: backend status + help + dark mode */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            {/* ── TOMBOL LOGIN CLOUD ── */}
-            {user ? (
-              <div className="hidden md:flex items-center gap-2 mr-2">
-                <span className={`text-[11px] font-medium ${D ? "text-white/70" : "text-gray-600"}`}>
-                  {user.user_metadata.full_name}
-                </span>
-                <button onClick={handleLogout} title="Logout" className="p-1.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-all">
-                  <LogOut className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ) : (
-              <button onClick={handleLogin} className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-all text-[11px] font-medium mr-2">
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Login Cloud</span>
-              </button>
-            )}
-            <div title={backendOnline === null ? "Memeriksa..." : backendOnline ? "Backend terhubung" : "Backend offline"}
-              className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-medium transition-all ${backendOnline === null
-                ? D ? "border-[#ffffff10] text-white/30" : "border-gray-200 text-gray-400"
-                : backendOnline
-                  ? D ? "border-emerald-500/20 bg-emerald-500/8 text-emerald-400" : "border-emerald-300 bg-emerald-50 text-emerald-700"
-                  : D ? "border-red-500/20 bg-red-500/8 text-red-400" : "border-red-300 bg-red-50 text-red-600"
-                }`}>
-              {backendOnline === null ? <Loader2 className="w-3 h-3 animate-spin" /> : backendOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-              <span className="hidden lg:inline">{backendOnline === null ? "..." : backendOnline ? "Online" : "Offline"}</span>
-            </div>
-            <button
-              onClick={() => setShowShortcuts(true)}
-              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all text-[13px] font-bold ${c.btn}`}
-              title="Keyboard Shortcuts">
-              ?
-            </button>
-            <button onClick={() => setIsDark(!isDark)}
-              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${c.btn}`}>
-              {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-            </button>
-          </div>
-
-        </div>
-      </header>
-
-
-      {/* ── BODY: 3-PANEL LAYOUT ── */}
-      <div className="w-full max-w-[1400px] 2xl:max-w-[1600px] 3xl:max-w-[2000px] 4xl:max-w-[2400px] mx-auto flex overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
-
-        {/* ══ PANEL 1: SIDEBAR SETTINGS — Desktop only ══ */}
-        <motion.aside
-          id="sidebar-settings"
-          className={`hidden lg:flex flex-col flex-shrink-0 border-r overflow-hidden ${c.sidebar}`}
-          animate={{ width: sidebarOpen ? 288 : 0 }}
-          transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-          style={{ height: "calc(100dvh - 56px)" }}
-        >
-          <motion.div
-            animate={{ opacity: sidebarOpen ? 1 : 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="flex-1 overflow-y-auto pb-8 scrollbar-thin w-[288px]"
-          >
-            {renderSidebarContent()}
-          </motion.div>
-        </motion.aside>
-
-        {/* ══ PANEL 2: EDITOR + PREVIEW COLLAPSIBLE ══ */}
-        <div id="editor-panel" className={`
-hidden md:flex flex-col border-r flex-shrink-0
-  ${c.sidebar}
-  ${sidebarOpen
-            ? "md:w-[280px] lg:w-[340px] xl:w-[400px] 2xl:w-[440px]"
-            : "md:w-[300px] lg:w-[380px] xl:w-[440px] 2xl:w-[500px]"}
-  transition-all duration-300
-`} style={{ height: "calc(100dvh - 56px)" }}>
-
-          {/* Editor header */}
-          <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} flex items-center justify-between ${D
-            ? "bg-gradient-to-r from-[#13131f] to-[#0d0d14]"
-            : "bg-gradient-to-r from-amber-50 via-violet-50 to-indigo-100"}`}>
-            <div className="flex items-center gap-2">
-              <div className={`w-5 h-5 rounded-md flex items-center justify-center ${D ? "bg-indigo-500/20" : "bg-indigo-100"}`}>
-                <span className="text-[10px]">📝</span>
-              </div>
-              <span className={`text-[10.5px] font-bold uppercase tracking-widest ${c.label}`}>Editor</span>
-              {currentFont && (
-                <span className={`text-[11px] px-2 py-0.5 rounded-md border ${c.pillBorder} ${c.pill} ${c.tp}`}
-                  style={{ fontFamily: FONT_FAMILY_MAP[currentFont.name] || currentFont.name }}>
-                  {currentFont.name}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className={`text-[10px] ${c.ts}`}>
-                <span className={`font-semibold ${D ? "text-indigo-400" : "text-indigo-600"}`}>{wordCount.toLocaleString()}</span> kata
-              </span>
-              <button
-                id="generate-btn"
-                onClick={handleGenerate}
-                disabled={isGenerating || !text.trim() || !selectedFolio}
-                className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl font-semibold text-xs transition-all min-w-[100px] ${isGenerating || !text.trim() || !selectedFolio
-                  ? D ? "bg-white/4 text-white/20 cursor-not-allowed border border-[#ffffff06]" : "bg-gray-100 text-gray-300 cursor-not-allowed border border-gray-200"
-                  : `bg-gradient-to-r ${c.accent} text-white shadow-md hover:shadow-lg hover:scale-[1.02]`
-                  }`}>
-                {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                <span>Generate</span>
-                {!isGenerating && estimatedPages > 1 && (
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${D ? "bg-white/15" : "bg-white/25"}`}>{estimatedPages}</span>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Textarea area - scrollable */}
-          <div className="flex-1 overflow-y-auto min-h-0 scrollbar-thin">
-            <div className="p-4 flex flex-col gap-3">
-
-              {/* Toolbar — scrollable horizontal, rapi di semua ukuran */}
-              <div className="flex flex-col gap-2">
-
-                {/* Baris 1: Tombol aksi — scroll horizontal di layar sempit */}
-                <div className="flex items-center gap-0 overflow-x-auto scrollbar-hide -mx-1 px-1">
-                  <div className="flex items-center gap-1.5 flex-nowrap min-w-max">
-
-                    {/* Tempel */}
-                    <button
-                      onClick={async () => {
-                        try {
-                          const t = await navigator.clipboard.readText();
-                          setInputText(t); setText(t); toast.success("Teks ditempel!");
-                        } catch { toast.error("Tidak bisa akses clipboard"); }
-                      }}
-                      className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-all whitespace-nowrap flex-shrink-0 ${c.btn}`}>
-                      <Clipboard className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span>Tempel</span>
-                    </button>
-
-                    {/* Tulis dengan AI */}
-                    <button
-                      onClick={() => setShowAiModal(true)}
-                      className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-all whitespace-nowrap flex-shrink-0 ${D
-                        ? "bg-indigo-500/8 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/15 hover:border-indigo-500/35"
-                        : "bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300"
-                        }`}>
-                      <Bot className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span>Tulis AI</span>
-                    </button>
-
-                    {/* Dikte */}
-                    <button
-                      onClick={toggleListening}
-                      title={isListening ? "Berhenti mendikte" : "Mulai mendikte"}
-                      className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-all whitespace-nowrap flex-shrink-0 ${isListening
-                        ? "bg-red-500/15 text-red-400 border-red-500/30 animate-pulse"
-                        : c.btn
-                        }`}>
-                      <Mic className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span>{isListening ? "Dengerin..." : "Dikte"}</span>
-                    </button>
-
-                    {/* Hapus */}
-                    <button
-                      onClick={() => {
-                        if (!text) return;
-                        toast((t) => (
-                          <div className="flex flex-row items-start gap-3">
-                            <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </div>
-                            <div className="flex flex-col">
-                              <p className={`text-xs font-bold mb-1 ${D ? "text-white" : "text-gray-900"}`}>Bersihkan Editor?</p>
-                              <p className={`text-[10px] mb-2.5 ${D ? "text-white/60" : "text-gray-500"}`}>Semua teks akan hilang dan tidak bisa dikembalikan.</p>
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => { setInputText(""); setText(""); toast.dismiss(t.id); toast.success("Teks berhasil dihapus!"); }}
-                                  className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-[10px] font-bold transition-all hover:bg-red-600 hover:scale-105 active:scale-95 shadow-md shadow-red-500/20">
-                                  Ya, Hapus
-                                </button>
-                                <button
-                                  onClick={() => toast.dismiss(t.id)}
-                                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all hover:scale-105 active:scale-95 ${D ? "bg-white/10 text-white hover:bg-white/20" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
-                                  Batal
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ), {
-                          duration: 6000,
-                          position: "top-center",
-                          style: { padding: '14px', borderRadius: '16px', background: D ? '#18181b' : '#ffffff', border: D ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)' }
-                        });
-                      }}
-                      disabled={!text}
-                      className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-all whitespace-nowrap flex-shrink-0 ${!text
-                        ? "opacity-35 cursor-not-allowed " + c.btn
-                        : D
-                          ? "hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25 " + c.btn
-                          : "hover:bg-red-50 hover:text-red-600 hover:border-red-200 " + c.btn
-                        }`}>
-                      <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span>Hapus</span>
-                    </button>
-
-                    {/* Divider */}
-                    {currentFolio && (
-                      <div className={`w-px h-5 flex-shrink-0 mx-0.5 ${D ? "bg-white/10" : "bg-gray-200"}`} />
-                    )}
-
-                    {/* Badge Folio Aktif */}
-                    {currentFolio && (
-                      <div className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 whitespace-nowrap ${c.tag}`}>
-                        <span className="text-xs">📄</span>
-                        <span className="max-w-[80px] truncate font-medium">{currentFolio.name}</span>
-                      </div>
-                    )}
-
-                  </div>
-                </div>
-
-                {/* Baris 2: Counter karakter + estimasi halaman */}
-                <div className={`flex items-center justify-between px-1`}>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[10.5px] ${c.ts}`}>
-                      <span className={`font-semibold tabular-nums ${text.length > 40000 ? "text-red-400" : D ? "text-emerald-400" : "text-emerald-600"
-                        }`}>
-                        {text.length.toLocaleString()}
-                      </span>
-                      <span className={c.ts}>/50k karakter</span>
-                    </span>
-                    <span className={`text-[10px] ${D ? "text-white/15" : "text-gray-300"}`}>·</span>
-                    <span className={`text-[10.5px] ${c.ts}`}>
-                      {wordCount.toLocaleString()} kata
-                    </span>
-                  </div>
-                  <span className={`text-[11px] font-bold tabular-nums px-2 py-0.5 rounded-lg border transition-all ${text.length > 45000
-                    ? "bg-red-500/10 text-red-400 border-red-500/20"
-                    : text.length > 30000
-                      ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                      : D
-                        ? "bg-violet-500/10 text-violet-400 border-violet-500/20"
-                        : "bg-violet-50 text-violet-600 border-violet-200"
-                    }`}>
-                    ~{estimatedPages} hal
-                  </span>
-                </div>
-
-              </div>
-
-              {/* Textarea */}
-              <textarea
-                ref={textareaRef}
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const file = e.dataTransfer.files[0];
-                  if (file?.type === "text/plain") {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => {
-                      if (typeof ev.target?.result === "string") {
-                        setText(text + (text ? "\n" : "") + ev.target.result);
-                        toast.success("File berhasil dimuat!");
-                      }
-                    };
-                    reader.readAsText(file);
-                  } else toast.error("Hanya file .txt");
-                }}
-                placeholder="Ketik atau paste teks di sini...&#10;&#10;Drag & drop file .txt ⚡"
-                className={`light-textarea w-full resize-none rounded-2xl px-4 py-3.5 text-sm leading-relaxed transition-all duration-200 outline-none border-2 focus:ring-4 ${D
-                  ? "bg-[#080810] border-[#ffffff0a] text-white placeholder-white/15 caret-violet-400 focus:border-violet-600/50 focus:ring-violet-500/10 focus:shadow-[0_0_0_4px_rgba(139,92,246,0.08)]"
-                  : "bg-white border-violet-100 text-gray-900 placeholder-violet-300/50 caret-violet-500 focus:border-violet-400 focus:ring-violet-400/10 shadow-[inset_0_2px_8px_rgba(139,92,246,0.05)]"
-                  } font-[inherit]`}
-                style={{ minHeight: "200px", height: "auto" }}
-              />
-
-              {/* Char progress */}
-              {text.length > 0 && (
-                <div className={`h-1 rounded-full overflow-hidden ${D ? "bg-[#ffffff08]" : "bg-gray-200"}`}>
-                  <div className={`h-full rounded-full transition-all duration-500 ${text.length > 45000 ? "bg-red-500" : text.length > 30000 ? "bg-amber-500" : D ? "bg-emerald-500" : "bg-emerald-600"
-                    }`} style={{ width: `${Math.min(100, (text.length / 50000) * 100)}%` }} />
-                </div>
-              )}
-
-              {/* Shortcut hints */}
-              <div className={`flex items-center gap-3 text-[10px] ${c.ts}`}>
-                <div className="flex items-center gap-1">
-                  <kbd className={`px-1.5 py-0.5 rounded border font-mono text-[9px] ${D ? "bg-white/5 border-white/10" : "bg-gray-100 border-gray-200"}`}>Ctrl+Enter</kbd>
-                  <span>Generate</span>
-                </div>
-                <div className={`w-px h-3 ${D ? "bg-white/10" : "bg-gray-200"}`} />
-                <div className="flex items-center gap-1">
-                  <span>Drag & drop</span>
-                  <kbd className={`px-1.5 py-0.5 rounded border font-mono text-[9px] ${D ? "bg-white/5 border-white/10" : "bg-gray-100 border-gray-200"}`}>.txt</kbd>
-                </div>
-              </div>
-
-              {estimatedPages > 1 && (
-                <div className={`flex items-start gap-2 px-3 py-2 rounded-lg border ${D ? "bg-amber-500/10 border-amber-500/20" : "bg-amber-50 border-amber-200"}`}>
-                  <span className="text-amber-500 text-sm mt-0.5 flex-shrink-0">⚠️</span>
-                  <p className={`text-[11px] leading-relaxed ${D ? "text-amber-400" : "text-amber-700"}`}>
-                    Teks akan menghasilkan <strong>{estimatedPages} halaman</strong>.
+                  <div className="text-3xl mb-2">{[["✍️"], ["🎨"], ["📝"], ["🚀"]][onboardingStep]}</div>
+                  <h3 className={`text-sm font-bold mb-1.5 ${isDark ? "text-white" : "text-gray-900"}`}>
+                    {["Selamat datang di HandWrite AI! 🎉", "Pilih & Atur Gaya Tulisan", "Ketik atau Tempel Teks", "Generate & Download"][onboardingStep]}
+                  </h3>
+                  <p className={`text-[12px] leading-relaxed mb-4 ${isDark ? "text-white/60" : "text-gray-500"}`}>
+                    {["Ubah teks apapun jadi tulisan tangan realistis di atas folio dalam hitungan detik.", "Di sidebar kiri, pilih font, kemiringan, warna tinta, efek typo, dan banyak lagi untuk tulisan yang benar-benar terasa manusiawi.", "Paste teks tugasmu di area utama. Bisa sampai 50.000 karakter! Gunakan Ctrl+Enter untuk langsung Generate.", "Klik Generate dan halaman muncul satu per satu secara real-time. Download sebagai JPG, ZIP, PDF, atau Word."][onboardingStep]}
                   </p>
-                </div>
-              )}
-
-              {/* Seed row */}
-              <div className="flex items-center justify-end gap-2">
-                <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[10px] ${c.pillBorder} ${c.pill}`}>
-                  <span className={c.ts}>Seed:</span>
-                  <span className={`font-mono font-semibold ${D ? "text-violet-400" : "text-violet-600"}`}>{String(seed).slice(-6)}</span>
-                  <button onClick={handleCopySeed} className={`ml-0.5 transition-colors ${showSeedCopied ? "text-emerald-500" : c.ts}`}>
-                    {showSeedCopied ? <CheckCircle2 className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                  </button>
-                </div>
-                <button
-                  onClick={handleGenerate}
-                  disabled={isGenerating || !generatedPages.length}
-                  title="Regenerate dengan seed yang sama"
-                  className={`p-2.5 rounded-xl border transition-all ${c.btn}`}
-                >
-                  <Eye className="w-4 h-4" />
-                </button>
-                <button onClick={() => setSeed(Date.now())} className={`p-2.5 rounded-xl border transition-all ${c.btn}`}>
-                  <RefreshCw className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* STATS BAR — pinned di bawah editor */}
-          <div className={`flex-shrink-0 border-t ${c.divider} px-4 py-3 ${D
-            ? "bg-gradient-to-b from-[#0d0d14] to-[#080810]"
-            : "bg-gradient-to-b from-violet-50 to-indigo-100/80"}`}>
-            <div className="grid grid-cols-2 gap-2">
-              {/* Estimasi halaman */}
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
-                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${D ? "bg-violet-500/15" : "bg-violet-100"}`}>
-                  <FileText className="w-3.5 h-3.5 text-violet-500" />
-                </div>
-                <div>
-                  <p className={`text-[9px] uppercase tracking-widest font-semibold ${c.ts}`}>Halaman</p>
-                  <p className={`text-sm font-bold tabular-nums ${D ? "text-violet-400" : "text-violet-600"}`}>~{estimatedPages}</p>
-                </div>
-              </div>
-              {/* Estimasi waktu */}
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
-                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${D ? "bg-amber-500/15" : "bg-amber-100"}`}>
-                  <Clock className="w-3.5 h-3.5 text-amber-500" />
-                </div>
-                <div>
-                  <p className={`text-[9px] uppercase tracking-widest font-semibold ${c.ts}`}>Estimasi</p>
-                  <p className={`text-sm font-bold ${D ? "text-amber-400" : "text-amber-600"}`}>{estimatedTimeLabel}</p>
-                </div>
-              </div>
-              {/* Font aktif */}
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
-                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${D ? "bg-indigo-500/15" : "bg-indigo-100"}`}>
-                  <PenTool className="w-3.5 h-3.5 text-indigo-500" />
-                </div>
-                <div className="min-w-0">
-                  <p className={`text-[9px] uppercase tracking-widest font-semibold ${c.ts}`}>Font</p>
-                  <p className={`text-[11px] font-semibold truncate ${c.tp}`}
-                    style={{ fontFamily: FONT_FAMILY_MAP[currentFont?.name || ''] || 'cursive' }}>
-                    {currentFont?.name || "—"}
-                  </p>
-                </div>
-              </div>
-              {/* Folio aktif */}
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
-                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${D ? "bg-emerald-500/15" : "bg-emerald-100"}`}>
-                  <ImageIcon className="w-3.5 h-3.5 text-emerald-500" />
-                </div>
-                <div className="min-w-0">
-                  <p className={`text-[9px] uppercase tracking-widest font-semibold ${c.ts}`}>Folio</p>
-                  <p className={`text-[11px] font-semibold truncate ${c.tp}`}>{currentFolio?.name || "—"}</p>
-                </div>
-              </div>
-            </div>
-            {/* Warna tinta */}
-            <div className={`flex items-center gap-2 mt-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
-              <div className="w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-black/10 ring-offset-1"
-                style={{ backgroundColor: config.color, outline: `2px solid ${D ? "#09090b" : "#fff"}`, outlineOffset: "1px" }} />
-              <span className={`text-[10px] font-mono ${c.ts}`}>{config.color.toUpperCase()}</span>
-              <span className={`text-[10px] ${c.ts} ml-auto`}>{wordCount.toLocaleString()} kata</span>
-            </div>
-          </div>
-          {/* Live Preview Strip */}
-          {livePreviewUrl && (
-            <div className={`relative rounded-xl overflow-hidden border mx-3 mb-3 ${c.pillBorder} ${isLoadingPreview ? "opacity-50" : "opacity-100"} transition-opacity duration-300`}>
-              <img src={livePreviewUrl} alt="Preview" className="w-full h-24 object-cover object-top" />
-              <div className={`absolute top-1.5 right-1.5 flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] ${D ? "bg-black/70 text-white/60" : "bg-white/85 text-gray-500"}`}>
-                {isLoadingPreview && <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse inline-block" />}
-                Live Preview
-              </div>
-              {isLoadingPreview && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[1px]">
-                  <Loader2 className="w-4 h-4 animate-spin text-violet-400" />
-                </div>
-              )}
-              {currentFont && (
-                <div className={`absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-[9px] font-medium ${D ? "bg-black/70 text-violet-300" : "bg-white/85 text-violet-600"}`}
-                  style={{ fontFamily: FONT_FAMILY_MAP[currentFont.name] || 'cursive' }}>
-                  {currentFont.name}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* ══ PANEL 3: OUTPUT VIEWER — mengisi sisa ruang ══ */}
-        <main className="hidden md:flex flex-1 min-w-0 flex-col overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
-
-          {/* Output header — 2 baris agar tidak overflow di laptop kecil */}
-          <div className={`flex-shrink-0 border-b ${c.divider} ${D ? "bg-[#09090b]/80" : "bg-white/80"} backdrop-blur-sm`}>
-
-            {/* Baris 1: Status + Navigasi halaman + Riwayat/Preset */}
-            <div className={`flex items-center justify-between gap-2 px-4 py-2 ${D
-              ? "bg-gradient-to-r from-[#0d0d14] to-[#13131f]"
-              : "bg-gradient-to-r from-indigo-100 to-violet-100"}`}>
-              <div className="flex items-center gap-2 min-w-0">
-                {/* Status pill */}
-                {isGenerating ? (
-                  <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${D ? "bg-violet-500/12 border border-violet-500/20" : "bg-violet-50 border border-violet-200"}`}>
-                    <Loader2 className="w-3 h-3 text-violet-500 animate-spin flex-shrink-0" />
-                    <span className={`text-[11px] font-medium ${D ? "text-violet-400" : "text-violet-700"}`}>Generating {Math.round(generateProgress)}%</span>
+                  <div className="flex gap-2">
+                    {onboardingStep > 0 && (
+                      <button onClick={() => setOnboardingStep(s => s - 1)}
+                        className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all ${isDark ? "border-white/10 text-white/60 hover:bg-white/5" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                        ← Kembali
+                      </button>
+                    )}
+                    <button onClick={() => { if (onboardingStep < 3) setOnboardingStep(s => s + 1); else { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); } }}
+                      className="flex-1 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 transition-all">
+                      {onboardingStep < 3 ? "Lanjut →" : "Mulai Sekarang! 🚀"}
+                    </button>
                   </div>
-                ) : generatedPages.length > 0 ? (
-                  <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${D ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-50 border border-emerald-200"}`}>
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-                    <span className={`text-[11px] font-medium ${D ? "text-emerald-400" : "text-emerald-700"}`}>{generatedPages.length} halaman siap</span>
-                  </div>
-                ) : (
-                  <span className={`text-[11px] font-semibold uppercase tracking-widest ${c.label}`}>Output Viewer</span>
-                )}
-
-                {/* Page navigation */}
-                {generatedPages.length > 0 && (
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setActivePageIndex(i => Math.max(0, i - 1))}
-                      disabled={activePageIndex === 0}
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs border transition-all ${activePageIndex === 0
-                        ? D ? "border-[#ffffff05] text-white/10 cursor-not-allowed" : "border-gray-100 text-gray-200 cursor-not-allowed"
-                        : c.btn
-                        }`}>←</button>
-                    <span className={`text-[11px] font-semibold tabular-nums min-w-[44px] text-center ${c.tp}`}>
-                      {activePageIndex + 1}/{generatedPages.length}
-                    </span>
-                    <button
-                      onClick={() => setActivePageIndex(i => Math.min(generatedPages.length - 1, i + 1))}
-                      disabled={activePageIndex === generatedPages.length - 1}
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs border transition-all ${activePageIndex === generatedPages.length - 1
-                        ? D ? "border-[#ffffff05] text-white/10 cursor-not-allowed" : "border-gray-100 text-gray-200 cursor-not-allowed"
-                        : c.btn
-                        }`}>→</button>
-                  </div>
-                )}
+                </div>
               </div>
-
-              {/* Riwayat & Preset — selalu visible di kanan */}
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <button
-                  onClick={() => setActiveTab(activeTab === "history" ? "result" : "history")}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${activeTab === "history" ? c.btnActive : c.btn}`}
-                  title="Riwayat">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span className="hidden lg:inline">Riwayat</span>
-                  {history.length > 0 && <span className={`text-[9px] px-1 py-0.5 rounded-full ${activeTab === "history" ? D ? "bg-white/20" : "bg-black/10" : D ? "bg-white/8 text-white/40" : "bg-gray-200 text-gray-500"}`}>{history.length}</span>}
-                </button>
-                <button
-                  onClick={() => setActiveTab(activeTab === "presets" ? "result" : "presets")}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${activeTab === "presets" ? c.btnActive : c.btn}`}
-                  title="Preset">
-                  <Save className="w-3.5 h-3.5" />
-                  <span className="hidden lg:inline">Preset</span>
-                  {presets.length > 0 && <span className={`text-[9px] px-1 py-0.5 rounded-full ${activeTab === "presets" ? D ? "bg-white/20" : "bg-black/10" : D ? "bg-white/8 text-white/40" : "bg-gray-200 text-gray-500"}`}>{presets.length}</span>}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* (Baris 2 Toolbar atas sudah dihapus agar layar lebih luas) */}
-
-          {/* Progress bar saat generating */}
-          {isGenerating && (
-            <div className={`h-1 w-full relative overflow-hidden ${D ? "bg-[#ffffff08]" : "bg-gray-100"}`}>
-              <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-all duration-300" style={{ width: `${generateProgress}%` }} />
             </div>
           )}
 
-          {/* ── MAIN CONTENT AREA ── */}
-          <div className="flex-1 min-h-0 overflow-hidden flex relative">
-
-            {/* === FLOATING TOOLBAR (Figma Style) === */}
-            {generatedPages.length > 0 && activeTab === "result" && (
-              <div className="absolute left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1.5 px-3 py-2.5 rounded-2xl shadow-2xl backdrop-blur-2xl border transition-all animate-in slide-in-from-bottom-4 duration-500"
-                style={{
-                  bottom: "max(2rem, calc(2rem + env(safe-area-inset-bottom)))",
-                  maxWidth: "calc(100vw - 2rem)",
-                  background: D
-                    ? "rgba(13, 13, 20, 0.85)"
-                    : "rgba(255, 255, 255, 0.92)",
-                  borderColor: D
-                    ? "rgba(255,255,255,0.08)"
-                    : "rgba(139,92,246,0.2)",
-                  boxShadow: D
-                    ? "0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04)"
-                    : "0 8px 40px rgba(139,92,246,0.15), 0 0 0 1px rgba(139,92,246,0.1)"
-                }}>
-
-                {/* Zoom Controls */}
-                <div className={`flex items-center gap-1 rounded-xl p-1 ${D ? "bg-black/40" : "bg-gray-100/80"}`}>
-                  <button onClick={() => setZoomLevel(z => Math.max(40, z - 20))} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-white text-gray-600 hover:shadow-sm"}`}>
-                    <ZoomOut className="w-4 h-4" />
-                  </button>
-                  <span className={`text-xs font-mono w-10 text-center font-bold ${D ? "text-gray-200" : "text-gray-800"}`}>{zoomLevel}%</span>
-                  <button onClick={() => setZoomLevel(z => Math.min(200, z + 20))} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-white text-gray-600 hover:shadow-sm"}`}>
-                    <ZoomIn className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className={`w-px h-6 mx-1 ${D ? "bg-white/10" : "bg-gray-300"}`} />
-
-                <button onClick={() => setFullscreenPage(generatedPages[activePageIndex])} className={`hidden sm:flex w-10 h-10 rounded-xl items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`} title="Fullscreen">
-                  <Maximize2 className="w-[18px] h-[18px]" />
-                </button>
-                <button onClick={() => handleCopyImageToClipboard(generatedPages[activePageIndex])} className={`hidden sm:flex w-10 h-10 rounded-xl items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`} title="Copy Image">
-                  <Copy className="w-[18px] h-[18px]" />
-                </button>
-                <button onClick={() => setGeneratedPages([])} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${D ? "hover:bg-red-500/20 text-red-400" : "hover:bg-red-50 text-red-500"}`} title="Hapus">
-                  <X className="w-5 h-5" />
-                </button>
-
-                <div className={`hidden sm:block w-px h-6 mx-1 ${D ? "bg-white/10" : "bg-gray-300"}`} />
-
-                <button onClick={() => handleDownloadSingle(generatedPages[activePageIndex])} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95 ${D ? "bg-violet-500 hover:bg-violet-400 text-white shadow-violet-500/25" : "bg-violet-600 hover:bg-violet-700 text-white shadow-violet-600/30"}`}>
-                  <Download className="w-4 h-4" />
-                  <span>JPG</span>
-                </button>
-
-                {/* Export Dropdown Trigger */}
-                <button
-                  ref={exportBtnRef}
-                  onClick={() => {
-                    if (showExportDropdown) { setShowExportDropdown(false); return; }
-                    const rect = exportBtnRef.current?.getBoundingClientRect();
-                    if (rect) setExportDropdownPos({ top: rect.top, left: rect.left, height: rect.height, width: rect.width });
-                    setShowExportDropdown(true);
-                  }}
-                  className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all border ${showExportDropdown ? (D ? "bg-white/10 border-white/20" : "bg-gray-200 border-gray-300") : (D ? "border-transparent hover:bg-white/5" : "border-transparent hover:bg-gray-100")}`}>
-                  <ChevronDown className={`w-4 h-4 ${D ? "text-gray-300" : "text-gray-600"} transition-transform duration-300 ${showExportDropdown ? "rotate-180" : ""}`} />
-                </button>
-              </div>
-            )}
-
-            {/* Thumbnail Strip Vertikal */}
-            {(generatedPages.length > 1 || isGenerating) && activeTab === "result" && (
-              <div className={`hidden lg:flex flex-col gap-2 p-2 w-[72px] flex-shrink-0 overflow-y-auto border-r scrollbar-thin ${c.divider} ${D ? "bg-[#09090b]" : "bg-violet-50/80"}`}>
-                {generatedPages.map((p, idx) => (
-                  <button
-                    key={p.page}
-                    onClick={() => setActivePageIndex(idx)}
-                    className={`flex-shrink-0 w-full rounded-lg overflow-hidden border-2 transition-all ${idx === activePageIndex
-                      ? "border-violet-500 shadow-lg shadow-violet-500/25 scale-[1.03]"
-                      : D ? "border-[#ffffff10] hover:border-violet-500/40" : "border-gray-200 hover:border-violet-300"
-                      }`}
-                  >
-                    <img src={p.image} alt={`Hal ${p.page}`} className="w-full object-cover object-top" style={{ aspectRatio: "210/297" }} />
-                    <div className={`text-[8px] text-center py-0.5 font-mono font-semibold ${idx === activePageIndex ? "text-violet-400" : c.ts}`}>
-                      {p.page}
-                    </div>
-                  </button>
-                ))}
-
-                {/* Skeleton halaman yang masih dalam proses generate */}
-                {isGenerating && Array.from({
-                  length: Math.max(0, (totalStreamPages ?? 0) - generatedPages.length)
-                }).map((_, idx) => (
-                  <div
-                    key={`skeleton-${idx}`}
-                    className={`flex-shrink-0 w-full rounded-lg overflow-hidden border-2 animate-pulse ${D ? "border-[#ffffff08]" : "border-gray-100"}`}>
-                    <div
-                      className={`w-full ${D ? "bg-white/4" : "bg-gray-100"}`}
-                      style={{ aspectRatio: "210/297" }}>
-                      <div className="w-full h-full flex flex-col gap-1.5 p-2 pt-3">
-                        {Array.from({ length: 8 }).map((_, i) => (
-                          <div
-                            key={i}
-                            className={`h-px rounded-full ${D ? "bg-white/8" : "bg-gray-300/60"}`}
-                            style={{ width: `${55 + (i % 3) * 15}%` }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <div className={`text-[8px] text-center py-0.5 font-mono ${D ? "text-white/10" : "text-gray-300"}`}>
-                      {generatedPages.length + idx + 1}
-                    </div>
+          {/* ── KEYBOARD SHORTCUT MODAL ── */}
+          <AnimatePresence>
+            {showShortcuts && (
+              <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                  onClick={() => setShowShortcuts(false)} />
+                <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                  className={`relative w-full max-w-sm rounded-2xl p-5 border shadow-2xl ${D ? "bg-[#18181b] border-[#ffffff14]" : "bg-white border-gray-200"}`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className={`font-bold text-base ${c.tp}`}>⌨️ Keyboard Shortcuts</h3>
+                    <button onClick={() => setShowShortcuts(false)}
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center ${c.btn}`}>
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                ))}
-              </div>
-            )}
-
-            {/* Output viewer utama (Figma-style Workspace) */}
-            <div
-              className={`relative flex-1 overflow-y-auto scrollbar-thin pb-24 ${D
-                ? "bg-[#060610]"
-                : "bg-gradient-to-br from-sky-100/80 via-indigo-50 to-violet-100/80"
-                }`}
-              style={{
-                backgroundImage: D
-                  ? "radial-gradient(#ffffff09 1px, transparent 1px)"
-                  : "radial-gradient(#8b5cf630 1px, transparent 1px)",
-                backgroundSize: "28px 28px",
-              }}>
-
-              <AnimatePresence mode="wait">
-                {(() => {
-                  // Mencegah error multiple children: Hanya render SATU root element pada satu waktu
-                  if (activeTab !== "result") return null;
-
-                  // STATE 1: Sedang Loading / Generating pertama kali
-                  if (isGenerating && streamedPages.length === 0) {
-                    return (
-                      <motion.div key="generating" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                        className="flex items-center justify-center h-full min-h-[400px] flex-col gap-6">
-                        <div className="relative w-24 h-24 flex items-center justify-center">
-                          <div className="absolute inset-0 rounded-full border-4 border-violet-500/10 dark:border-violet-500/20" />
-                          <div className="absolute inset-0 rounded-full border-4 border-violet-500 border-t-transparent animate-spin" />
-                          <div className="absolute inset-2 rounded-full border-4 border-indigo-400/80 border-b-transparent animate-[spin_1.5s_reverse_infinite]" />
-                          <PenTool className={`w-8 h-8 animate-pulse relative z-10 ${D ? "text-violet-400" : "text-violet-600"}`} />
-                          <div className="absolute inset-0 bg-violet-500/20 blur-xl rounded-full animate-pulse" />
-                        </div>
-                        <div className="text-center max-w-[240px] w-full">
-                          <p className={`text-base font-bold mb-2 bg-gradient-to-r ${c.accent} bg-clip-text text-transparent`}>
-                            {generateProgress < 20 ? "Menyiapkan pena..." : generateProgress < 50 ? "Menulis goresan pertama..." : generateProgress < 80 ? "Menambahkan tekstur..." : "Sedikit lagi selesai..."}
-                          </p>
-                          <p className={`text-xs font-medium ${c.ts} mb-5 flex items-center justify-center gap-1.5`}>
-                            <span>AI sedang bekerja</span>
-                            <span className="flex gap-0.5 mt-1">
-                              <span className="w-1 h-1 rounded-full bg-current animate-bounce" style={{ animationDelay: "0ms" }} />
-                              <span className="w-1 h-1 rounded-full bg-current animate-bounce" style={{ animationDelay: "150ms" }} />
-                              <span className="w-1 h-1 rounded-full bg-current animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <div className="space-y-1.5">
+                    {[
+                      { keys: ["Ctrl", "Enter"], label: "Generate tulisan" },
+                      { keys: ["←", "→"], label: "Navigasi halaman" },
+                      { keys: ["Esc"], label: "Tutup modal / Fullscreen" },
+                      { keys: ["Ctrl", "Z"], label: "Undo config" },
+                    ].map((s, i) => (
+                      <div key={i} className={`flex items-center justify-between px-3 py-2.5 rounded-xl ${D ? "bg-white/4" : "bg-gray-50"}`}>
+                        <span className={`text-xs ${c.tm}`}>{s.label}</span>
+                        <div className="flex items-center gap-1">
+                          {s.keys.map((k, ki) => (
+                            <span key={ki}>
+                              <kbd className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold border ${D ? "bg-[#09090b] border-[#ffffff15] text-violet-400" : "bg-white border-gray-200 text-violet-600 shadow-sm"}`}>
+                                {k}
+                              </kbd>
+                              {ki < s.keys.length - 1 && (
+                                <span className={`mx-0.5 text-[10px] ${c.ts}`}>+</span>
+                              )}
                             </span>
-                          </p>
-                          <div className={`w-full h-2.5 rounded-full overflow-hidden p-0.5 ${D ? "bg-[#ffffff0a] shadow-inner" : "bg-gray-200 shadow-inner"}`}>
-                            <div className="h-full bg-gradient-to-r from-violet-500 via-indigo-400 to-violet-500 rounded-full transition-all duration-500 relative" style={{ width: `${Math.max(5, generateProgress)}%` }}>
-                              <div className="absolute top-0 left-0 right-0 h-1/2 bg-white/20 rounded-full" />
-                            </div>
-                          </div>
-                          <p className={`text-[11px] mt-2.5 font-mono tracking-widest ${c.ts}`}>{Math.round(generateProgress)}% COMPLETE</p>
-                        </div>
-                      </motion.div>
-                    );
-                  }
-
-                  // STATE 2: Ada Halaman (Selesai atau Streaming)
-                  if (generatedPages.length > 0 || streamedPages.length > 0) {
-                    const safeIndex = Math.min(activePageIndex, Math.max(0, generatedPages.length - 1));
-                    const page = generatedPages.length > 0
-                      ? generatedPages[safeIndex]
-                      : streamedPages[streamedPages.length - 1];
-                    if (!page) return null;
-                    return (
-                      <motion.div
-                        key={`page-${page.page}-${activePageIndex}`}
-                        initial={{ opacity: 0, rotateY: -8, scale: 0.98 }}
-                        animate={{ opacity: 1, rotateY: 0, scale: 1 }}
-                        exit={{ opacity: 0, rotateY: 8, scale: 0.98 }}
-                        transition={{ type: "spring", damping: 30, stiffness: 250 }}
-                        className="p-4 lg:p-8 flex items-start justify-center min-h-full"
-                        style={{ perspective: "1200px" }}
-                      >
-                        <div className="relative" style={{ width: `${zoomLevel}%`, maxWidth: "100%" }}>
-                          <img src={page.image} alt={`Halaman ${page.page}`} className="w-full rounded-xl shadow-2xl cursor-zoom-in block" style={{ boxShadow: D ? "0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04)" : "0 32px 80px rgba(0,0,0,0.25)" }} onClick={() => generatedPages.length > 0 && setFullscreenPage(page)} />
-                          {isGenerating && streamedPages.length > 0 && (
-                            <div className={`absolute bottom-4 right-4 flex items-center gap-2 px-3 py-1.5 rounded-lg backdrop-blur-sm ${D ? "bg-black/70 text-violet-400" : "bg-white/90 text-violet-600"}`}>
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                              <span className="text-[11px] font-medium">Menulis {streamedPages.length}/{totalStreamPages}</span>
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    );
-                  }
-
-                  // STATE 3: Kosong
-                  return (
-                    <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                      className="flex items-center justify-center h-full min-h-[400px] p-8">
-                      <div className="text-center max-w-sm">
-                        {/* Animated Icon */}
-                        <div className="relative w-24 h-24 mx-auto mb-6">
-                          <div className={`absolute inset-0 rounded-3xl ${D ? "bg-gradient-to-br from-violet-900/40 to-indigo-900/40 border border-violet-700/20" : "bg-gradient-to-br from-violet-100 to-indigo-100 border border-violet-200"}`} />
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <PenTool className={`w-10 h-10 ${D ? "text-violet-400/60" : "text-violet-400"}`} />
-                          </div>
-                          {/* Decorative dots */}
-                          <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${D ? "bg-indigo-500/40" : "bg-indigo-300"}`} />
-                          <div className={`absolute -bottom-1 -left-1 w-2 h-2 rounded-full ${D ? "bg-violet-500/40" : "bg-violet-300"}`} />
-                        </div>
-
-                        <p className={`text-base font-bold mb-2 ${D ? "text-white/70" : "text-gray-700"}`}>
-                          Hasil akan tampil di sini
-                        </p>
-                        <p className={`text-[12px] leading-relaxed mb-6 ${c.ts}`}>
-                          Ketik teks di editor, pilih font & folio di sidebar, lalu klik Generate.
-                        </p>
-
-                        {/* Step hints */}
-                        <div className="space-y-2 text-left mb-6">
-                          {[
-                            { icon: "📝", label: "Ketik atau paste teks", color: D ? "bg-indigo-900/30 border-indigo-700/30" : "bg-indigo-50 border-indigo-100" },
-                            { icon: "🎨", label: "Pilih font & folio di sidebar", color: D ? "bg-violet-900/30 border-violet-700/30" : "bg-violet-50 border-violet-100" },
-                            { icon: "✨", label: "Klik Generate atau Ctrl+Enter", color: D ? "bg-purple-900/30 border-purple-700/30" : "bg-purple-50 border-purple-100" },
-                          ].map((step, i) => (
-                            <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-xl border text-xs ${step.color}`}>
-                              <span className="text-base">{step.icon}</span>
-                              <span className={D ? "text-white/50" : "text-gray-600"}>{step.label}</span>
-                            </div>
                           ))}
                         </div>
-
-                        <button
-                          onClick={handleLoadDemo}
-                          className={`w-full mb-3 py-2.5 rounded-xl text-xs font-bold border-2 border-dashed transition-all hover:scale-[1.02] active:scale-95 ${D
-                            ? "border-violet-500/40 text-violet-400 hover:border-violet-500/70 hover:bg-violet-500/8"
-                            : "border-violet-400 text-violet-600 hover:border-violet-500 hover:bg-violet-50"
-                            }`}
-                        >
-                          ✍️ Coba Teks Demo — langsung isi & pilih font otomatis
-                        </button>
-
-                        <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] ${D ? "bg-white/4 border-[#ffffff08] text-white/25" : "bg-violet-50 border-violet-100 text-violet-400"}`}>
-                          <kbd className={`font-mono px-1.5 py-0.5 rounded text-[9px] ${D ? "bg-white/8" : "bg-white border border-violet-200"}`}>Ctrl+Enter</kbd>
-                          <span>untuk Generate cepat</span>
-                        </div>
                       </div>
-                    </motion.div>
-                  );
-                })()}
-              </AnimatePresence>
-            </div>
-
-            {/* ── RIWAYAT DRAWER (slide dari kanan) ── */}
-            <AnimatePresence>
-              {activeTab === "history" && (
-                <motion.div
-                  key="history-drawer"
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 320, opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: "easeInOut" }}
-                  className={`flex-shrink-0 border-l overflow-hidden ${c.sidebar} ${c.divider}`}
-                  style={{ width: 320 }}>
-                  <div className="w-[320px] h-full flex flex-col">
-                    <div className={`flex items-center justify-between px-4 py-3 border-b flex-shrink-0 ${c.divider}`}>
-                      <div className="flex items-center gap-2">
-                        <Clock className={`w-4 h-4 ${c.ts}`} />
-                        <span className={`text-sm font-semibold ${c.tp}`}>Riwayat</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {history.length > 0 && (
-                          <button onClick={async () => {
-                            setHistory([]);
-                            localStorage.removeItem("hw_history");
-                            // Hapus semua riwayat milik user ini di cloud
-                            if (user) {
-                              await supabase.from('user_history').delete().eq('user_id', user.id);
-                            }
-                          }}
-                            className={`text-[11px] flex items-center gap-1 px-2 py-1 rounded-lg transition-all ${D ? "text-red-400/70 hover:bg-red-500/10 border border-[#ffffff08]" : "text-red-500 hover:bg-red-50 border border-red-200"}`}>
-                            <Trash2 className="w-3 h-3" />Hapus
-                          </button>
-                        )}
-                        <button onClick={() => setActiveTab("result")} className={`w-7 h-7 rounded-lg flex items-center justify-center ${c.btn}`}>
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin">
-                      {history.length === 0 ? (
-                        <div className="py-12 text-center">
-                          <Clock className={`w-8 h-8 mx-auto mb-3 ${c.ts} opacity-40`} />
-                          <p className={`text-sm ${c.tm}`}>Belum ada riwayat</p>
-                        </div>
-                      ) : history.map((item) => (
-                        <div key={item.id} className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${c.pillBorder} ${c.rowHover}`}>
-                          <div className={`w-14 h-20 rounded-lg overflow-hidden flex-shrink-0 border shadow-sm ${D ? "border-[#ffffff14]" : "border-gray-200"}`}>
-                            {item.thumbnail
-                              ? <img src={item.thumbnail} alt="" className="w-full h-full object-cover object-top" />
-                              : <div className={`w-full h-full flex flex-col items-center justify-center gap-1 ${D ? "bg-violet-500/12" : "bg-violet-100"}`}>
-                                <FileText className="w-4 h-4 text-violet-500" />
-                                <span className="text-[8px] text-violet-400 font-medium">{item.pageCount} hal</span>
-                              </div>
-                            }
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-[11px] font-semibold leading-snug line-clamp-2 ${c.tm}`}>{item.textPreview}</p>
-                            <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-md border ${D ? "bg-white/5 border-[#ffffff10] text-white/50" : "bg-gray-50 border-gray-200 text-gray-500"}`}
-                                style={{ fontFamily: FONT_FAMILY_MAP[item.fontName] || "inherit" }}>
-                                {item.fontName}
-                              </span>
-                              <span className={`text-[9px] ${c.ts}`}>{item.pageCount} hal</span>
-                            </div>
-                            <p className={`text-[9px] mt-1 ${c.ts}`}>{formatTime(item.timestamp)}</p>
-                            <div className="flex items-center gap-1 mt-2">
-                              <button onClick={() => restoreHistory(item)}
-                                className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all border ${D ? "bg-indigo-500/12 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20" : "bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100"}`}>
-                                Pulihkan
-                              </button>
-                              <button onClick={() => deleteHistory(item.id)}
-                                className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ml-auto ${D ? "text-white/20 hover:bg-red-500/10 hover:text-red-400" : "text-gray-300 hover:bg-red-50 hover:text-red-500"}`}>
-                                <X className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    ))}
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* ── PRESET DRAWER (slide dari kanan) ── */}
-            <AnimatePresence>
-              {activeTab === "presets" && (
-                <motion.div
-                  key="preset-drawer"
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 320, opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: "easeInOut" }}
-                  className={`flex-shrink-0 border-l overflow-hidden ${c.sidebar} ${c.divider}`}>
-                  <div className="w-[320px] h-full flex flex-col">
-                    <div className={`flex items-center justify-between px-4 py-3 border-b flex-shrink-0 ${c.divider}`}>
-                      <div className="flex items-center gap-2">
-                        <Save className={`w-4 h-4 ${c.ts}`} />
-                        <span className={`text-sm font-semibold ${c.tp}`}>Preset</span>
-                      </div>
-                      <button onClick={() => setActiveTab("result")} className={`w-7 h-7 rounded-lg flex items-center justify-center ${c.btn}`}>
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin">
-                      {/* Save preset */}
-                      <div className={`flex gap-2 p-3 rounded-xl border ${c.pillBorder} ${c.pill}`}>
-                        <input type="text" placeholder="Nama preset..." value={presetName}
-                          onChange={(e) => setPresetName(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && savePreset()}
-                          className={`flex-1 px-3 py-1.5 text-xs border rounded-lg transition-colors ${c.input}`} />
-                        <button onClick={savePreset}
-                          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r ${c.accent} text-white hover:opacity-90`}>
-                          <Save className="w-3 h-3" />Simpan
-                        </button>
-                      </div>
-                      <p className={`text-[10px] ${c.ts}`}>Menyimpan: font, folio, warna, spasi, dan semua config.</p>
-                      {presets.length === 0 ? (
-                        <div className="py-10 text-center">
-                          <Save className={`w-7 h-7 mx-auto mb-2.5 ${c.ts} opacity-40`} />
-                          <p className={`text-sm ${c.tm}`}>Belum ada preset</p>
-                        </div>
-                      ) : presets.map((preset) => (
-                        <div key={preset.id} className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all ${c.pillBorder} ${c.rowHover}`}>
-                          <div className="w-7 h-7 rounded-lg flex-shrink-0 ring-1 ring-black/10" style={{ backgroundColor: preset.config.color }} />
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-xs font-semibold truncate ${c.tp}`}>{preset.name}</p>
-                            <p className={`text-[10px] ${c.ts}`}>{fonts[preset.fontId]?.name || preset.fontId}</p>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <button onClick={() => loadPreset(preset)}
-                              className={`px-2 py-1 rounded-md text-[10px] font-medium border transition-all ${D ? "bg-violet-500/12 text-violet-400 border-violet-500/20 hover:bg-violet-500/20" : "bg-violet-50 text-violet-600 border-violet-200"}`}>
-                              Muat
-                            </button>
-                            <button onClick={() => deletePreset(preset.id)}
-                              className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${D ? "text-white/20 hover:bg-red-500/10 hover:text-red-400" : "text-gray-300 hover:bg-red-50 hover:text-red-500"}`}>
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-          </div>
-        </main>
-
-        {/* ══ MOBILE: Editor + Output tabs (< md) ══ */}
-        <div className="flex md:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
-          {/* Mobile tab switcher (Modern iOS Style) */}
-          <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} ${D ? "bg-[#09090b]" : "bg-white"}`}>
-            <div className={`flex p-1 rounded-xl relative ${D ? "bg-[#ffffff08]" : "bg-violet-100/60"}`}>
-              {[
-                { id: "editor", label: "✏️ Editor" },
-                { id: "result", label: "✨ Hasil" },
-              ].map((tab) => {
-                const isActive = activeTab === tab.id || (tab.id === "editor" && activeTab === "presets");
-                return (
-                  <button key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-300 relative z-10 ${isActive ? (D ? "text-white" : "text-gray-900") : c.ts
-                      }`}>
-                    {tab.label}
+                  <button
+                    onClick={() => { setShowShortcuts(false); setShowOnboarding(true); setOnboardingStep(0); }}
+                    className={`w-full mt-4 py-2 rounded-xl text-xs font-medium border transition-all ${c.btn}`}>
+                    Lihat Tutorial Onboarding
                   </button>
-                );
-              })}
-              {/* Animasi background pill (kapsul yang bergeser) */}
-              <div
-                className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg transition-all duration-300 ease-out shadow-sm ${D
-                  ? "bg-[#13131f] border border-[#ffffff0d]"
-                  : "bg-white border border-violet-200 shadow-violet-100"}`}
-                style={{ left: (activeTab === "result" ? "calc(50% + 2px)" : "4px") }}
-              />
-            </div>
-          </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
 
-          {/* Mobile editor panel */}
-          {activeTab !== "result" && (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-4 scrollbar-thin space-y-3">
-                {/* Mobile toolbar — scroll horizontal */}
-                <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
-                  <div className="flex items-center gap-2 flex-nowrap min-w-max pb-1">
-                    <button onClick={async () => {
-                      try { const t = await navigator.clipboard.readText(); setInputText(t); setText(t); toast.success("Ditempel!"); }
-                      catch { toast.error("Gagal akses clipboard"); }
-                    }} className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${c.btn}`}>
-                      <Clipboard className="w-3.5 h-3.5" /><span>Tempel</span>
+          {/* ── MODAL TOP UP QRIS ── */}
+          <AnimatePresence>
+            {showQrisModal && (
+              <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                  onClick={() => setShowQrisModal(false)} />
+
+                {/* PERBAIKAN: Tambah max-h-[90dvh], overflow-y-auto, dan penyesuaian ukuran responsif */}
+                <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                  className={`relative w-full max-w-sm sm:max-w-md max-h-[92dvh] overflow-y-auto scrollbar-hide rounded-3xl p-5 sm:p-6 border shadow-2xl flex flex-col items-center text-center ${D ? "bg-[#13131f] border-[#ffffff14]" : "bg-white border-gray-200"}`}>
+
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-full bg-amber-500/20 flex items-center justify-center mb-3 sm:mb-4">
+                    <Zap className="w-6 h-6 sm:w-7 sm:h-7 text-amber-500" fill="currentColor" />
+                  </div>
+
+                  <h3 className={`font-bold text-lg sm:text-xl mb-1.5 sm:mb-2 flex-shrink-0 ${c.tp}`}>Energi Habis!</h3>
+                  <p className={`text-xs sm:text-sm mb-4 sm:mb-6 flex-shrink-0 ${c.ts}`}>
+                    Kamu butuh energi untuk menulis halaman. Yuk dukung kreator dengan Top Up untuk mendapatkan fitur Premium!
+                  </p>
+
+                  {/* Tempat Gambar QRIS - Skala responsif menyesuaikan HP */}
+                  <div className="w-40 h-40 sm:w-48 sm:h-48 flex-shrink-0 bg-white p-3 sm:p-4 rounded-2xl border-4 border-amber-500 mb-4 sm:mb-6 shadow-xl flex items-center justify-center relative group">
+                    <QRCodeSVG
+                      value="00020101021126570011ID.DANA.WWW011893600915300202425202090020242520303UMI51440014ID.CO.QRIS.WWW0215ID10254508315380303UMI5204594553033605802ID5909DUA PUTRA600409056105511526304B1DC"
+                      size={140}
+                      level="H"
+                      includeMargin={false}
+                      style={{ width: "100%", height: "100%" }}
+                    />
+                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-end justify-center p-2 rounded-xl">
+                      <span className="text-[9px] sm:text-[10px] font-bold text-amber-600 bg-white/95 px-2 py-1 rounded-full shadow-sm">Scan Aman & Cepat</span>
+                    </div>
+                  </div>
+
+                  {/* TIER HARGA BARU - Layout dibuat padat di mobile */}
+                  <div className="w-full space-y-2 mb-4 sm:mb-6 flex-shrink-0">
+                    {[
+                      { name: "Paket Maba", energy: 15, price: "5.000", color: "blue", tag: "Hemat" },
+                      { name: "Paket Deadline", energy: 50, price: "15.000", color: "violet", tag: "Populer" },
+                      { name: "Paket Sultan", energy: 150, price: "35.000", color: "amber", tag: "Terbaik" },
+                    ].map((tier) => (
+                      <div key={tier.name} className={`flex items-center justify-between p-2.5 sm:p-3 rounded-2xl border transition-all ${tier.tag === "Populer"
+                        ? D ? "bg-violet-500/10 border-violet-500/40 ring-1 ring-violet-500/20" : "bg-violet-50 border-violet-200 ring-1 ring-violet-200"
+                        : D ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-100"
+                        }`}>
+                        <div className="text-left">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <span className={`text-[9px] sm:text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-md ${tier.color === "blue" ? "bg-blue-500/20 text-blue-500" :
+                              tier.color === "violet" ? "bg-violet-500/20 text-violet-500" : "bg-amber-500/20 text-amber-500"
+                              }`}>{tier.tag}</span>
+                            <span className={`text-[11px] sm:text-xs font-bold ${c.tp}`}>{tier.name}</span>
+                          </div>
+                          <p className={`text-[10px] sm:text-[11px] mt-0.5 ${c.ts}`}>⚡ {tier.energy} Halaman</p>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-xs sm:text-sm font-black ${c.tp}`}>Rp {tier.price}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Tombol Action di bagian bawah (tetap aman walau scroll) */}
+                  <div className="w-full mt-auto flex-shrink-0">
+                    <a href="https://wa.me/6281234567890?text=Halo%20Admin%20HandWrite%20AI,%20saya%20sudah%20transfer%20via%20QRIS%20untuk%20Top%20Up%20Energi.%20Berikut%20bukti%20transfernya:"
+                      target="_blank" rel="noopener noreferrer"
+                      className="w-full py-2.5 sm:py-3 rounded-xl font-bold text-white bg-[#25D366] hover:bg-[#1ebd5a] active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/30 text-xs sm:text-sm">
+                      <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                      Konfirmasi via WhatsApp
+                    </a>
+
+                    <button onClick={() => setShowQrisModal(false)}
+                      className={`mt-3 sm:mt-4 text-[11px] sm:text-xs font-medium transition-colors p-2 ${D ? "text-white/40 hover:text-white" : "text-gray-400 hover:text-gray-800"}`}>
+                      Tutup dulu, mau lihat-lihat
                     </button>
-                    <button onClick={() => setShowAiModal(true)}
-                      className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${D ? "bg-indigo-500/8 text-indigo-400 border-indigo-500/20" : "bg-indigo-50 text-indigo-600 border-indigo-200"}`}>
-                      <Bot className="w-3.5 h-3.5" /><span>Tulis AI</span>
+                  </div>
+
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* ── DASHBOARD ADMIN RAHASIA ── */}
+          <AnimatePresence>
+            {showAdminModal && (
+              <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                  onClick={() => setShowAdminModal(false)} />
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+                  className={`relative w-full max-w-sm rounded-3xl p-6 border shadow-2xl ${D ? "bg-[#0d0d14] border-violet-500/30" : "bg-white border-violet-200"}`}>
+
+                  <div className="flex items-center gap-2 mb-4">
+                    <Settings className="w-5 h-5 text-violet-500" />
+                    <h3 className={`font-bold ${c.tp}`}>Admin Control Panel</h3>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className={`text-[10px] uppercase font-bold mb-1 block ${c.ts}`}>Email User Target</label>
+                      <input
+                        type="email"
+                        placeholder="contoh: maba@gmail.com"
+                        value={targetUserEmail}
+                        onChange={(e) => setTargetUserEmail(e.target.value)}
+                        className={`w-full px-4 py-2.5 rounded-xl text-sm border ${c.input}`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`text-[10px] uppercase font-bold mb-1 block ${c.ts}`}>Set Total Energi</label>
+                      <input
+                        type="number"
+                        value={addAmount}
+                        onChange={(e) => setAddAmount(Number(e.target.value))}
+                        className={`w-full px-4 py-2.5 rounded-xl text-sm border ${c.input}`}
+                      />
+                    </div>
+
+                    <button
+                      onClick={handleAdminUpdateEnergy}
+                      className="w-full py-3 rounded-xl font-bold text-white bg-violet-600 hover:bg-violet-700 shadow-lg shadow-violet-500/25 transition-all">
+                      Update Energi Sekarang
                     </button>
-                    <button onClick={toggleListening}
-                      className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${isListening ? "bg-red-500/15 text-red-400 border-red-500/30 animate-pulse" : c.btn}`}>
-                      <Mic className="w-3.5 h-3.5" /><span>{isListening ? "Dengerin..." : "Dikte"}</span>
-                    </button>
-                    <button onClick={() => { setInputText(""); setText(""); toast.success("Teks dihapus!"); }}
-                      disabled={!text}
-                      className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${!text ? "opacity-35 cursor-not-allowed " + c.btn : D ? "hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25 " + c.btn : "hover:bg-red-50 hover:text-red-600 hover:border-red-200 " + c.btn}`}>
-                      <Trash2 className="w-3.5 h-3.5" /><span>Hapus</span>
-                    </button>
-                    {currentFolio && (
-                      <>
-                        <div className={`w-px h-5 flex-shrink-0 ${D ? "bg-white/10" : "bg-gray-200"}`} />
-                        <span className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${c.tag}`}>
-                          <span>📄</span><span className="max-w-[70px] truncate">{currentFolio.name}</span>
-                        </span>
-                      </>
-                    )}
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* ── FULLSCREEN ── */}
+          {fullscreenPage && (
+            <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4 backdrop-blur-sm"
+              onClick={() => setFullscreenPage(null)}>
+              <button className="absolute top-4 right-4 w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all"
+                onClick={() => setFullscreenPage(null)}>
+                <X className="w-5 h-5" />
+              </button>
+              <div className="text-center" onClick={(e) => e.stopPropagation()}>
+                <p className="text-white/35 text-[11px] mb-3 tracking-widest uppercase">
+                  Halaman {fullscreenPage.page} · ESC untuk tutup
+                </p>
+                <img src={fullscreenPage.image} alt="" className="max-h-[88vh] max-w-[92vw] rounded-xl shadow-2xl object-contain" />
+                <div className="flex justify-center gap-3 mt-4">
+                  <button onClick={() => handleDownloadSingle(fullscreenPage)}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-all">
+                    <Download className="w-4 h-4" />Download
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── HEADER ── */}
+          <header className={`${c.header} border-b sticky top-0 z-50 transition-colors duration-200`}>
+            {isGenerating && (
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-violet-500/10">
+                <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-all duration-500"
+                  style={{ width: `${generateProgress}%` }} />
+              </div>
+            )}
+            <div className="w-full max-w-[1400px] 2xl:max-w-[1600px] 3xl:max-w-[2000px] 4xl:max-w-[2400px] mx-auto px-3 sm:px-4 lg:px-6 3xl:px-12 h-14 flex items-center justify-between gap-2">
+
+              {/* LEFT: toggle + logo */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className={`hidden lg:flex w-8 h-8 rounded-lg items-center justify-center transition-all ${c.btn}`}>
+                  {sidebarOpen ? <PanelLeftClose className="w-3.5 h-3.5" /> : <PanelLeftOpen className="w-3.5 h-3.5" />}
+                </button>
+                {/* Ubah md:hidden menjadi lg:hidden di bawah ini */}
+                <button onClick={() => setMobileSidebarOpen(true)}
+                  className={`flex lg:hidden w-8 h-8 rounded-lg items-center justify-center transition-all ${c.btn}`}>
+                  <Menu className="w-3.5 h-3.5" />
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-violet-500/30">
+                    <PenTool className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="font-bold text-sm bg-clip-text text-transparent hidden xs:block"
+                      style={{
+                        backgroundImage: D
+                          ? "linear-gradient(90deg, #a78bfa, #818cf8, #c4b5fd)"
+                          : "linear-gradient(90deg, #7c3aed, #4f46e5, #7c3aed)",
+                        backgroundSize: "200% auto",
+                        animation: "shimmer 3s linear infinite"
+                      }}>
+                      HandWrite AI
+                    </span>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-mono border ${D ? "border-violet-500/30 bg-violet-500/10 text-violet-400" : "border-violet-300 bg-violet-50 text-violet-600"}`}>v1.2</span>
                   </div>
                 </div>
-                <textarea ref={textareaRef} value={inputText} onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Ketik atau paste teks di sini..."
-                  className={`w-full resize-none rounded-2xl px-4 py-3.5 text-sm leading-relaxed outline-none border-2 focus:border-violet-500/60 ${D ? "bg-[#0f0f12] border-[#ffffff10] text-white placeholder-white/20" : "bg-white/40 border-white/60 shadow-inner backdrop-blur-md text-gray-900 placeholder-indigo-900/40 caret-violet-600"
-                    }`} style={{ minHeight: "240px" }} />
-                {text.length > 0 && (
-                  <div className={`h-1 rounded-full overflow-hidden ${D ? "bg-[#ffffff08]" : "bg-gray-200"}`}>
-                    <div className={`h-full rounded-full ${text.length > 45000 ? "bg-red-500" : D ? "bg-emerald-500" : "bg-emerald-600"}`}
-                      style={{ width: `${Math.min(100, (text.length / 50000) * 100)}%` }} />
+              </div>
+
+              {/* CENTER: status pill */}
+              <div className="hidden sm:flex flex-1 justify-center">
+                {isGenerating ? (
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${D ? "bg-violet-500/10 border border-violet-500/20" : "bg-violet-50 border border-violet-200"}`}>
+                    <Loader2 className="w-3.5 h-3.5 text-violet-500 animate-spin" />
+                    <span className={`text-xs font-medium ${D ? "text-violet-400" : "text-violet-700"}`}>
+                      Generating {Math.round(generateProgress)}%
+                    </span>
+                  </div>
+                ) : generatedPages.length > 0 ? (
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${D ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-50 border border-emerald-200"}`}>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    <span className={`text-xs font-medium ${D ? "text-emerald-400" : "text-emerald-700"}`}>
+                      {generatedPages.length} halaman siap
+                    </span>
+                  </div>
+                ) : text.trim() ? (
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${D ? "bg-white/5 border-[#ffffff10]" : "bg-gray-50 border-gray-200"}`}>
+                    <Clock className={`w-3.5 h-3.5 ${c.ts}`} />
+                    <span className={`text-xs ${c.ts}`}>
+                      ~{estimatedPages} hal · {estimatedTimeLabel}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* RIGHT: backend status + help + dark mode */}
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {/* ── TOMBOL LOGIN CLOUD ── */}
+                {user ? (
+                  <div className="hidden md:flex items-center gap-2 mr-2">
+                    <span className={`text-[11px] font-medium ${D ? "text-white/70" : "text-gray-600"}`}>
+                      {user.user_metadata.full_name}
+                    </span>
+                    <button onClick={handleLogout} title="Logout" className="p-1.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-all">
+                      <LogOut className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={handleLogin} className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-all text-[11px] font-medium mr-2">
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span>Login Cloud</span>
+                  </button>
+                )}
+                <div title={backendOnline === null ? "Memeriksa..." : backendOnline ? "Backend terhubung" : "Backend offline"}
+                  className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-medium transition-all ${backendOnline === null
+                    ? D ? "border-[#ffffff10] text-white/30" : "border-gray-200 text-gray-400"
+                    : backendOnline
+                      ? D ? "border-emerald-500/20 bg-emerald-500/8 text-emerald-400" : "border-emerald-300 bg-emerald-50 text-emerald-700"
+                      : D ? "border-red-500/20 bg-red-500/8 text-red-400" : "border-red-300 bg-red-50 text-red-600"
+                    }`}>
+                  {backendOnline === null ? <Loader2 className="w-3 h-3 animate-spin" /> : backendOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                  <span className="hidden lg:inline">{backendOnline === null ? "..." : backendOnline ? "Online" : "Offline"}</span>
+                </div>
+                {/* INDIKATOR ENERGI / ADMIN DASHBOARD */}
+                {user?.email === "sharulwrdn10@gmail.com" ? (
+                  <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-l-lg border bg-violet-500/10 text-violet-500 border-violet-500/30 text-[10px] font-bold tracking-widest cursor-default">
+                      <Zap className="w-3.5 h-3.5" fill="currentColor" />
+                      <span>DEV</span>
+                    </div>
+                    <button
+                      onClick={() => setShowAdminModal(true)}
+                      className="px-2 py-1.5 rounded-r-lg border border-l-0 bg-violet-600 text-white text-[9px] font-bold hover:bg-violet-700 transition-all">
+                      MANAGE
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => setShowQrisModal(true)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-all ${energy < estimatedPages
+                      ? "bg-rose-500/10 text-rose-500 border-rose-500/30 animate-pulse"
+                      : D ? "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20" : "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
+                      }`}>
+                    <Zap className={`w-3.5 h-3.5 ${energy < estimatedPages ? "text-rose-500" : "text-amber-500"}`} fill="currentColor" />
+                    <span>{energy}</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowShortcuts(true)}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all text-[13px] font-bold ${c.btn}`}
+                  title="Keyboard Shortcuts">
+                  ?
+                </button>
+                <button onClick={() => setIsDark(!isDark)}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${c.btn}`}>
+                  {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+
+            </div>
+          </header>
+
+
+          {/* ── BODY: 3-PANEL LAYOUT ── */}
+          <div className="w-full max-w-[1400px] 2xl:max-w-[1600px] 3xl:max-w-[2000px] 4xl:max-w-[2400px] mx-auto flex overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
+
+            {/* ══ PANEL 1: SIDEBAR SETTINGS — Desktop only ══ */}
+            <motion.aside
+              id="sidebar-settings"
+              className={`hidden lg:flex flex-col flex-shrink-0 border-r overflow-hidden ${c.sidebar}`}
+              animate={{ width: sidebarOpen ? 288 : 0 }}
+              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              style={{ height: "calc(100dvh - 56px)" }}
+            >
+              <motion.div
+                animate={{ opacity: sidebarOpen ? 1 : 0 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="flex-1 overflow-y-auto pb-8 scrollbar-thin w-[288px]"
+              >
+                {renderSidebarContent()}
+              </motion.div>
+            </motion.aside>
+
+            {/* ══ BUNGKUS PANEL 2 & 3 ══ */}
+            <div className="hidden lg:flex flex-1 overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
+
+              {/* ══ PANEL 2: EDITOR ══ */}
+              <div id="editor-panel"
+                className={`flex flex-col border-r flex-shrink-0 ${c.sidebar} ${sidebarOpen
+                  ? "lg:w-[340px] xl:w-[400px] 2xl:w-[440px]"
+                  : "lg:w-[380px] xl:w-[440px] 2xl:w-[500px]"
+                  } transition-all duration-300`}>
+
+                {/* Editor header */}
+                <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} flex items-center justify-between ${D
+                  ? "bg-gradient-to-r from-[#13131f] to-[#0d0d14]"
+                  : "bg-gradient-to-r from-amber-50 via-violet-50 to-indigo-100"}`}>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center ${D ? "bg-indigo-500/20" : "bg-indigo-100"}`}>
+                      <span className="text-[10px]">📝</span>
+                    </div>
+                    <span className={`text-[10.5px] font-bold uppercase tracking-widest ${c.label}`}>Editor</span>
+                    {currentFont && (
+                      <span className={`text-[11px] px-2 py-0.5 rounded-md border ${c.pillBorder} ${c.pill} ${c.tp}`}
+                        style={{ fontFamily: FONT_FAMILY_MAP[currentFont.name] || currentFont.name }}>
+                        {currentFont.name}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] ${c.ts}`}>
+                      <span className={`font-semibold ${D ? "text-indigo-400" : "text-indigo-600"}`}>{wordCount.toLocaleString()}</span> kata
+                    </span>
+
+                    <motion.button
+                      id="generate-btn"
+                      onClick={handleGenerate}
+                      disabled={isGenerating || !text.trim() || !selectedFolio}
+                      whileHover={!(isGenerating || !text.trim() || !selectedFolio) ? { scale: 1.03 } : {}}
+                      whileTap={!(isGenerating || !text.trim() || !selectedFolio) ? { scale: 0.95 } : {}}
+                      animate={isGenerating ? { boxShadow: ["0px 0px 0px rgba(139,92,246,0)", "0px 0px 20px rgba(139,92,246,0.6)", "0px 0px 0px rgba(139,92,246,0)"] } : {}}
+                      transition={{ type: "spring", stiffness: 400, damping: 25, ...(isGenerating && { duration: 2, repeat: Infinity, ease: "easeInOut" }) }}
+                      className={`relative flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl font-bold text-xs transition-all min-w-[110px] overflow-hidden ${isGenerating || !text.trim() || !selectedFolio
+                        ? D ? "bg-[#ffffff05] text-white/30 cursor-not-allowed border border-[#ffffff0a]" : "bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-200"
+                        : `bg-gradient-to-r ${c.accent} text-white shadow-[0_4px_12px_rgba(139,92,246,0.25)] hover:shadow-[0_8px_24px_rgba(139,92,246,0.4)]`
+                        }`}>
+
+                      {/* Efek Sweeping Glow di dalam tombol saat loading */}
+                      {isGenerating && (
+                        <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_1.5s_infinite] -translate-x-full" />
+                      )}
+
+                      <div className="relative z-10 flex items-center gap-1.5">
+                        {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <Sparkles className="w-3.5 h-3.5" />}
+                        <span>{isGenerating ? 'Menulis...' : 'Generate'}</span>
+                        {!isGenerating && estimatedPages > 1 && (
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${D ? "bg-black/20" : "bg-white/25"}`}>{estimatedPages}</span>
+                        )}
+                      </div>
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Textarea area - scrollable */}
+                <div className="flex-1 overflow-y-auto min-h-0 scrollbar-thin">
+                  <div className="p-4 flex flex-col gap-3">
+
+                    {/* Toolbar — scrollable horizontal, rapi di semua ukuran */}
+                    <div className="flex flex-col gap-2">
+
+                      {/* Baris 1: Tombol aksi — scroll horizontal di layar sempit */}
+                      <div className="flex items-center gap-0 overflow-x-auto scrollbar-hide -mx-1 px-1">
+                        <div className="flex items-center gap-1.5 flex-nowrap min-w-max">
+
+                          {/* Tempel */}
+                          <button
+                            onClick={async () => {
+                              try {
+                                const t = await navigator.clipboard.readText();
+                                setInputText(t); setText(t); toast.success("Teks ditempel!");
+                              } catch { toast.error("Tidak bisa akses clipboard"); }
+                            }}
+                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-all whitespace-nowrap flex-shrink-0 ${c.btn}`}>
+                            <Clipboard className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>Tempel</span>
+                          </button>
+
+                          {/* Tulis dengan AI */}
+                          <button
+                            onClick={() => setShowAiModal(true)}
+                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-all whitespace-nowrap flex-shrink-0 ${D
+                              ? "bg-indigo-500/8 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/15 hover:border-indigo-500/35"
+                              : "bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300"
+                              }`}>
+                            <Bot className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>Tulis AI</span>
+                          </button>
+
+                          {/* Dikte */}
+                          <button
+                            onClick={toggleListening}
+                            title={isListening ? "Berhenti mendikte" : "Mulai mendikte"}
+                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-all whitespace-nowrap flex-shrink-0 ${isListening
+                              ? "bg-red-500/15 text-red-400 border-red-500/30 animate-pulse"
+                              : c.btn
+                              }`}>
+                            <Mic className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>{isListening ? "Dengerin..." : "Dikte"}</span>
+                          </button>
+
+                          {/* Hapus */}
+                          <button
+                            onClick={() => {
+                              if (!text) return;
+                              toast((t) => (
+                                <div className="flex flex-row items-start gap-3">
+                                  <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <p className={`text-xs font-bold mb-1 ${D ? "text-white" : "text-gray-900"}`}>Bersihkan Editor?</p>
+                                    <p className={`text-[10px] mb-2.5 ${D ? "text-white/60" : "text-gray-500"}`}>Semua teks akan hilang dan tidak bisa dikembalikan.</p>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => { setInputText(""); setText(""); toast.dismiss(t.id); toast.success("Teks berhasil dihapus!"); }}
+                                        className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-[10px] font-bold transition-all hover:bg-red-600 hover:scale-105 active:scale-95 shadow-md shadow-red-500/20">
+                                        Ya, Hapus
+                                      </button>
+                                      <button
+                                        onClick={() => toast.dismiss(t.id)}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all hover:scale-105 active:scale-95 ${D ? "bg-white/10 text-white hover:bg-white/20" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
+                                        Batal
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ), {
+                                duration: 6000,
+                                position: "top-center",
+                                style: { padding: '14px', borderRadius: '16px', background: D ? '#18181b' : '#ffffff', border: D ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)' }
+                              });
+                            }}
+                            disabled={!text}
+                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-all whitespace-nowrap flex-shrink-0 ${!text
+                              ? "opacity-35 cursor-not-allowed " + c.btn
+                              : D
+                                ? "hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25 " + c.btn
+                                : "hover:bg-red-50 hover:text-red-600 hover:border-red-200 " + c.btn
+                              }`}>
+                            <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>Hapus</span>
+                          </button>
+
+                          {/* Bagikan Link Publik */}
+                          <button
+                            onClick={handleSharePublicLink}
+                            disabled={!text.trim()}
+                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-all whitespace-nowrap flex-shrink-0 ${!text.trim()
+                              ? "opacity-35 cursor-not-allowed " + c.btn
+                              : D
+                                ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/20"
+                                : "bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-100"
+                              }`}
+                          >
+                            <Link className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>Link Publik</span>
+                          </button>
+
+                          {/* Divider */}
+                          {currentFolio && (
+                            <div className={`w-px h-5 flex-shrink-0 mx-0.5 ${D ? "bg-white/10" : "bg-gray-200"}`} />
+                          )}
+
+                          {/* Badge Folio Aktif */}
+                          {currentFolio && (
+                            <div className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 whitespace-nowrap ${c.tag}`}>
+                              <span className="text-xs">📄</span>
+                              <span className="max-w-[80px] truncate font-medium">{currentFolio.name}</span>
+                            </div>
+                          )}
+
+                        </div>
+                      </div>
+
+                      {/* Baris 2: Counter karakter + estimasi halaman */}
+                      <div className={`flex items-center justify-between px-1`}>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10.5px] ${c.ts}`}>
+                            <span className={`font-semibold tabular-nums ${text.length > 40000 ? "text-red-400" : D ? "text-emerald-400" : "text-emerald-600"
+                              }`}>
+                              {text.length.toLocaleString()}
+                            </span>
+                            <span className={c.ts}>/50k karakter</span>
+                          </span>
+                          <span className={`text-[10px] ${D ? "text-white/15" : "text-gray-300"}`}>·</span>
+                          <span className={`text-[10.5px] ${c.ts}`}>
+                            {wordCount.toLocaleString()} kata
+                          </span>
+                        </div>
+                        <span className={`text-[11px] font-bold tabular-nums px-2 py-0.5 rounded-lg border transition-all ${text.length > 45000
+                          ? "bg-red-500/10 text-red-400 border-red-500/20"
+                          : text.length > 30000
+                            ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                            : D
+                              ? "bg-violet-500/10 text-violet-400 border-violet-500/20"
+                              : "bg-violet-50 text-violet-600 border-violet-200"
+                          }`}>
+                          ~{estimatedPages} hal
+                        </span>
+                      </div>
+
+                    </div>
+
+                    {/* Textarea */}
+                    <textarea
+                      ref={textareaRef}
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={async (e) => {
+                        e.preventDefault();
+                        const file = e.dataTransfer.files[0];
+                        if (!file) return;
+
+                        if (file.type === "text/plain") {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            if (typeof ev.target?.result === "string") {
+                              const newText = text + (text ? "\n\n" : "") + ev.target.result;
+                              setText(newText); setInputText(newText);
+                              toast.success("File TXT berhasil dimuat! 📄");
+                            }
+                          };
+                          reader.readAsText(file);
+                        }
+                        else if (file.name.toLowerCase().endsWith(".docx")) {
+                          const tid = toast.loading("Mengekstrak teks dari Word... ⏳");
+                          try {
+                            const arrayBuffer = await file.arrayBuffer();
+                            const result = await mammoth.extractRawText({ arrayBuffer });
+                            const extractedText = result.value.trim();
+                            if (extractedText) {
+                              const newText = text + (text ? "\n\n" : "") + extractedText;
+                              setText(newText); setInputText(newText);
+                              toast.success("Teks Word berhasil diekstrak! ✨", { id: tid });
+                            } else {
+                              toast.error("File Word kosong atau format tidak terbaca", { id: tid });
+                            }
+                          } catch (err) {
+                            toast.error("Gagal membaca file Word", { id: tid });
+                          }
+                        }
+                        else {
+                          toast.error("Saat ini hanya mendukung file .txt dan .docx ⚠️");
+                        }
+                      }}
+                      placeholder="Ketik atau paste teks di sini...&#10;&#10;Drag & drop file .txt atau .docx (Word) ⚡"
+                      className={`light-textarea w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-all duration-300 outline-none border ${D
+                        ? "bg-[#0a0a0c] border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50 focus:bg-[#0f0f12] shadow-inner"
+                        : "bg-gray-50/50 hover:bg-white border-gray-200/80 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400 focus:bg-white focus:shadow-[0_4px_24px_rgba(0,0,0,0.04)]"
+                        } font-[inherit]`}
+                      style={{ minHeight: "200px", height: "auto" }}
+                    />
+
+                    {/* Char progress */}
+                    {text.length > 0 && (
+                      <div className={`h-1 rounded-full overflow-hidden ${D ? "bg-[#ffffff08]" : "bg-gray-200"}`}>
+                        <div className={`h-full rounded-full transition-all duration-500 ${text.length > 45000 ? "bg-red-500" : text.length > 30000 ? "bg-amber-500" : D ? "bg-emerald-500" : "bg-emerald-600"
+                          }`} style={{ width: `${Math.min(100, (text.length / 50000) * 100)}%` }} />
+                      </div>
+                    )}
+
+                    {/* Shortcut hints */}
+                    <div className={`flex items-center gap-3 text-[10px] ${c.ts}`}>
+                      <div className="flex items-center gap-1">
+                        <kbd className={`px-1.5 py-0.5 rounded border font-mono text-[9px] ${D ? "bg-white/5 border-white/10" : "bg-gray-100 border-gray-200"}`}>Ctrl+Enter</kbd>
+                        <span>Generate</span>
+                      </div>
+                      <div className={`w-px h-3 ${D ? "bg-white/10" : "bg-gray-200"}`} />
+                      <div className="flex items-center gap-1">
+                        <span>Drag & drop</span>
+                        <kbd className={`px-1.5 py-0.5 rounded border font-mono text-[9px] ${D ? "bg-white/5 border-white/10" : "bg-gray-100 border-gray-200"}`}>.txt</kbd>
+                      </div>
+                    </div>
+
+                    {estimatedPages > 1 && (
+                      <div className={`flex items-start gap-2 px-3 py-2 rounded-lg border ${D ? "bg-amber-500/10 border-amber-500/20" : "bg-amber-50 border-amber-200"}`}>
+                        <span className="text-amber-500 text-sm mt-0.5 flex-shrink-0">⚠️</span>
+                        <p className={`text-[11px] leading-relaxed ${D ? "text-amber-400" : "text-amber-700"}`}>
+                          Teks akan menghasilkan <strong>{estimatedPages} halaman</strong>.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Seed row */}
+                    <div className="flex items-center justify-end gap-2">
+                      <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[10px] ${c.pillBorder} ${c.pill}`}>
+                        <span className={c.ts}>Seed:</span>
+                        <span className={`font-mono font-semibold ${D ? "text-violet-400" : "text-violet-600"}`}>{String(seed).slice(-6)}</span>
+                        <button onClick={handleCopySeed} className={`ml-0.5 transition-colors ${showSeedCopied ? "text-emerald-500" : c.ts}`}>
+                          {showSeedCopied ? <CheckCircle2 className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                        </button>
+                      </div>
+                      <button
+                        onClick={handleGenerate}
+                        disabled={isGenerating || !generatedPages.length}
+                        title="Regenerate dengan seed yang sama"
+                        className={`p-2.5 rounded-xl border transition-all ${c.btn}`}
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => setSeed(Date.now())} className={`p-2.5 rounded-xl border transition-all ${c.btn}`}>
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* STATS BAR — pinned di bawah editor */}
+                <div className={`flex-shrink-0 border-t ${c.divider} px-4 py-3 ${D
+                  ? "bg-gradient-to-b from-[#0d0d14] to-[#080810]"
+                  : "bg-gradient-to-b from-violet-50 to-indigo-100/80"}`}>
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Estimasi halaman */}
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
+                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${D ? "bg-violet-500/15" : "bg-violet-100"}`}>
+                        <FileText className="w-3.5 h-3.5 text-violet-500" />
+                      </div>
+                      <div>
+                        <p className={`text-[9px] uppercase tracking-widest font-semibold ${c.ts}`}>Halaman</p>
+                        <p className={`text-sm font-bold tabular-nums ${D ? "text-violet-400" : "text-violet-600"}`}>~{estimatedPages}</p>
+                      </div>
+                    </div>
+                    {/* Estimasi waktu */}
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
+                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${D ? "bg-amber-500/15" : "bg-amber-100"}`}>
+                        <Clock className="w-3.5 h-3.5 text-amber-500" />
+                      </div>
+                      <div>
+                        <p className={`text-[9px] uppercase tracking-widest font-semibold ${c.ts}`}>Estimasi</p>
+                        <p className={`text-sm font-bold ${D ? "text-amber-400" : "text-amber-600"}`}>{estimatedTimeLabel}</p>
+                      </div>
+                    </div>
+                    {/* Font aktif */}
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
+                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${D ? "bg-indigo-500/15" : "bg-indigo-100"}`}>
+                        <PenTool className="w-3.5 h-3.5 text-indigo-500" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className={`text-[9px] uppercase tracking-widest font-semibold ${c.ts}`}>Font</p>
+                        <p className={`text-[11px] font-semibold truncate ${c.tp}`}
+                          style={{ fontFamily: FONT_FAMILY_MAP[currentFont?.name || ''] || 'cursive' }}>
+                          {currentFont?.name || "—"}
+                        </p>
+                      </div>
+                    </div>
+                    {/* Folio aktif */}
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
+                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${D ? "bg-emerald-500/15" : "bg-emerald-100"}`}>
+                        <ImageIcon className="w-3.5 h-3.5 text-emerald-500" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className={`text-[9px] uppercase tracking-widest font-semibold ${c.ts}`}>Folio</p>
+                        <p className={`text-[11px] font-semibold truncate ${c.tp}`}>{currentFolio?.name || "—"}</p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Warna tinta */}
+                  <div className={`flex items-center gap-2 mt-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
+                    <div className="w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-black/10 ring-offset-1"
+                      style={{ backgroundColor: config.color, outline: `2px solid ${D ? "#09090b" : "#fff"}`, outlineOffset: "1px" }} />
+                    <span className={`text-[10px] font-mono ${c.ts}`}>{config.color.toUpperCase()}</span>
+                    <span className={`text-[10px] ${c.ts} ml-auto`}>{wordCount.toLocaleString()} kata</span>
+                  </div>
+                </div>
+                {/* Live Preview Strip */}
+                {livePreviewUrl && (
+                  <div className={`relative rounded-xl overflow-hidden border mx-3 mb-3 ${c.pillBorder} ${isLoadingPreview ? "opacity-50" : "opacity-100"} transition-opacity duration-300`}>
+                    <img src={livePreviewUrl} alt="Preview" className="w-full h-24 object-cover object-top" />
+                    <div className={`absolute top-1.5 right-1.5 flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] ${D ? "bg-black/70 text-white/60" : "bg-white/85 text-gray-500"}`}>
+                      {isLoadingPreview && <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse inline-block" />}
+                      Live Preview
+                    </div>
+                    {isLoadingPreview && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[1px]">
+                        <Loader2 className="w-4 h-4 animate-spin text-violet-400" />
+                      </div>
+                    )}
+                    {currentFont && (
+                      <div className={`absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-[9px] font-medium ${D ? "bg-black/70 text-violet-300" : "bg-white/85 text-violet-600"}`}
+                        style={{ fontFamily: FONT_FAMILY_MAP[currentFont.name] || 'cursive' }}>
+                        {currentFont.name}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            </div>
-          )}
 
-          {/* Mobile result panel */}
-          {activeTab === "result" && (
-            <div className={`flex-1 overflow-y-auto pb-24 scrollbar-thin ${D ? "bg-[#060608]" : "bg-gray-100"}`}>
-              {generatedPages.length > 0 ? (
-                <div className="p-4">
-                  {generatedPages.length > 1 && (
-                    <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+              {/* ══ PANEL 3: OUTPUT VIEWER ══ */}
+              <main className="flex flex-1 min-w-0 flex-col overflow-hidden">
+
+                {/* Output header — 2 baris agar tidak overflow di laptop kecil */}
+                <div className={`flex-shrink-0 border-b ${c.divider} ${D ? "bg-[#09090b]/80" : "bg-white/80"} backdrop-blur-sm`}>
+
+                  {/* Baris 1: Status + Navigasi halaman + Riwayat/Preset */}
+                  <div className={`flex items-center justify-between gap-2 px-4 py-2 ${D
+                    ? "bg-gradient-to-r from-[#0d0d14] to-[#13131f]"
+                    : "bg-gradient-to-r from-indigo-100 to-violet-100"}`}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      {/* Status pill */}
+                      {isGenerating ? (
+                        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${D ? "bg-violet-500/12 border border-violet-500/20" : "bg-violet-50 border border-violet-200"}`}>
+                          <Loader2 className="w-3 h-3 text-violet-500 animate-spin flex-shrink-0" />
+                          <span className={`text-[11px] font-medium ${D ? "text-violet-400" : "text-violet-700"}`}>Generating {Math.round(generateProgress)}%</span>
+                        </div>
+                      ) : generatedPages.length > 0 ? (
+                        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${D ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-50 border border-emerald-200"}`}>
+                          <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
+                          <span className={`text-[11px] font-medium ${D ? "text-emerald-400" : "text-emerald-700"}`}>{generatedPages.length} halaman siap</span>
+                        </div>
+                      ) : (
+                        <span className={`text-[11px] font-semibold uppercase tracking-widest ${c.label}`}>Output Viewer</span>
+                      )}
+
+                      {/* Page navigation */}
+                      {generatedPages.length > 0 && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              if (bookRef.current?.pageFlip) bookRef.current.pageFlip().flipPrev();
+                              else setActivePageIndex(i => Math.max(0, i - 1));
+                            }}
+                            disabled={activePageIndex === 0}
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs border transition-all ${activePageIndex === 0
+                              ? D ? "border-[#ffffff05] text-white/10 cursor-not-allowed" : "border-gray-100 text-gray-200 cursor-not-allowed"
+                              : c.btn
+                              }`}>←</button>
+                          <span className={`text-[11px] font-semibold tabular-nums min-w-[44px] text-center ${c.tp}`}>
+                            {activePageIndex + 1}/{generatedPages.length}
+                          </span>
+                          <button
+                            onClick={() => {
+                              if (bookRef.current?.pageFlip) bookRef.current.pageFlip().flipNext();
+                              else setActivePageIndex(i => Math.min(generatedPages.length - 1, i + 1));
+                            }}
+                            disabled={activePageIndex === generatedPages.length - 1}
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs border transition-all ${activePageIndex === generatedPages.length - 1
+                              ? D ? "border-[#ffffff05] text-white/10 cursor-not-allowed" : "border-gray-100 text-gray-200 cursor-not-allowed"
+                              : c.btn
+                              }`}>→</button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Riwayat & Preset — selalu visible di kanan */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => setActiveTab(activeTab === "history" ? "result" : "history")}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${activeTab === "history" ? c.btnActive : c.btn}`}
+                        title="Riwayat">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span className="hidden lg:inline">Riwayat</span>
+                        {history.length > 0 && <span className={`text-[9px] px-1 py-0.5 rounded-full ${activeTab === "history" ? D ? "bg-white/20" : "bg-black/10" : D ? "bg-white/8 text-white/40" : "bg-gray-200 text-gray-500"}`}>{history.length}</span>}
+                      </button>
+                      <button
+                        onClick={() => setActiveTab(activeTab === "presets" ? "result" : "presets")}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${activeTab === "presets" ? c.btnActive : c.btn}`}
+                        title="Preset">
+                        <Save className="w-3.5 h-3.5" />
+                        <span className="hidden lg:inline">Preset</span>
+                        {presets.length > 0 && <span className={`text-[9px] px-1 py-0.5 rounded-full ${activeTab === "presets" ? D ? "bg-white/20" : "bg-black/10" : D ? "bg-white/8 text-white/40" : "bg-gray-200 text-gray-500"}`}>{presets.length}</span>}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* (Baris 2 Toolbar atas sudah dihapus agar layar lebih luas) */}
+
+                {/* Progress bar saat generating */}
+                {isGenerating && (
+                  <div className={`h-1 w-full relative overflow-hidden ${D ? "bg-[#ffffff08]" : "bg-gray-100"}`}>
+                    <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-all duration-300" style={{ width: `${generateProgress}%` }} />
+                  </div>
+                )}
+
+                {/* ── MAIN CONTENT AREA ── */}
+                <div className="flex-1 min-h-0 overflow-hidden flex relative">
+
+                  {/* === FLOATING TOOLBAR (Figma Style) === */}
+                  {generatedPages.length > 0 && activeTab === "result" && (
+                    <div className="absolute left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1.5 px-3 py-2.5 rounded-2xl shadow-2xl backdrop-blur-2xl border transition-all animate-in slide-in-from-bottom-4 duration-500"
+                      style={{
+                        bottom: "max(2rem, calc(2rem + env(safe-area-inset-bottom)))",
+                        maxWidth: "calc(100vw - 2rem)",
+                        background: D
+                          ? "rgba(13, 13, 20, 0.85)"
+                          : "rgba(255, 255, 255, 0.92)",
+                        borderColor: D
+                          ? "rgba(255,255,255,0.08)"
+                          : "rgba(139,92,246,0.2)",
+                        boxShadow: D
+                          ? "0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04)"
+                          : "0 8px 40px rgba(139,92,246,0.15), 0 0 0 1px rgba(139,92,246,0.1)"
+                      }}>
+
+                      {/* Zoom Controls */}
+                      <div className={`flex items-center gap-1 rounded-xl p-1 ${D ? "bg-black/40" : "bg-gray-100/80"}`}>
+                        <button onClick={() => setZoomLevel(z => Math.max(40, z - 20))} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-white text-gray-600 hover:shadow-sm"}`}>
+                          <ZoomOut className="w-4 h-4" />
+                        </button>
+                        <span className={`text-xs font-mono w-10 text-center font-bold ${D ? "text-gray-200" : "text-gray-800"}`}>{zoomLevel}%</span>
+                        <button onClick={() => setZoomLevel(z => Math.min(200, z + 20))} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-white text-gray-600 hover:shadow-sm"}`}>
+                          <ZoomIn className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className={`w-px h-6 mx-1 ${D ? "bg-white/10" : "bg-gray-300"}`} />
+
+                      <button onClick={() => setFullscreenPage(generatedPages[activePageIndex])} className={`hidden sm:flex w-10 h-10 rounded-xl items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`} title="Fullscreen">
+                        <Maximize2 className="w-[18px] h-[18px]" />
+                      </button>
+                      <button onClick={() => handleCopyImageToClipboard(generatedPages[activePageIndex])} className={`hidden sm:flex w-10 h-10 rounded-xl items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`} title="Copy Image">
+                        <Copy className="w-[18px] h-[18px]" />
+                      </button>
+                      <button onClick={() => setGeneratedPages([])} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${D ? "hover:bg-red-500/20 text-red-400" : "hover:bg-red-50 text-red-500"}`} title="Hapus">
+                        <X className="w-5 h-5" />
+                      </button>
+
+                      <div className={`hidden sm:block w-px h-6 mx-1 ${D ? "bg-white/10" : "bg-gray-300"}`} />
+
+                      <button onClick={() => handleDownloadSingle(generatedPages[activePageIndex])} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95 ${D ? "bg-violet-500 hover:bg-violet-400 text-white shadow-violet-500/25" : "bg-violet-600 hover:bg-violet-700 text-white shadow-violet-600/30"}`}>
+                        <Download className="w-4 h-4" />
+                        <span>JPG</span>
+                      </button>
+
+                      {/* Export Dropdown Trigger */}
+                      <button
+                        ref={exportBtnRef}
+                        onClick={() => {
+                          if (showExportDropdown) { setShowExportDropdown(false); return; }
+                          const rect = exportBtnRef.current?.getBoundingClientRect();
+                          if (rect) setExportDropdownPos({ top: rect.top, left: rect.left, height: rect.height, width: rect.width });
+                          setShowExportDropdown(true);
+                        }}
+                        className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all border ${showExportDropdown ? (D ? "bg-white/10 border-white/20" : "bg-gray-200 border-gray-300") : (D ? "border-transparent hover:bg-white/5" : "border-transparent hover:bg-gray-100")}`}>
+                        <ChevronDown className={`w-4 h-4 ${D ? "text-gray-300" : "text-gray-600"} transition-transform duration-300 ${showExportDropdown ? "rotate-180" : ""}`} />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Thumbnail Strip Vertikal */}
+                  {(generatedPages.length > 1 || isGenerating) && activeTab === "result" && (
+                    <div className={`hidden lg:flex flex-col gap-2 p-2 w-[72px] flex-shrink-0 overflow-y-auto border-r scrollbar-thin ${c.divider} ${D ? "bg-[#09090b]" : "bg-violet-50/80"}`}>
                       {generatedPages.map((p, idx) => (
-                        <button key={p.page} onClick={() => setActivePageIndex(idx)}
-                          className={`flex-shrink-0 rounded-lg overflow-hidden border-2 ${idx === activePageIndex ? "border-violet-500" : D ? "border-[#ffffff10]" : "border-gray-200"}`}
-                          style={{ width: 36 }}>
-                          <img src={p.image} alt={`Hal ${p.page}`} className="w-full object-cover" style={{ aspectRatio: '210/297' }} />
+                        <button
+                          key={p.page}
+                          onClick={() => {
+                            if (bookRef.current?.pageFlip) {
+                              const flip = bookRef.current.pageFlip();
+                              if (idx === activePageIndex + 1) flip.flipNext();
+                              else if (idx === activePageIndex - 1) flip.flipPrev();
+                              else flip.flip(idx);
+                            } else {
+                              setActivePageIndex(idx);
+                            }
+                          }}
+                          className={`flex-shrink-0 w-full rounded-lg overflow-hidden border-2 transition-all ${idx === activePageIndex
+                            ? "border-violet-500 shadow-lg shadow-violet-500/25 scale-[1.03]"
+                            : D ? "border-[#ffffff10] hover:border-violet-500/40" : "border-gray-200 hover:border-violet-300"
+                            }`}
+                        >
+                          <img src={p.image} alt={`Hal ${p.page}`} className="w-full object-cover object-top" style={{ aspectRatio: "210/297" }} />
+                          <div className={`text-[8px] text-center py-0.5 font-mono font-semibold ${idx === activePageIndex ? "text-violet-400" : c.ts}`}>
+                            {p.page}
+                          </div>
                         </button>
                       ))}
-                    </div>
-                  )}
-                  <div
-                    style={{ transform: `scale(${mobileZoom / 100})`, transformOrigin: "top center", transition: "transform 0.1s ease" }}
-                    onTouchStart={(e) => {
-                      if (e.touches.length === 2) {
-                        // Pinch start
-                        const dx = e.touches[0].clientX - e.touches[1].clientX;
-                        const dy = e.touches[0].clientY - e.touches[1].clientY;
-                        pinchStartDistRef.current = Math.sqrt(dx * dx + dy * dy);
-                        pinchStartZoomRef.current = mobileZoom;
-                      } else {
-                        swipeStartXRef.current = e.touches[0].clientX;
-                        swipeStartYRef.current = e.touches[0].clientY;
-                      }
-                    }}
-                    onTouchMove={(e) => {
-                      if (e.touches.length === 2 && pinchStartDistRef.current !== null) {
-                        e.preventDefault();
-                        const dx = e.touches[0].clientX - e.touches[1].clientX;
-                        const dy = e.touches[0].clientY - e.touches[1].clientY;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        const ratio = dist / pinchStartDistRef.current;
-                        const newZoom = Math.min(250, Math.max(60, pinchStartZoomRef.current * ratio));
-                        setMobileZoom(Math.round(newZoom));
-                      }
-                    }}
-                    onTouchEnd={(e) => {
-                      if (pinchStartDistRef.current !== null) {
-                        pinchStartDistRef.current = null;
-                        return;
-                      }
-                      if (swipeStartXRef.current === null) return;
-                      const deltaX = e.changedTouches[0].clientX - swipeStartXRef.current;
-                      const deltaY = e.changedTouches[0].clientY - (swipeStartYRef.current ?? 0);
-                      if (Math.abs(deltaX) < Math.abs(deltaY) || Math.abs(deltaX) < 40) return;
-                      if (deltaX < 0) {
-                        setActivePageIndex(i => Math.min(generatedPages.length - 1, i + 1));
-                      } else {
-                        setActivePageIndex(i => Math.max(0, i - 1));
-                      }
-                      swipeStartXRef.current = null;
-                      swipeStartYRef.current = null;
-                    }}>
-                    <img
-                      src={generatedPages[activePageIndex]?.image}
-                      alt="Hasil"
-                      className="w-full rounded-xl shadow-xl select-none"
-                      onClick={() => mobileZoom === 100 && setFullscreenPage(generatedPages[activePageIndex])}
-                    />
-                    {generatedPages.length > 1 && (
-                      <div className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-bold backdrop-blur-md shadow-sm ${isDark ? "bg-black/60 text-white/90" : "bg-white/80 text-gray-800"
-                        }`}>
-                        {activePageIndex + 1} / {generatedPages.length}
-                      </div>
-                    )}
-                  </div>
 
-
-                  {/* Reset zoom jika diperbesar */}
-                  {mobileZoom !== 100 && (
-                    <button
-                      onClick={() => setMobileZoom(100)}
-                      className={`mt-2 mx-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-medium border transition-all ${c.btn}`}>
-                      <ZoomOut className="w-3 h-3" />Reset Zoom ({mobileZoom}%)
-                    </button>
-                  )}
-                  {/* Indikator swipe halaman */}
-                  {generatedPages.length > 1 && (
-                    <div className="flex justify-center gap-1.5 mt-3">
-                      {generatedPages.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setActivePageIndex(idx)}
-                          className={`rounded-full transition-all duration-300 ${idx === activePageIndex
-                            ? "w-5 h-1.5 bg-violet-500"
-                            : D ? "w-1.5 h-1.5 bg-white/20" : "w-1.5 h-1.5 bg-gray-300"
-                            }`}
-                        />
+                      {/* Skeleton halaman yang masih dalam proses generate */}
+                      {isGenerating && Array.from({
+                        length: Math.max(0, (totalStreamPages ?? 0) - generatedPages.length)
+                      }).map((_, idx) => (
+                        <div
+                          key={`skeleton-${idx}`}
+                          className={`flex-shrink-0 w-full rounded-lg overflow-hidden border-2 animate-pulse ${D ? "border-[#ffffff08]" : "border-gray-100"}`}>
+                          <div
+                            className={`w-full ${D ? "bg-white/4" : "bg-gray-100"}`}
+                            style={{ aspectRatio: "210/297" }}>
+                            <div className="w-full h-full flex flex-col gap-1.5 p-2 pt-3">
+                              {Array.from({ length: 8 }).map((_, i) => (
+                                <div
+                                  key={i}
+                                  className={`h-px rounded-full ${D ? "bg-white/8" : "bg-gray-300/60"}`}
+                                  style={{ width: `${55 + (i % 3) * 15}%` }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          <div className={`text-[8px] text-center py-0.5 font-mono ${D ? "text-white/10" : "text-gray-300"}`}>
+                            {generatedPages.length + idx + 1}
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}
-                </div>
-              ) : isGenerating ? (
-                <div className="flex items-center justify-center h-full min-h-[300px] flex-col gap-4">
-                  <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
-                  <p className={`text-sm ${c.tm}`}>Generating {Math.round(generateProgress)}%</p>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full min-h-[300px]">
-                  <p className={`text-sm ${c.ts}`}>Klik Generate untuk mulai</p>
-                </div>
-              )}
 
-              {/* FAB: Generate ulang saat di tab Hasil */}
-              <button
-                onClick={() => setActiveTab("editor" as any)}
-                className={`fixed bottom-24 right-4 w-12 h-12 rounded-full shadow-2xl flex items-center justify-center z-40 bg-gradient-to-br ${c.accent} text-white`}
-                style={{ boxShadow: "0 8px 24px rgba(139,92,246,0.4)" }}
-              >
-                <PenTool className="w-5 h-5" />
-              </button>
+                  {/* Output viewer utama (Figma-style Workspace) */}
+                  <div
+                    className={`relative flex-1 overflow-y-auto scrollbar-thin pb-24 ${D
+                      ? "bg-[#060610]"
+                      : "bg-gradient-to-br from-sky-100/80 via-indigo-50 to-violet-100/80"
+                      }`}
+                    style={{
+                      backgroundImage: D
+                        ? "radial-gradient(#ffffff09 1px, transparent 1px)"
+                        : "radial-gradient(#8b5cf630 1px, transparent 1px)",
+                      backgroundSize: "28px 28px",
+                    }}>
+
+                    <AnimatePresence mode="wait">
+                      {(() => {
+                        // Mencegah error multiple children: Hanya render SATU root element pada satu waktu
+                        if (activeTab !== "result") return null;
+
+                        // STATE 1: Sedang Loading / Generating pertama kali
+                        if (isGenerating && streamedPages.length === 0) {
+                          return (
+                            <motion.div key="generating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                              className="flex items-center justify-center h-full min-h-[400px] w-full p-8">
+
+                              <div className={`relative w-full max-w-md p-8 rounded-2xl border backdrop-blur-sm shadow-2xl flex flex-col gap-4 overflow-hidden ${D ? "bg-[#13131f]/60 border-[#ffffff10]" : "bg-white/60 border-violet-100"}`}>
+                                {/* Efek cahaya lewat di atas skeleton */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-violet-500/10 to-transparent w-[200%] animate-[shimmer_2s_infinite] -translate-x-full" />
+
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="w-10 h-10 rounded-full bg-violet-500/20 flex items-center justify-center animate-pulse">
+                                    <PenTool className="w-5 h-5 text-violet-500" />
+                                  </div>
+                                  <div>
+                                    <h3 className={`text-sm font-bold bg-gradient-to-r ${c.accent} bg-clip-text text-transparent`}>
+                                      AI Sedang Menulis...
+                                    </h3>
+                                    <p className={`text-[10px] ${c.ts} font-mono tracking-widest uppercase`}>{Math.round(generateProgress)}% Selesai</p>
+                                  </div>
+                                </div>
+
+                                {/* Skeleton Baris Tulisan */}
+                                <div className="space-y-3 mt-4">
+                                  {[85, 92, 78, 88, 60].map((width, i) => (
+                                    <div key={i} className="flex items-center gap-2">
+                                      {/* Baris utama */}
+                                      <motion.div
+                                        initial={{ width: 0, opacity: 0.3 }}
+                                        animate={{ width: `${width}%`, opacity: 1 }}
+                                        transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse", delay: i * 0.2 }}
+                                        className={`h-2 rounded-full ${D ? "bg-white/10" : "bg-violet-100"}`}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                            </motion.div>
+                          );
+                        }
+
+                        // STATE 2: Ada Halaman (Selesai atau Streaming)
+                        if (generatedPages.length > 0 || streamedPages.length > 0) {
+                          const pages = generatedPages.length > 0 ? generatedPages : streamedPages;
+
+                          return (
+                            <motion.div
+                              key="book-viewer"
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="p-4 lg:p-8 flex items-center justify-center min-h-full w-full"
+                            >
+                              <div className="relative" style={{ width: `${zoomLevel}%`, maxWidth: "100%", display: "flex", justifyContent: "center" }}>
+                                {/* Render Buku 3D - Mode Kertas Tipis Melengkung */}
+                                <FlipBook
+                                  ref={bookRef}
+                                  width={420}
+                                  height={594}
+                                  size="stretch"
+                                  minWidth={280}
+                                  maxWidth={800}
+                                  minHeight={400}
+                                  maxHeight={1131}
+                                  maxShadowOpacity={0.3}
+                                  showCover={false}
+                                  mobileScrollSupport={true}
+                                  className="shadow-2xl rounded-sm"
+                                  onFlip={(e: any) => setActivePageIndex(e.data)}
+                                >
+                                  {pages.map((p) => (
+                                    <div key={p.page} className="bg-white overflow-hidden" style={{ boxShadow: "inset 0 0 20px rgba(0,0,0,0.05)" }}>
+                                      <img
+                                        src={p.image}
+                                        alt={`Hal ${p.page}`}
+                                        className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
+                                        onDoubleClick={() => generatedPages.length > 0 && setFullscreenPage(p)}
+                                      />
+                                    </div>
+                                  ))}
+                                </FlipBook>
+                              </div>
+                            </motion.div>
+                          );
+                        }
+
+                        // STATE 3: Kosong
+                        return (
+                          <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="flex items-center justify-center min-h-full p-8 py-16">
+                            <div className="text-center max-w-sm m-auto">
+                              {/* Animated Icon */}
+                              <div className="relative w-24 h-24 mx-auto mb-8 mt-6">
+                                <div className={`absolute inset-0 rounded-3xl ${D ? "bg-gradient-to-br from-violet-900/40 to-indigo-900/40 border border-violet-700/20" : "bg-gradient-to-br from-violet-100 to-indigo-100 border border-violet-200"}`} />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <PenTool className={`w-10 h-10 ${D ? "text-violet-400/60" : "text-violet-400"}`}
+                                    style={{ animation: "bounce 2s ease-in-out infinite" }} />
+                                </div>
+                                <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${D ? "bg-indigo-500/40" : "bg-indigo-300"}`}
+                                  style={{ animation: "pulse 2s ease-in-out infinite" }} />
+                                <div className={`absolute -bottom-1 -left-1 w-2 h-2 rounded-full ${D ? "bg-violet-500/40" : "bg-violet-300"}`}
+                                  style={{ animation: "pulse 2.5s ease-in-out infinite" }} />
+                              </div>
+
+                              <p className={`text-base font-bold mb-2 ${D ? "text-white/70" : "text-gray-700"}`}>
+                                Hasil akan tampil di sini
+                              </p>
+                              <p className={`text-[12px] leading-relaxed mb-6 ${c.ts}`}>
+                                Ketik teks di editor, pilih font & folio di sidebar, lalu klik Generate.
+                              </p>
+
+                              {/* Step hints */}
+                              <div className="space-y-2 text-left mb-6">
+                                {[
+                                  { icon: "📝", label: "Ketik atau paste teks", color: D ? "bg-indigo-900/30 border-indigo-700/30" : "bg-indigo-50 border-indigo-100" },
+                                  { icon: "🎨", label: "Pilih font & folio di sidebar", color: D ? "bg-violet-900/30 border-violet-700/30" : "bg-violet-50 border-violet-100" },
+                                  { icon: "✨", label: "Klik Generate atau Ctrl+Enter", color: D ? "bg-purple-900/30 border-purple-700/30" : "bg-purple-50 border-purple-100" },
+                                ].map((step, i) => (
+                                  <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-xl border text-xs ${step.color}`}>
+                                    <span className="text-base">{step.icon}</span>
+                                    <span className={D ? "text-white/50" : "text-gray-600"}>{step.label}</span>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <button
+                                onClick={handleLoadDemo}
+                                className={`w-full mb-3 py-2.5 rounded-xl text-xs font-bold border-2 border-dashed transition-all hover:scale-[1.02] active:scale-95 ${D
+                                  ? "border-violet-500/40 text-violet-400 hover:border-violet-500/70 hover:bg-violet-500/8"
+                                  : "border-violet-400 text-violet-600 hover:border-violet-500 hover:bg-violet-50"
+                                  }`}
+                              >
+                                ✍️ Coba Teks Demo — langsung isi & pilih font otomatis
+                              </button>
+
+                              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] ${D ? "bg-white/4 border-[#ffffff08] text-white/25" : "bg-violet-50 border-violet-100 text-violet-400"}`}>
+                                <kbd className={`font-mono px-1.5 py-0.5 rounded text-[9px] ${D ? "bg-white/8" : "bg-white border border-violet-200"}`}>Ctrl+Enter</kbd>
+                                <span>untuk Generate cepat</span>
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })()}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* ── RIWAYAT DRAWER (slide dari kanan) ── */}
+                  <AnimatePresence>
+                    {activeTab === "history" && (
+                      <motion.div
+                        key="history-drawer"
+                        initial={{ width: 0, opacity: 0 }}
+                        animate={{ width: 320, opacity: 1 }}
+                        exit={{ width: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: "easeInOut" }}
+                        className={`flex-shrink-0 border-l overflow-hidden ${c.sidebar} ${c.divider}`}
+                        style={{ width: 320 }}>
+                        <div className="w-[320px] h-full flex flex-col">
+                          <div className={`flex items-center justify-between px-4 py-3 border-b flex-shrink-0 ${c.divider}`}>
+                            <div className="flex items-center gap-2">
+                              <Clock className={`w-4 h-4 ${c.ts}`} />
+                              <span className={`text-sm font-semibold ${c.tp}`}>Riwayat</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {history.length > 0 && (
+                                <button onClick={async () => {
+                                  setHistory([]);
+                                  localStorage.removeItem("hw_history");
+                                  // Hapus semua riwayat milik user ini di cloud
+                                  if (user) {
+                                    await supabase.from('user_history').delete().eq('user_id', user.id);
+                                  }
+                                }}
+                                  className={`text-[11px] flex items-center gap-1 px-2 py-1 rounded-lg transition-all ${D ? "text-red-400/70 hover:bg-red-500/10 border border-[#ffffff08]" : "text-red-500 hover:bg-red-50 border border-red-200"}`}>
+                                  <Trash2 className="w-3 h-3" />Hapus
+                                </button>
+                              )}
+                              <button onClick={() => setActiveTab("result")} className={`w-7 h-7 rounded-lg flex items-center justify-center ${c.btn}`}>
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin">
+                            {history.length === 0 ? (
+                              <div className="py-12 text-center">
+                                <Clock className={`w-8 h-8 mx-auto mb-3 ${c.ts} opacity-40`} />
+                                <p className={`text-sm ${c.tm}`}>Belum ada riwayat</p>
+                              </div>
+                            ) : history.map((item) => (
+                              <div key={item.id} className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${c.pillBorder} ${c.rowHover}`}>
+                                <div className={`w-14 h-20 rounded-lg overflow-hidden flex-shrink-0 border shadow-sm ${D ? "border-[#ffffff14]" : "border-gray-200"}`}>
+                                  {item.thumbnail
+                                    ? <img src={item.thumbnail} alt="" className="w-full h-full object-cover object-top" />
+                                    : <div className={`w-full h-full flex flex-col items-center justify-center gap-1 ${D ? "bg-violet-500/12" : "bg-violet-100"}`}>
+                                      <FileText className="w-4 h-4 text-violet-500" />
+                                      <span className="text-[8px] text-violet-400 font-medium">{item.pageCount} hal</span>
+                                    </div>
+                                  }
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-[11px] font-semibold leading-snug line-clamp-2 ${c.tm}`}>{item.textPreview}</p>
+                                  <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md border ${D ? "bg-white/5 border-[#ffffff10] text-white/50" : "bg-gray-50 border-gray-200 text-gray-500"}`}
+                                      style={{ fontFamily: FONT_FAMILY_MAP[item.fontName] || "inherit" }}>
+                                      {item.fontName}
+                                    </span>
+                                    <span className={`text-[9px] ${c.ts}`}>{item.pageCount} hal</span>
+                                  </div>
+                                  <p className={`text-[9px] mt-1 ${c.ts}`}>{formatTime(item.timestamp)}</p>
+                                  <div className="flex items-center gap-1 mt-2">
+                                    <button onClick={() => restoreHistory(item)}
+                                      className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all border ${D ? "bg-indigo-500/12 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20" : "bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100"}`}>
+                                      Pulihkan
+                                    </button>
+                                    <button onClick={() => deleteHistory(item.id)}
+                                      className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ml-auto ${D ? "text-white/20 hover:bg-red-500/10 hover:text-red-400" : "text-gray-300 hover:bg-red-50 hover:text-red-500"}`}>
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* ── PRESET DRAWER (slide dari kanan) ── */}
+                  <AnimatePresence>
+                    {activeTab === "presets" && (
+                      <motion.div
+                        key="preset-drawer"
+                        initial={{ width: 0, opacity: 0 }}
+                        animate={{ width: 320, opacity: 1 }}
+                        exit={{ width: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: "easeInOut" }}
+                        className={`flex-shrink-0 border-l overflow-hidden ${c.sidebar} ${c.divider}`}>
+                        <div className="w-[320px] h-full flex flex-col">
+                          <div className={`flex items-center justify-between px-4 py-3 border-b flex-shrink-0 ${c.divider}`}>
+                            <div className="flex items-center gap-2">
+                              <Save className={`w-4 h-4 ${c.ts}`} />
+                              <span className={`text-sm font-semibold ${c.tp}`}>Preset</span>
+                            </div>
+                            <button onClick={() => setActiveTab("result")} className={`w-7 h-7 rounded-lg flex items-center justify-center ${c.btn}`}>
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin">
+                            {/* Save preset */}
+                            <div className={`flex gap-2 p-3 rounded-xl border ${c.pillBorder} ${c.pill}`}>
+                              <input type="text" placeholder="Nama preset..." value={presetName}
+                                onChange={(e) => setPresetName(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && savePreset()}
+                                className={`flex-1 px-3 py-1.5 text-xs border rounded-lg transition-colors ${c.input}`} />
+                              <button onClick={savePreset}
+                                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r ${c.accent} text-white hover:opacity-90`}>
+                                <Save className="w-3 h-3" />Simpan
+                              </button>
+                            </div>
+                            <p className={`text-[10px] ${c.ts}`}>Menyimpan: font, folio, warna, spasi, dan semua config.</p>
+                            {presets.length === 0 ? (
+                              <div className="py-10 text-center">
+                                <Save className={`w-7 h-7 mx-auto mb-2.5 ${c.ts} opacity-40`} />
+                                <p className={`text-sm ${c.tm}`}>Belum ada preset</p>
+                              </div>
+                            ) : presets.map((preset) => (
+                              <div key={preset.id} className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all ${c.pillBorder} ${c.rowHover}`}>
+                                <div className="w-7 h-7 rounded-lg flex-shrink-0 ring-1 ring-black/10" style={{ backgroundColor: preset.config.color }} />
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-xs font-semibold truncate ${c.tp}`}>{preset.name}</p>
+                                  <p className={`text-[10px] ${c.ts}`}>{fonts[preset.fontId]?.name || preset.fontId}</p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <button onClick={() => loadPreset(preset)}
+                                    className={`px-2 py-1 rounded-md text-[10px] font-medium border transition-all ${D ? "bg-violet-500/12 text-violet-400 border-violet-500/20 hover:bg-violet-500/20" : "bg-violet-50 text-violet-600 border-violet-200"}`}>
+                                    Muat
+                                  </button>
+                                  <button onClick={() => deletePreset(preset.id)}
+                                    className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${D ? "text-white/20 hover:bg-red-500/10 hover:text-red-400" : "text-gray-300 hover:bg-red-50 hover:text-red-500"}`}>
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </main>
             </div>
-          )}
-        </div>
 
-      </div>
-
-      {/* ── EXPORT DROPDOWN PORTAL — fixed di atas semua layer ── */}
-      <AnimatePresence>
-        {showExportDropdown && exportDropdownPos && (
-          <>
-            <div className="fixed inset-0 z-[90]" onClick={() => setShowExportDropdown(false)} />
-            <motion.div
-              ref={exportDropdownRef}
-              // Animasi menyesuaikan arah buka (dari bawah atau dari atas)
-              initial={{ opacity: 0, y: exportDropdownPos.top > (typeof window !== 'undefined' ? window.innerHeight : 800) / 2 ? 10 : -10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: exportDropdownPos.top > (typeof window !== 'undefined' ? window.innerHeight : 800) / 2 ? 10 : -10, scale: 0.95 }}
-              transition={{ duration: 0.15, ease: "easeOut" }}
-              style={{
-                position: "fixed",
-                left: Math.min(exportDropdownPos.left - 120, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 200),
-                ...(typeof window !== 'undefined' && exportDropdownPos.top > window.innerHeight / 2
-                  ? { bottom: window.innerHeight - exportDropdownPos.top + 16 }
-                  : { top: exportDropdownPos.top + exportDropdownPos.height + 16 }),
-                zIndex: 9999,
-              }}
-              className={`w-48 rounded-2xl border shadow-2xl overflow-hidden backdrop-blur-xl ${D
-                ? "bg-[#0d0d14]/95 border-[#ffffff10] shadow-[0_16px_48px_rgba(0,0,0,0.7)]"
-                : "bg-white/98 border-violet-200 shadow-[0_16px_48px_rgba(139,92,246,0.2)]"}`}>
-              <div className="p-1">
-                <button onClick={() => { handleDownloadAllPng(); setShowExportDropdown(false); }}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${c.rowHover} ${c.tm}`}>
-                  <div className="w-6 h-6 rounded-md flex items-center justify-center bg-violet-500/15">
-                    <Download className="w-3.5 h-3.5 text-violet-500" />
-                  </div>Semua JPG
-                </button>
-                <button onClick={() => { handleDownloadZip(); setShowExportDropdown(false); }}
-                  disabled={isDownloadingZip}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${c.rowHover} ${c.tm} ${isDownloadingZip ? "opacity-50" : ""}`}>
-                  <div className="w-6 h-6 rounded-md flex items-center justify-center bg-emerald-500/15">
-                    {isDownloadingZip ? <Loader2 className="w-3.5 h-3.5 text-emerald-500 animate-spin" /> : <Package className="w-3.5 h-3.5 text-emerald-500" />}
-                  </div>ZIP Archive
-                </button>
-                <div className={`my-1 h-px ${D ? "bg-white/8" : "bg-gray-100"}`} />
-                <button onClick={() => { handleExportPdf(); setShowExportDropdown(false); }}
-                  disabled={isExportingPdf}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${c.rowHover} ${c.tm} ${isExportingPdf ? "opacity-50" : ""}`}>
-                  <div className="w-6 h-6 rounded-md flex items-center justify-center bg-amber-500/15">
-                    {isExportingPdf ? <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin" /> : <FileDown className="w-3.5 h-3.5 text-amber-500" />}
-                  </div>PDF
-                </button>
-                <button onClick={async () => {
-                  setShowExportDropdown(false);
-                  const tid = toast.loading("Membuat PNG transparan...");
-                  try {
-                    const res = await fetch(`${API_URL}/api/download/transparent`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ imageData: generatedPages[activePageIndex].image })
-                    });
-                    if (!res.ok) throw new Error();
-                    const blob = await res.blob();
-                    saveAs(blob, `tulisan_transparan_hal${activePageIndex + 1}.png`);
-                    toast.success("PNG transparan berhasil!", { id: tid });
-                  } catch { toast.error("Gagal export", { id: tid }); }
-                }}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${c.rowHover} ${c.tm}`}>
-                  <div className="w-6 h-6 rounded-md flex items-center justify-center bg-purple-500/15">
-                    <ImageIcon className="w-3.5 h-3.5 text-purple-500" />
-                  </div>PNG Transparan
-                </button>
-                <button onClick={() => { handleExportDocx(); setShowExportDropdown(false); }}
-                  disabled={isExportingDocx}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${c.rowHover} ${c.tm} ${isExportingDocx ? "opacity-50" : ""}`}>
-                  <div className="w-6 h-6 rounded-md flex items-center justify-center bg-blue-500/15">
-                    {isExportingDocx ? <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" /> : <FileText className="w-3.5 h-3.5 text-blue-500" />}
-                  </div>Word (.docx)
-                </button>
+            {/* ══ MOBILE & TABLET: Editor + Output tabs (< lg) ══ */}
+            <div className="flex lg:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
+              {/* Mobile tab switcher (Modern iOS Style) */}
+              <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} ${D ? "bg-[#09090b]" : "bg-white"}`}>
+                <div className={`flex p-1 rounded-xl relative ${D ? "bg-[#ffffff08]" : "bg-violet-100/60"}`}>
+                  {[
+                    { id: "editor", label: "✏️ Editor" },
+                    { id: "result", label: "✨ Hasil" },
+                  ].map((tab) => {
+                    const isActive = activeTab === tab.id || (tab.id === "editor" && activeTab === "presets");
+                    return (
+                      <button key={tab.id}
+                        onClick={() => setActiveTab(tab.id as any)}
+                        className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-300 relative z-10 ${isActive ? (D ? "text-white" : "text-gray-900") : c.ts
+                          }`}>
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                  {/* Animasi background pill (kapsul yang bergeser) */}
+                  <div
+                    className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg transition-all duration-300 ease-out shadow-sm ${D
+                      ? "bg-[#13131f] border border-[#ffffff0d]"
+                      : "bg-white border border-violet-200 shadow-violet-100"}`}
+                    style={{ left: (activeTab === "result" ? "calc(50% + 2px)" : "4px") }}
+                  />
+                </div>
               </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
 
-      {/* ── MOBILE BOTTOM BAR (Modern Floating Dock) ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden pointer-events-none p-4 safe-area-pb">
-        {/* Notifikasi proses tulis melayang di atas dock */}
-        <AnimatePresence>
-          {isGenerating && totalStreamPages > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-              className={`absolute -top-12 left-0 right-0 mx-auto w-max max-w-[90%] px-4 py-2 rounded-full text-[10px] font-medium text-center shadow-lg pointer-events-auto backdrop-blur-md border ${D ? "bg-violet-500/20 text-violet-300 border-violet-500/30" : "bg-white/90 text-violet-700 border-violet-200"}`}>
-              <Loader2 className="w-3 h-3 animate-spin inline mr-1.5 -mt-0.5" />
-              Menulis halaman {streamedPages.length} dari {totalStreamPages}
-              {totalStreamPages > 0 && streamedPages.length > 0 && (
-                <span className="ml-1 opacity-60">
-                  · ~{Math.ceil((totalStreamPages - streamedPages.length) * 3)}s lagi
-                </span>
+              {/* Mobile editor panel */}
+              {activeTab !== "result" && (
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  {/* Tambahkan flex, flex-col, gap-3, dan pb-28 (padding bottom ekstra untuk area dock) */}
+                  <div className="flex-1 flex flex-col overflow-y-auto p-4 pb-28 scrollbar-thin gap-3">
+
+                    {/* Mobile toolbar — scroll horizontal */}
+                    <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 flex-shrink-0">
+                      <div className="flex items-center gap-2 flex-nowrap min-w-max pb-1">
+                        <button onClick={async () => {
+                          try { const t = await navigator.clipboard.readText(); setInputText(t); setText(t); toast.success("Ditempel!"); }
+                          catch { toast.error("Gagal akses clipboard"); }
+                        }} className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${c.btn}`}>
+                          <Clipboard className="w-3.5 h-3.5" /><span>Tempel</span>
+                        </button>
+                        <button onClick={() => setShowAiModal(true)}
+                          className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${D ? "bg-indigo-500/8 text-indigo-400 border-indigo-500/20" : "bg-indigo-50 text-indigo-600 border-indigo-200"}`}>
+                          <Bot className="w-3.5 h-3.5" /><span>Tulis AI</span>
+                        </button>
+                        <button onClick={toggleListening}
+                          className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${isListening ? "bg-red-500/15 text-red-400 border-red-500/30 animate-pulse" : c.btn}`}>
+                          <Mic className="w-3.5 h-3.5" /><span>{isListening ? "Dengerin..." : "Dikte"}</span>
+                        </button>
+                        <button onClick={() => { setInputText(""); setText(""); toast.success("Teks dihapus!"); }}
+                          disabled={!text}
+                          className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${!text ? "opacity-35 cursor-not-allowed " + c.btn : D ? "hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25 " + c.btn : "hover:bg-red-50 hover:text-red-600 hover:border-red-200 " + c.btn}`}>
+                          <Trash2 className="w-3.5 h-3.5" /><span>Hapus</span>
+                        </button>
+                        {currentFolio && (
+                          <>
+                            <div className={`w-px h-5 flex-shrink-0 ${D ? "bg-white/10" : "bg-gray-200"}`} />
+                            <span className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${c.tag}`}>
+                              <span>📄</span><span className="max-w-[70px] truncate">{currentFolio.name}</span>
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Textarea — Ditambahkan flex-1 agar memenuhi sisa ruang layar dan UI lebih modern ala Notion */}
+                    <textarea ref={textareaRef} value={inputText} onChange={(e) => setInputText(e.target.value)}
+                      placeholder="Ketik atau paste teks di sini..."
+                      className={`flex-1 w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-all duration-300 outline-none border ${D
+                        ? "bg-[#0a0a0c] border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50 focus:bg-[#0f0f12] shadow-inner"
+                        : "bg-gray-50/50 hover:bg-white border-gray-200/80 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400 focus:bg-white focus:shadow-[0_4px_24px_rgba(0,0,0,0.04)]"
+                        }`} style={{ minHeight: "280px" }} />
+
+                    {/* Progress bar — Ditambahkan flex-shrink-0 agar tidak gepeng */}
+                    {text.length > 0 && (
+                      <div className={`h-1 flex-shrink-0 rounded-full overflow-hidden ${D ? "bg-[#ffffff08]" : "bg-gray-200"}`}>
+                        <div className={`h-full rounded-full ${text.length > 45000 ? "bg-red-500" : D ? "bg-emerald-500" : "bg-emerald-600"}`}
+                          style={{ width: `${Math.min(100, (text.length / 50000) * 100)}%` }} />
+                      </div>
+                    )}
+
+                  </div>
+                </div>
               )}
-            </motion.div>
-          )}
-        </AnimatePresence>
 
-        {/* Dock Kaca (Glassmorphism) */}
-        <div className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl shadow-2xl pointer-events-auto backdrop-blur-xl border transition-all ${D
-          ? "bg-[#0d0d14]/90 border-[#ffffff10] shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
-          : "bg-white/90 border-violet-200 shadow-[0_8px_32px_rgba(139,92,246,0.15)]"}`}>
-          <button onClick={() => setMobileSidebarOpen(true)}
-            className={`flex md:hidden w-8 h-8 rounded-lg items-center justify-center transition-all ${c.btn}`}>
-            <Menu className="w-3.5 h-3.5" />
-          </button>
+              {/* Mobile result panel */}
+              {activeTab === "result" && (
+                <div className={`flex-1 overflow-y-auto pb-24 scrollbar-thin ${D ? "bg-[#060608]" : "bg-gray-100"}`}>
+                  {generatedPages.length > 0 ? (
+                    <div className="p-4">
+                      {generatedPages.length > 1 && (
+                        <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+                          {generatedPages.map((p, idx) => (
+                            <button key={p.page} onClick={() => setActivePageIndex(idx)}
+                              className={`flex-shrink-0 rounded-lg overflow-hidden border-2 ${idx === activePageIndex ? "border-violet-500" : D ? "border-[#ffffff10]" : "border-gray-200"}`}
+                              style={{ width: 36 }}>
+                              <img src={p.image} alt={`Hal ${p.page}`} className="w-full object-cover" style={{ aspectRatio: '210/297' }} />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      <div
+                        style={{ transform: `scale(${mobileZoom / 100})`, transformOrigin: "top center", transition: "transform 0.1s ease" }}
+                        onTouchStart={(e) => {
+                          if (e.touches.length === 2) {
+                            // Pinch start
+                            const dx = e.touches[0].clientX - e.touches[1].clientX;
+                            const dy = e.touches[0].clientY - e.touches[1].clientY;
+                            pinchStartDistRef.current = Math.sqrt(dx * dx + dy * dy);
+                            pinchStartZoomRef.current = mobileZoom;
+                          } else {
+                            swipeStartXRef.current = e.touches[0].clientX;
+                            swipeStartYRef.current = e.touches[0].clientY;
+                          }
+                        }}
+                        onTouchMove={(e) => {
+                          if (e.touches.length === 2 && pinchStartDistRef.current !== null) {
+                            e.preventDefault();
+                            const dx = e.touches[0].clientX - e.touches[1].clientX;
+                            const dy = e.touches[0].clientY - e.touches[1].clientY;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            const ratio = dist / pinchStartDistRef.current;
+                            const newZoom = Math.min(250, Math.max(60, pinchStartZoomRef.current * ratio));
+                            setMobileZoom(Math.round(newZoom));
+                          }
+                        }}
+                        onTouchEnd={(e) => {
+                          if (pinchStartDistRef.current !== null) {
+                            pinchStartDistRef.current = null;
+                            return;
+                          }
+                          if (swipeStartXRef.current === null) return;
+                          const deltaX = e.changedTouches[0].clientX - swipeStartXRef.current;
+                          const deltaY = e.changedTouches[0].clientY - (swipeStartYRef.current ?? 0);
+                          if (Math.abs(deltaX) < Math.abs(deltaY) || Math.abs(deltaX) < 40) return;
+                          if (deltaX < 0) {
+                            setActivePageIndex(i => Math.min(generatedPages.length - 1, i + 1));
+                          } else {
+                            setActivePageIndex(i => Math.max(0, i - 1));
+                          }
+                          swipeStartXRef.current = null;
+                          swipeStartYRef.current = null;
+                        }}>
+                        <img
+                          src={generatedPages[activePageIndex]?.image}
+                          alt="Hasil"
+                          className="w-full rounded-xl shadow-xl select-none"
+                          onClick={() => mobileZoom === 100 && setFullscreenPage(generatedPages[activePageIndex])}
+                        />
+                        {generatedPages.length > 1 && (
+                          <div className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-bold backdrop-blur-md shadow-sm ${isDark ? "bg-black/60 text-white/90" : "bg-white/80 text-gray-800"
+                            }`}>
+                            {activePageIndex + 1} / {generatedPages.length}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : isGenerating ? (
+                    <div className="flex items-center justify-center h-full min-h-[300px] flex-col gap-4">
+                      <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
+                      <p className={`text-sm ${c.tm}`}>Generating {Math.round(generateProgress)}%</p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full min-h-[300px]">
+                      <p className={`text-sm ${c.ts}`}>Klik Generate untuk mulai</p>
+                    </div>
+                  )}
 
-          <div className="flex-1 min-w-0 pl-1 relative">
-            {currentFont ? (
-              <span className={`text-[12px] font-bold truncate block ${c.tp}`} style={{ fontFamily: FONT_FAMILY_MAP[currentFont.name] || currentFont.name }}>
-                {currentFont.name}
-              </span>
-            ) : (
-              <span className={`text-[11px] ${c.ts}`}>Pilih font...</span>
-            )}
-            <span className={`text-[9px] mt-0.5 block truncate ${c.ts}`}>
-              {wordCount} kata • Est. {estimatedPages} hal
-            </span>
-            {isGenerating && (
-              <div className="absolute -bottom-2.5 left-0 right-0 h-[2px] opacity-70">
-                <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-all duration-500" style={{ width: `${generateProgress}%` }} />
-              </div>
-            )}
+                  {/* ── MOBILE FLOATING DYNAMIC ISLAND ── */}
+                  {generatedPages.length > 0 && (
+                    <motion.div
+                      initial={{ y: 50, x: "-50%", opacity: 0 }}
+                      animate={{ y: 0, x: "-50%", opacity: 1 }}
+                      className="fixed bottom-8 left-1/2 z-[60] flex items-center p-1.5 rounded-full shadow-2xl backdrop-blur-xl border transition-all"
+                      style={{
+                        background: D ? "rgba(15,15,22,0.85)" : "rgba(255,255,255,0.95)",
+                        borderColor: D ? "rgba(255,255,255,0.1)" : "rgba(139,92,246,0.2)",
+                        boxShadow: D ? "0 12px 40px rgba(0,0,0,0.6)" : "0 12px 40px rgba(139,92,246,0.2)"
+                      }}
+                    >
+                      {/* Tombol Kembali ke Editor */}
+                      <button onClick={() => setActiveTab("editor" as any)} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`}>
+                        <PenTool className="w-4 h-4" />
+                      </button>
+
+                      <div className={`w-px h-5 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
+
+                      {/* Navigasi Halaman (Hanya muncul jika > 1 halaman) */}
+                      {generatedPages.length > 1 && (
+                        <>
+                          <button onClick={() => setActivePageIndex(i => Math.max(0, i - 1))} disabled={activePageIndex === 0} className={`w-8 h-10 flex items-center justify-center transition-all ${activePageIndex === 0 ? "opacity-30" : "text-violet-500"}`}>
+                            <ChevronDown className="w-4 h-4 rotate-90" />
+                          </button>
+                          <span className={`text-[11px] font-bold font-mono px-1 ${c.tp}`}>
+                            {activePageIndex + 1}/{generatedPages.length}
+                          </span>
+                          <button onClick={() => setActivePageIndex(i => Math.min(generatedPages.length - 1, i + 1))} disabled={activePageIndex === generatedPages.length - 1} className={`w-8 h-10 flex items-center justify-center transition-all ${activePageIndex === generatedPages.length - 1 ? "opacity-30" : "text-violet-500"}`}>
+                            <ChevronDown className="w-4 h-4 -rotate-90" />
+                          </button>
+                          <div className={`w-px h-5 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
+                        </>
+                      )}
+
+                      {/* Tombol Aksi Utama: Reset Zoom atau Simpan */}
+                      <div className="ml-1">
+                        {mobileZoom !== 100 ? (
+                          <button
+                            onClick={() => setMobileZoom(100)}
+                            className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-amber-500/15 text-amber-500 hover:bg-amber-500/25 text-[11px] font-bold transition-all"
+                          >
+                            <ZoomOut className="w-3.5 h-3.5" />
+                            <span>Reset ({mobileZoom}%)</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleDownloadSingle(generatedPages[activePageIndex])}
+                            className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[11px] font-bold text-white shadow-lg active:scale-95 transition-all bg-gradient-to-r ${c.accent}`}
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Simpan</span>
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              )}
+            </div>
+
           </div>
 
-          {generatedPages.length > 0 && typeof navigator !== "undefined" && !!navigator.share && (
-            <button
-              onClick={() => handleSharePage(generatedPages[activePageIndex])}
-              className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 transition-all ${c.btn}`}
-              title="Bagikan ke WA/Telegram"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-              </svg>
-            </button>
-          )}
+          {/* ── EXPORT DROPDOWN PORTAL — fixed di atas semua layer ── */}
+          <AnimatePresence>
+            {showExportDropdown && exportDropdownPos && (
+              <>
+                <div className="fixed inset-0 z-[90]" onClick={() => setShowExportDropdown(false)} />
+                <motion.div
+                  ref={exportDropdownRef}
+                  // Animasi menyesuaikan arah buka (dari bawah atau dari atas)
+                  initial={{ opacity: 0, y: exportDropdownPos.top > (typeof window !== 'undefined' ? window.innerHeight : 800) / 2 ? 10 : -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: exportDropdownPos.top > (typeof window !== 'undefined' ? window.innerHeight : 800) / 2 ? 10 : -10, scale: 0.95 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                  style={{
+                    position: "fixed",
+                    left: Math.min(exportDropdownPos.left - 120, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 200),
+                    ...(typeof window !== 'undefined' && exportDropdownPos.top > window.innerHeight / 2
+                      ? { bottom: window.innerHeight - exportDropdownPos.top + 16 }
+                      : { top: exportDropdownPos.top + exportDropdownPos.height + 16 }),
+                    zIndex: 9999,
+                  }}
+                  className={`w-48 rounded-2xl border shadow-2xl overflow-hidden backdrop-blur-xl ${D
+                    ? "bg-[#0d0d14]/95 border-[#ffffff10] shadow-[0_16px_48px_rgba(0,0,0,0.7)]"
+                    : "bg-white/98 border-violet-200 shadow-[0_16px_48px_rgba(139,92,246,0.2)]"}`}>
+                  <div className="p-1">
+                    <button onClick={() => { handleDownloadAllPng(); setShowExportDropdown(false); }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${c.rowHover} ${c.tm}`}>
+                      <div className="w-6 h-6 rounded-md flex items-center justify-center bg-violet-500/15">
+                        <Download className="w-3.5 h-3.5 text-violet-500" />
+                      </div>Semua JPG
+                    </button>
+                    <button onClick={() => { handleDownloadZip(); setShowExportDropdown(false); }}
+                      disabled={isDownloadingZip}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${c.rowHover} ${c.tm} ${isDownloadingZip ? "opacity-50" : ""}`}>
+                      <div className="w-6 h-6 rounded-md flex items-center justify-center bg-emerald-500/15">
+                        {isDownloadingZip ? <Loader2 className="w-3.5 h-3.5 text-emerald-500 animate-spin" /> : <Package className="w-3.5 h-3.5 text-emerald-500" />}
+                      </div>ZIP Archive
+                    </button>
+                    <div className={`my-1 h-px ${D ? "bg-white/8" : "bg-gray-100"}`} />
+                    <button onClick={() => { handleExportPdf("high"); setShowExportDropdown(false); }}
+                      disabled={isExportingPdf}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${c.rowHover} ${c.tm} ${isExportingPdf ? "opacity-50" : ""}`}>
+                      <div className="w-6 h-6 rounded-md flex items-center justify-center bg-amber-500/15">
+                        {isExportingPdf ? <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin" /> : <FileDown className="w-3.5 h-3.5 text-amber-500" />}
+                      </div>PDF (Resolusi Tinggi / Cetak)
+                    </button>
+                    <button onClick={() => { handleExportPdf("low"); setShowExportDropdown(false); }}
+                      disabled={isExportingPdf}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${c.rowHover} ${c.tm} ${isExportingPdf ? "opacity-50" : ""}`}>
+                      <div className="w-6 h-6 rounded-md flex items-center justify-center bg-rose-500/15">
+                        {isExportingPdf ? <Loader2 className="w-3.5 h-3.5 text-rose-500 animate-spin" /> : <FileDown className="w-3.5 h-3.5 text-rose-500" />}
+                      </div>PDF (Hemat Kuota / WA)
+                    </button>
+                    <button onClick={async () => {
+                      setShowExportDropdown(false);
+                      const tid = toast.loading("Membuat PNG transparan...");
+                      try {
+                        const res = await fetch(`${API_URL}/api/download/transparent`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ imageData: generatedPages[activePageIndex].image })
+                        });
+                        if (!res.ok) throw new Error();
+                        const blob = await res.blob();
+                        saveAs(blob, `tulisan_transparan_hal${activePageIndex + 1}.png`);
+                        toast.success("PNG transparan berhasil!", { id: tid });
+                      } catch { toast.error("Gagal export", { id: tid }); }
+                    }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${c.rowHover} ${c.tm}`}>
+                      <div className="w-6 h-6 rounded-md flex items-center justify-center bg-purple-500/15">
+                        <ImageIcon className="w-3.5 h-3.5 text-purple-500" />
+                      </div>PNG Transparan
+                    </button>
+                    <button onClick={() => { handleExportDocx(); setShowExportDropdown(false); }}
+                      disabled={isExportingDocx}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${c.rowHover} ${c.tm} ${isExportingDocx ? "opacity-50" : ""}`}>
+                      <div className="w-6 h-6 rounded-md flex items-center justify-center bg-blue-500/15">
+                        {isExportingDocx ? <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" /> : <FileText className="w-3.5 h-3.5 text-blue-500" />}
+                      </div>Word (.docx)
+                    </button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
 
-          <button onClick={handleGenerate} disabled={isGenerating || !text.trim() || !selectedFolio}
-            className={`flex items-center gap-1.5 px-5 py-3 rounded-xl font-bold text-sm transition-all flex-shrink-0 shadow-lg ${isGenerating || !text.trim() || !selectedFolio
-              ? D ? "bg-white/4 text-white/20 cursor-not-allowed border border-[#ffffff06] shadow-none" : "bg-gray-100 text-gray-300 cursor-not-allowed border border-gray-200 shadow-none"
-              : `bg-gradient-to-r ${c.accent} text-white hover:opacity-90 active:scale-95`
-              }`}>
-            {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mx-3" /> : <><Sparkles className="w-4 h-4" /><span>Generate</span></>}
-          </button>
-        </div>
-      </div>
+          {/* ── MOBILE BOTTOM BAR (Modern Floating Dock) ── */}
+          <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden pointer-events-none p-4 safe-area-pb">
+            {/* Notifikasi proses tulis melayang di atas dock */}
+            <AnimatePresence>
+              {isGenerating && totalStreamPages > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                  className={`absolute -top-12 left-0 right-0 mx-auto w-max max-w-[90%] px-4 py-2 rounded-full text-[10px] font-medium text-center shadow-lg pointer-events-auto backdrop-blur-md border ${D ? "bg-violet-500/20 text-violet-300 border-violet-500/30" : "bg-white/90 text-violet-700 border-violet-200"}`}>
+                  <Loader2 className="w-3 h-3 animate-spin inline mr-1.5 -mt-0.5" />
+                  Menulis halaman {streamedPages.length} dari {totalStreamPages}
+                  {totalStreamPages > 0 && streamedPages.length > 0 && (
+                    <span className="ml-1 opacity-60">
+                      · ~{Math.ceil((totalStreamPages - streamedPages.length) * 3)}s lagi
+                    </span>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-    </div>
+            {/* Dock Kaca (Glassmorphism) */}
+            <div className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl shadow-2xl pointer-events-auto backdrop-blur-xl border transition-all duration-500 ease-in-out ${activeTab === "result" ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+              } ${D
+                ? "bg-[#0d0d14]/90 border-[#ffffff10] shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
+                : "bg-white/90 border-violet-200 shadow-[0_8px_32px_rgba(139,92,246,0.15)]"}`}>
+              {/* Ubah md:hidden menjadi lg:hidden di bawah ini */}
+              <button onClick={() => setMobileSidebarOpen(true)}
+                className={`flex lg:hidden w-8 h-8 rounded-lg items-center justify-center transition-all ${c.btn}`}>
+                <Menu className="w-3.5 h-3.5" />
+              </button>
+
+              <div className="flex-1 min-w-0 pl-1 relative">
+                {currentFont ? (
+                  <span className={`text-[12px] font-bold truncate block ${c.tp}`} style={{ fontFamily: FONT_FAMILY_MAP[currentFont.name] || currentFont.name }}>
+                    {currentFont.name}
+                  </span>
+                ) : (
+                  <span className={`text-[11px] ${c.ts}`}>Pilih font...</span>
+                )}
+                <span className={`text-[9px] mt-0.5 block truncate ${c.ts}`}>
+                  {wordCount} kata • Est. {estimatedPages} hal
+                </span>
+                {isGenerating && (
+                  <div className="absolute -bottom-2.5 left-0 right-0 h-[2px] opacity-70">
+                    <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-all duration-500" style={{ width: `${generateProgress}%` }} />
+                  </div>
+                )}
+              </div>
+
+              {generatedPages.length > 0 && typeof navigator !== "undefined" && !!navigator.share && (
+                <button
+                  onClick={() => handleSharePage(generatedPages[activePageIndex])}
+                  className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 transition-all ${c.btn}`}
+                  title="Bagikan ke WA/Telegram"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                </button>
+              )}
+
+              <button onClick={handleGenerate} disabled={isGenerating || !text.trim() || !selectedFolio}
+                className={`flex items-center gap-1.5 px-5 py-3 rounded-xl font-bold text-sm transition-all flex-shrink-0 shadow-lg ${isGenerating || !text.trim() || !selectedFolio
+                  ? D ? "bg-white/4 text-white/20 cursor-not-allowed border border-[#ffffff06] shadow-none" : "bg-gray-100 text-gray-300 cursor-not-allowed border border-gray-200 shadow-none"
+                  : `bg-gradient-to-r ${c.accent} text-white hover:opacity-90 active:scale-95`
+                  }`}>
+                {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mx-3" /> : <><Sparkles className="w-4 h-4" /><span>Generate</span></>}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div >
   );
 }

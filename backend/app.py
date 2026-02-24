@@ -340,6 +340,8 @@ def generate_preview():
             "pageNumberFormat": "- {n} -",
             "marginJitter": 0,
             "folioEvenPath": None,
+            "enableDropCap": False,  # <--- TAMBAHAN UNTUK MENCEGAH ERROR 500
+            "watermarkText": "",  # <--- TAMBAHAN UNTUK MENCEGAH ERROR 500
         }
 
         folio_path = FOLIO_TEMPLATES.get(folio_id)
@@ -347,14 +349,14 @@ def generate_preview():
             # Fallback: pakai folio pertama yang ada
             folio_path = next(iter(FOLIO_TEMPLATES.values()), None)
         if not folio_path:
-            return jsonify({"error": "No folio available"}), 400
+            return jsonify({"error": "No folio available"}), 200
 
         font_info = AVAILABLE_FONTS.get(font_id)
         if not font_info:
-            return jsonify({"error": "Invalid font"}), 400
+            return jsonify({"error": "Invalid font"}), 200
         font_path = os.path.join(FONT_FOLDER, font_info["file"])
         if not os.path.exists(font_path):
-            return jsonify({"error": "Font file not found"}), 400
+            return jsonify({"error": "Font file not found"}), 200
 
         generator = HandwritingGenerator(config, folio_path, font_path)
 
@@ -705,10 +707,10 @@ def generate_handwriting_stream():
         total = len(all_page_lines)
 
         def stream():
+            # Import ditaruh di luar loop agar tidak dipanggil berulang kali
             import json as _json
             import gc
 
-            # --- KODE BARU: SISTEM ANTREAN KETAT (MENCEGAH OOM) ---
             with generation_lock:
                 # Tandai folio sedang dipakai
                 with _active_lock:
@@ -716,20 +718,18 @@ def generate_handwriting_stream():
                     if folio_even_path:
                         _active_folios.add(folio_even_path)
                 try:
-                    # Kirim total dulu
                     yield f"data: {_json.dumps({'type': 'total', 'totalPages': total})}\n\n"
 
-                    # Generate berurutan agar efek Tinta Tembus & Tired Mode bekerja sempurna
                     for idx, lines in enumerate(all_page_lines):
                         page_img = generator.generate_page(lines, idx + 1)
                         buf = io.BytesIO()
 
-                        # Kompresi adaptif
                         jpeg_quality = max(78, 92 - (total * 2)) if total > 5 else 92
                         page_img.save(
                             buf, format="JPEG", quality=jpeg_quality, optimize=True
                         )
                         buf.seek(0)
+
                         b64 = base64.b64encode(buf.getvalue()).decode()
                         payload = _json.dumps(
                             {
@@ -740,16 +740,20 @@ def generate_handwriting_stream():
                         )
                         yield f"data: {payload}\n\n"
 
-                        # PEMBERSIH RAM OTOMATIS
+                        # Hapus variabel besar
                         del page_img
                         del buf
                         del b64
                         del payload
-                        gc.collect()
 
+                        # Jalankan Garbage Collection setiap 3 halaman saja agar stream tidak patah-patah
+                        if (idx + 1) % 3 == 0:
+                            gc.collect()
+
+                    # Pembersihan final
+                    gc.collect()
                     yield f"data: {_json.dumps({'type': 'done'})}\n\n"
                 finally:
-                    # Lepaskan tanda setelah streaming selesai atau terputus
                     with _active_lock:
                         _active_folios.discard(folio_path)
                         if folio_even_path:
@@ -895,8 +899,9 @@ def cleanup_old_folios(folder_path, max_age_hours=24):
         except Exception as e:
             print(f"⚠️ [Cleanup Error]: {e}")
 
-        # Jeda selama 1 jam (3600 detik) sebelum mengecek kembali
-        time.sleep(3600)
+        finally:
+            # Jeda selama 1 jam (3600 detik) selalu dieksekusi walau ada error
+            time.sleep(3600)
 
 
 # Jalankan thread cleanup sebagai daemon (otomatis mati jika server Flask mati)

@@ -411,6 +411,10 @@ class HandwritingGenerator:
                         anchor="ls",
                     )
 
+            skewed_img = None
+            paste_x = 0
+            paste_y = 0
+
             # === 1. KEMIRINGAN ASLI (TRUE SKEWING) ===
             if getattr(self, "slant_angle", 0) != 0 and char.strip():
                 # PERBESAR KANVAS jadi 3x lipat agar ekor huruf aman
@@ -472,14 +476,12 @@ class HandwritingGenerator:
                 # 1. Micro-bolding: Jika tekanan tangan sedang kuat, bolpoin sedikit lebih tebal
                 if pen_pressure > 5 and random.random() < 0.25:
                     bold_offset = random.choice([0.5, 1.0])
-                    if getattr(self, "slant_angle", 0) != 0:
-                        skewed_now = locals().get("skewed_img")
-                        if skewed_now is not None:
-                            text_layer.paste(
-                                skewed_now,
-                                (paste_x + int(bold_offset), paste_y),
-                                skewed_now,
-                            )
+                    if getattr(self, "slant_angle", 0) != 0 and skewed_img is not None:
+                        text_layer.paste(
+                            skewed_img,
+                            (paste_x + int(bold_offset), paste_y),
+                            skewed_img,
+                        )
                     else:
                         draw.text(
                             (cursor_x + jitter_x + bold_offset, y_baseline),
@@ -488,89 +490,6 @@ class HandwritingGenerator:
                             font=char_font,
                             anchor="ls",
                         )
-
-                # 2. Ink Blobs: Gumpalan tinta khas ujung bolpoin saat mulai/berhenti menggores
-                if random.random() < 0.12:  # 12% kemungkinan muncul gumpalan kecil
-                    # Ukuran gumpalan (sangat mikroskopis, 0.5 - 1.5 pixel)
-                    blob_r = random.uniform(0.5, 1.5)
-
-                    # Posisi acak di sekitar huruf (biasanya di pangkal/ujung garis huruf)
-                    char_width_est = draw.textlength(char, font=char_font)
-                    blob_x = (
-                        cursor_x + jitter_x + random.uniform(0, char_width_est * 0.8)
-                    )
-                    blob_y = y_baseline - random.uniform(
-                        font_size * 0.1, font_size * 0.7
-                    )
-
-                    # Warna gumpalan selalu pekat & lebih gelap dari tinta utama
-                    r_c, g_c, b_c = char_color
-                    blob_color = (
-                        max(0, r_c - 45),
-                        max(0, g_c - 45),
-                        max(0, b_c - 45),
-                        random.randint(200, 255),
-                    )
-
-                    # Gambar gumpalannya
-                    draw.ellipse(
-                        [
-                            blob_x - blob_r,
-                            blob_y - blob_r,
-                            blob_x + blob_r,
-                            blob_y + blob_r,
-                        ],
-                        fill=blob_color,
-                    )
-
-            # FITUR BARU (Claude Poin 2): Titik Tinta (Ink Blob) di Awal/Akhir kata
-            if char.strip():
-                is_edge_of_word = (
-                    word_char_idx == 1 or word_char_idx >= current_word_len - 1
-                )
-                if (
-                    is_edge_of_word and random.random() < 0.03
-                ):  # Probabilitas 3% sesuai saran
-                    blob_r = random.uniform(0.5, 1.5)
-                    blob_x = cursor_x + jitter_x + random.uniform(0, font_size * 0.3)
-                    blob_y = y_baseline - random.uniform(
-                        font_size * 0.1, font_size * 0.6
-                    )
-                    # Gambar titik ekstra tebal
-                    r_c, g_c, b_c = (
-                        char_color[:3] if len(char_color) > 3 else char_color
-                    )
-                    draw.ellipse(
-                        [
-                            blob_x - blob_r,
-                            blob_y - blob_r,
-                            blob_x + blob_r,
-                            blob_y + blob_r,
-                        ],
-                        fill=(r_c, g_c, b_c, 210),
-                    )
-
-            # Ink pooling di tanda baca
-            # PUNCTUATION = set(".,;:!?")
-            # if char in PUNCTUATION and char.strip() and random.random() < 0.5:
-            # pool_r = random.uniform(1.0, 2.5)
-            # pool_x = cursor_x + jitter_x + random.uniform(-1, 2)
-            # pool_y = y_baseline - random.uniform(font_size * 0.05, font_size * 0.2)
-            # r_p, g_p, b_p = self.base_color_rgb
-            # draw.ellipse(
-            # [
-            # pool_x - pool_r,
-            # pool_y - pool_r,
-            # pool_x + pool_r,
-            # pool_y + pool_r,
-            # ],
-            # fill=(
-            # max(0, r_p - 30),
-            # max(0, g_p - 30),
-            # max(0, b_p - 30),
-            # random.randint(180, 240),
-            # ),
-            # )
 
             # === 2. UPDATE KERNING (Letter Spacing Variation - Claude Poin 3) ===
             char_width = draw.textlength(char, font=char_font)
@@ -581,27 +500,22 @@ class HandwritingGenerator:
             else:
                 # Variasi jarak antar huruf
                 LONG_TAIL_CHARS = set("frvwy")
-                CLOSE_NEXT_CHARS = set("oadb")
 
                 # ── RAPAT DI AKHIR BARIS ─────────────────────────────────────
-                # Makin mendekati maxWidth, jarak antar huruf mengecil
-                # (simulasi memaksakan huruf agar muat di akhir baris)
                 line_fill_ratio = (cursor_x - x) / max(1, available_width)
                 end_squeeze = 0.0
                 if line_fill_ratio > 0.78:
-                    # Squeeze makin kuat seiring mendekati ujung baris
-                    squeeze_strength = (line_fill_ratio - 0.78) / 0.22  # 0.0 s/d 1.0
-                    end_squeeze = -random.uniform(0.5, 2.5) * squeeze_strength
+                    squeeze_strength = (line_fill_ratio - 0.78) / 0.22
+                    end_squeeze = -random.uniform(0.3, 1.5) * squeeze_strength
                 # ────────────────────────────────────────────────────────────
 
                 if char in LONG_TAIL_CHARS:
-                    letter_jitter = random.uniform(-3.5, -1.0) + end_squeeze
-                    cursor_x += char_width + letter_jitter
-                elif char in CLOSE_NEXT_CHARS:
-                    letter_jitter = random.uniform(-2.0, 0.5) + end_squeeze
+                    # Huruf ekor panjang: sedikit rapat tapi tidak terlalu
+                    letter_jitter = random.uniform(-1.5, 0.5) + end_squeeze
                     cursor_x += char_width + letter_jitter
                 else:
-                    letter_jitter = random.uniform(-1.5, 2.5) + end_squeeze
+                    # Semua huruf lain: jarak normal dengan sedikit variasi
+                    letter_jitter = random.uniform(0.5, 2.5) + end_squeeze
                     cursor_x += char_width + letter_jitter
 
                 # ── CONNECTOR STROKE (sambungan antar huruf) ──────────────────
@@ -614,7 +528,9 @@ class HandwritingGenerator:
                         font_size * 0.06, font_size * 0.16
                     )
                     # Titik akhir: awal huruf berikutnya (sedikit ke kanan)
-                    conn_end_x = cursor_x + random.uniform(1, 4)
+                    conn_end_x = min(
+                        cursor_x + random.uniform(1, 4), self.config["maxWidth"]
+                    )
                     conn_end_y = conn_start_y + random.uniform(-2, 2)
 
                     # Warna connector: sama dengan tinta tapi lebih transparan
@@ -632,39 +548,17 @@ class HandwritingGenerator:
                 ink_level = min(1.0, ink_level + random.uniform(0.3, 0.6))
             ink_level = max(0.08, ink_level)
 
-            # ── EFEK TINTA MENGERING di ujung kata ───────────────────────────
-            # Saat huruf terakhir kata, tambahkan titik pudar kecil
-            is_last_char_of_word = word_char_idx >= current_word_len - 1
-            if (
-                tok_type == "char"
-                and char.strip()
-                and is_last_char_of_word
-                and random.random() < 0.15
-            ):
-                fade_x = cursor_x + random.uniform(-2, 3)
-                fade_y = y_baseline - random.uniform(font_size * 0.05, font_size * 0.25)
-                fade_r = random.uniform(0.4, 1.2)
-                r_f, g_f, b_f = self.base_color_rgb
-                fade_alpha = random.randint(25, 65)
-                draw.ellipse(
-                    [
-                        fade_x - fade_r,
-                        fade_y - fade_r,
-                        fade_x + fade_r,
-                        fade_y + fade_r,
-                    ],
-                    fill=(r_f, g_f, b_f, fade_alpha),
-                )
-            # ─────────────────────────────────────────────────────────────────
-
         return cursor_x
 
     def calculate_text_width(self, text):
-        """Estimasi lebar teks termasuk wordSpacing"""
+        """Estimasi lebar teks termasuk wordSpacing & Margin Toleransi"""
         bbox = self.font.getbbox(text)
         base_width = bbox[2] - bbox[0]
         extra = text.count(" ") * self.word_spacing
-        return base_width + extra
+
+        # Tambahkan toleransi 8% karena humanizer_effect kadang membesarkan font
+        # dan membuat jarak antar huruf (kerning) jadi lebih lebar
+        return (base_width + extra) * 1.08
 
     def split_into_pages(self, text):
         pages, current_lines = [], []
@@ -784,6 +678,57 @@ class HandwritingGenerator:
         # Kamera HP yang memotret kertas teks biasanya menghasilkan grain tipis (ISO noise)
         noise = np.random.normal(0, 2.5, arr.shape)
         arr = arr + noise
+
+        # === 4. EFEK KERTAS KUSUT / TERLIPAT (Jika diaktifkan di UI) ===
+        if self.config.get("paperTexture", False):
+            # Buat shadow map untuk lipatan (1.0 = tidak ada bayangan, < 1.0 = gelap)
+            fold_map = np.ones((h, w), dtype=np.float32)
+
+            # a. Lipatan Vertikal Acak
+            fold_x = random.randint(int(w * 0.3), int(w * 0.7))
+            angle_offset = random.randint(-150, 150)
+
+            # Optimisasi: Gambar garis tebal hitam, lalu blur dengan trik resize (10x lebih cepat)
+            cv2.line(
+                fold_map,
+                (fold_x, 0),
+                (fold_x + angle_offset, h),
+                0.88,
+                thickness=random.randint(200, 400),
+            )
+            # Trik cepat: perkecil ukuran 1/4 -> blur ringan -> kembalikan ke ukuran asli
+            small_fold = cv2.resize(
+                fold_map, (w // 4, h // 4), interpolation=cv2.INTER_LINEAR
+            )
+            small_blur = cv2.GaussianBlur(small_fold, (31, 31), 0)
+            fold_map = cv2.resize(small_blur, (w, h), interpolation=cv2.INTER_CUBIC)
+
+            # b. Sesekali tambahkan lipatan Horizontal acak (50% peluang)
+            if random.random() > 0.5:
+                fold_h_map = np.ones((h, w), dtype=np.float32)
+                fold_y = random.randint(int(h * 0.3), int(h * 0.7))
+                cv2.line(
+                    fold_h_map,
+                    (0, fold_y),
+                    (w, fold_y + random.randint(-80, 80)),
+                    0.92,
+                    thickness=random.randint(150, 300),
+                )
+                small_h_fold = cv2.resize(
+                    fold_h_map, (w // 4, h // 4), interpolation=cv2.INTER_LINEAR
+                )
+                small_h_blur = cv2.GaussianBlur(small_h_fold, (31, 31), 0)
+                fold_h_map = cv2.resize(
+                    small_h_blur, (w, h), interpolation=cv2.INTER_CUBIC
+                )
+
+                fold_map *= fold_h_map
+
+            # Aplikasikan bayangan lipatan (fold_map) ke semua channel warna (RGB)
+            fold_map = np.clip(fold_map, 0, 1)
+            arr[:, :, 0] *= fold_map
+            arr[:, :, 1] *= fold_map
+            arr[:, :, 2] *= fold_map
 
         # Kembalikan matriks float32 ke format gambar standar (uint8)
         result = np.clip(arr, 0, 255).astype(np.uint8)
