@@ -223,33 +223,53 @@ function BeforeAfterSlider() {
   const [sliderPosition, setSliderPosition] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleMove = (clientX: number) => {
+  // HAPUS fungsi handleMove yang lama, kita gabungkan ke dalam event
+
+  const handleMouseDown = (e: React.MouseEvent) => {
     if (!containerRef.current) return;
+    // Hitung posisi BoundingRect HANYA SEKALI di awal klik (Mencegah Lag)
     const rect = containerRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+
+    const onMouseMove = (me: MouseEvent) => {
+      const x = Math.max(0, Math.min(me.clientX - rect.left, rect.width));
+      setSliderPosition((x / rect.width) * 100);
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+
+    // Set posisi pertama kali klik
+    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
     setSliderPosition((x / rect.width) * 100);
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    handleMove(e.clientX);
-    const handleMouseMove = (me: MouseEvent) => handleMove(me.clientX);
-    const handleMouseUp = () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-  };
-
   const handleTouchStart = (e: React.TouchEvent) => {
-    handleMove(e.touches[0].clientX);
-    const handleTouchMove = (te: TouchEvent) => handleMove(te.touches[0].clientX);
-    const handleTouchEnd = () => {
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
+    if (!containerRef.current) return;
+    // Hitung posisi BoundingRect HANYA SEKALI di awal sentuh (Mencegah Ngadat di HP)
+    const rect = containerRef.current.getBoundingClientRect();
+
+    const onTouchMove = (te: TouchEvent) => {
+      const x = Math.max(0, Math.min(te.touches[0].clientX - rect.left, rect.width));
+      setSliderPosition((x / rect.width) * 100);
     };
-    window.addEventListener('touchmove', handleTouchMove);
-    window.addEventListener('touchend', handleTouchEnd);
+
+    const onTouchEnd = () => {
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+    };
+
+    // Tambahkan { passive: true } agar iOS Safari tahu ini tidak akan memblokir Scroll
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchend', onTouchEnd);
+
+    // Set posisi pertama kali sentuh
+    const x = Math.max(0, Math.min(e.touches[0].clientX - rect.left, rect.width));
+    setSliderPosition((x / rect.width) * 100);
   };
 
   return (
@@ -381,6 +401,8 @@ export default function Home() {
   };
   const [inputText, setInputText] = useState("");
   const [text, setText] = useState("");
+  const [hideMobileDock, setHideMobileDock] = useState(false);
+  const lastScrollYRef = useRef(0);
   const [energy, setEnergy] = useState<number>(5); // Modal awal 5 Energi untuk user gratis
   const [showQrisModal, setShowQrisModal] = useState(false);
   const [selectedFont, setSelectedFont] = useState("indie_flower");
@@ -2092,7 +2114,7 @@ export default function Home() {
       {/* --- TAMBAHKAN KODE INI MULAI DARI SINI --- */}
       {!showEditor && !user ? (
         /* ══ LANDING PAGE SECTION ══ */
-        <div className={`relative min-h-screen flex flex-col items-center p-4 sm:p-6 text-center overflow-x-hidden ${isDark ? "bg-[#0A0A0C]" : "bg-[#f8f7ff]"}`}>
+        <div className={`relative min-h-[100dvh] w-full flex flex-col items-center p-4 sm:p-6 text-center overflow-clip ${isDark ? "bg-[#0A0A0C]" : "bg-[#f8f7ff]"}`}>
           {/* Background Ambient Glow */}
           <div className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none">
             <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/20 blur-[150px] animate-pulse" />
@@ -2878,8 +2900,8 @@ export default function Home() {
               {/* ══ PANEL 2: EDITOR ══ */}
               <div id="editor-panel"
                 className={`flex flex-col border-r flex-shrink-0 ${c.sidebar} ${sidebarOpen
-                  ? "lg:w-[340px] xl:w-[400px] 2xl:w-[440px]"
-                  : "lg:w-[380px] xl:w-[440px] 2xl:w-[500px]"
+                  ? "lg:w-[340px] xl:w-[400px] 2xl:w-[440px] 3xl:w-[600px] 4xl:w-[700px]"
+                  : "lg:w-[380px] xl:w-[440px] 2xl:w-[500px] 3xl:w-[700px] 4xl:w-[800px]"
                   } transition-all duration-300`}>
 
                 {/* Editor header */}
@@ -3835,7 +3857,22 @@ export default function Home() {
               {activeTab !== "result" && (
                 <div className="flex-1 flex flex-col overflow-hidden">
                   {/* Tambahkan flex, flex-col, gap-3, dan pb-28 (padding bottom ekstra untuk area dock) */}
-                  <div className="flex-1 flex flex-col overflow-y-auto p-4 pb-28 scrollbar-thin gap-3">
+                  <div className="flex-1 flex flex-col overflow-y-auto p-4 pb-28 scrollbar-thin gap-3"
+                    onScroll={(e) => {
+                      // Ubah target menjadi currentTarget di sini 👇
+                      const currentScrollY = e.currentTarget.scrollTop;
+
+                      // Sembunyikan dock jika scroll ke bawah lebih dari 50px
+                      if (currentScrollY > lastScrollYRef.current && currentScrollY > 50) {
+                        setHideMobileDock(true);
+                      }
+                      // Munculkan dock jika scroll ke atas
+                      else if (currentScrollY < lastScrollYRef.current) {
+                        setHideMobileDock(false);
+                      }
+                      lastScrollYRef.current = currentScrollY;
+                    }}
+                  >
 
                     {/* Mobile toolbar — scroll horizontal */}
                     <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 flex-shrink-0">
@@ -4138,7 +4175,7 @@ export default function Home() {
           <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden pointer-events-none px-4 safe-area-pb flex justify-center">
 
             {/* Dock Kaca (Glassmorphism) */}
-            <div className={`glass-panel w-full max-w-sm flex items-center gap-3 px-3 py-2.5 rounded-2xl pointer-events-auto transition-all duration-500 ease-in-out ${activeTab === "result" ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}>
+            <div className={`glass-panel w-full max-w-sm flex items-center gap-3 px-3 py-2.5 rounded-2xl pointer-events-auto transition-all duration-500 ease-in-out ${activeTab === "result" || hideMobileDock ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}>
               {/* Ubah md:hidden menjadi lg:hidden di bawah ini */}
               <button onClick={() => setMobileSidebarOpen(true)}
                 className={`flex lg:hidden w-8 h-8 rounded-lg items-center justify-center transition-all ${c.btn}`}>
