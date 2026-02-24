@@ -3856,149 +3856,136 @@ export default function Home() {
               )}
 
               {/* Mobile result panel */}
-              {activeTab === "result" && (
-                <div className={`flex-1 overflow-y-auto pb-24 scrollbar-thin ${D ? "bg-[#060608]" : "bg-gray-100"}`}>
-                  {generatedPages.length > 0 ? (
-                    <div className="p-4">
-                      {generatedPages.length > 1 && (
-                        <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
-                          {generatedPages.map((p, idx) => (
-                            <button key={p.page} onClick={() => setActivePageIndex(idx)}
-                              className={`flex-shrink-0 rounded-lg overflow-hidden border-2 ${idx === activePageIndex ? "border-violet-500" : D ? "border-[#ffffff10]" : "border-gray-200"}`}
-                              style={{ width: 36 }}>
-                              <img src={p.image} alt={`Hal ${p.page}`} className="w-full object-cover" style={{ aspectRatio: '210/297' }} />
-                            </button>
-                          ))}
+              {activeTab === "result" && (() => {
+                // KODE BARU: Dukung Live Streaming di HP
+                const activePages = generatedPages.length > 0 ? generatedPages : streamedPages;
+
+                return (
+                  <div className={`flex-1 overflow-y-auto pb-24 scrollbar-thin ${D ? "bg-[#060608]" : "bg-gray-100"}`}>
+                    {activePages.length > 0 ? (
+                      <div className="p-4 flex flex-col items-center">
+
+                        {/* Thumbnail "Banyak Jendela" telah DIHAPUS agar layar HP lebih luas dan estetik */}
+
+                        <div
+                          className="relative w-full max-w-md mx-auto"
+                          style={{ transform: `scale(${mobileZoom / 100})`, transformOrigin: "top center", transition: "transform 0.1s ease" }}
+                          onTouchStart={(e) => {
+                            if (e.touches.length === 2) {
+                              const dx = e.touches[0].clientX - e.touches[1].clientX;
+                              const dy = e.touches[0].clientY - e.touches[1].clientY;
+                              pinchStartDistRef.current = Math.sqrt(dx * dx + dy * dy);
+                              pinchStartZoomRef.current = mobileZoom;
+                            } else {
+                              swipeStartXRef.current = e.touches[0].clientX;
+                              swipeStartYRef.current = e.touches[0].clientY;
+                            }
+                          }}
+                          onTouchMove={(e) => {
+                            if (e.touches.length === 2 && pinchStartDistRef.current !== null) {
+                              e.preventDefault();
+                              const dx = e.touches[0].clientX - e.touches[1].clientX;
+                              const dy = e.touches[0].clientY - e.touches[1].clientY;
+                              const dist = Math.sqrt(dx * dx + dy * dy);
+                              const ratio = dist / pinchStartDistRef.current;
+                              setMobileZoom(Math.round(Math.min(250, Math.max(60, pinchStartZoomRef.current * ratio))));
+                            }
+                          }}
+                          onTouchEnd={(e) => {
+                            if (pinchStartDistRef.current !== null) { pinchStartDistRef.current = null; return; }
+                            if (swipeStartXRef.current === null) return;
+                            const deltaX = e.changedTouches[0].clientX - swipeStartXRef.current;
+                            const deltaY = e.changedTouches[0].clientY - (swipeStartYRef.current ?? 0);
+                            if (Math.abs(deltaX) < Math.abs(deltaY) || Math.abs(deltaX) < 40) return;
+                            if (deltaX < 0) setActivePageIndex(i => Math.min(activePages.length - 1, i + 1)); // Swipe kiri
+                            else setActivePageIndex(i => Math.max(0, i - 1)); // Swipe kanan
+                            swipeStartXRef.current = null; swipeStartYRef.current = null;
+                          }}>
+
+                          <img
+                            src={activePages[activePageIndex]?.image}
+                            alt="Hasil"
+                            className="w-full rounded-xl shadow-xl select-none"
+                            onClick={() => mobileZoom === 100 && setFullscreenPage(activePages[activePageIndex])}
+                          />
+
+                          {/* Indikator Halaman Minimalis ala Instagram */}
+                          {activePages.length > 1 && (
+                            <div className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-[11px] font-bold backdrop-blur-md shadow-sm border ${isDark ? "bg-black/60 text-white/90 border-white/10" : "bg-white/80 text-gray-800 border-gray-200"
+                              }`}>
+                              {activePageIndex + 1} / {activePages.length}
+                            </div>
+                          )}
                         </div>
-                      )}
-                      <div
-                        style={{ transform: `scale(${mobileZoom / 100})`, transformOrigin: "top center", transition: "transform 0.1s ease" }}
-                        onTouchStart={(e) => {
-                          if (e.touches.length === 2) {
-                            // Pinch start
-                            const dx = e.touches[0].clientX - e.touches[1].clientX;
-                            const dy = e.touches[0].clientY - e.touches[1].clientY;
-                            pinchStartDistRef.current = Math.sqrt(dx * dx + dy * dy);
-                            pinchStartZoomRef.current = mobileZoom;
-                          } else {
-                            swipeStartXRef.current = e.touches[0].clientX;
-                            swipeStartYRef.current = e.touches[0].clientY;
-                          }
-                        }}
-                        onTouchMove={(e) => {
-                          if (e.touches.length === 2 && pinchStartDistRef.current !== null) {
-                            e.preventDefault();
-                            const dx = e.touches[0].clientX - e.touches[1].clientX;
-                            const dy = e.touches[0].clientY - e.touches[1].clientY;
-                            const dist = Math.sqrt(dx * dx + dy * dy);
-                            const ratio = dist / pinchStartDistRef.current;
-                            const newZoom = Math.min(250, Math.max(60, pinchStartZoomRef.current * ratio));
-                            setMobileZoom(Math.round(newZoom));
-                          }
-                        }}
-                        onTouchEnd={(e) => {
-                          if (pinchStartDistRef.current !== null) {
-                            pinchStartDistRef.current = null;
-                            return;
-                          }
-                          if (swipeStartXRef.current === null) return;
-                          const deltaX = e.changedTouches[0].clientX - swipeStartXRef.current;
-                          const deltaY = e.changedTouches[0].clientY - (swipeStartYRef.current ?? 0);
-                          if (Math.abs(deltaX) < Math.abs(deltaY) || Math.abs(deltaX) < 40) return;
-                          if (deltaX < 0) {
-                            setActivePageIndex(i => Math.min(generatedPages.length - 1, i + 1));
-                          } else {
-                            setActivePageIndex(i => Math.max(0, i - 1));
-                          }
-                          swipeStartXRef.current = null;
-                          swipeStartYRef.current = null;
-                        }}>
-                        <img
-                          src={generatedPages[activePageIndex]?.image}
-                          alt="Hasil"
-                          className="w-full rounded-xl shadow-xl select-none"
-                          onClick={() => mobileZoom === 100 && setFullscreenPage(generatedPages[activePageIndex])}
-                        />
-                        {generatedPages.length > 1 && (
-                          <div className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-bold backdrop-blur-md shadow-sm ${isDark ? "bg-black/60 text-white/90" : "bg-white/80 text-gray-800"
-                            }`}>
-                            {activePageIndex + 1} / {generatedPages.length}
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  ) : isGenerating ? (
-                    <div className="flex items-center justify-center h-full min-h-[300px] flex-col gap-4">
-                      <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
-                      <p className={`text-sm ${c.tm}`}>Generating {Math.round(generateProgress)}%</p>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center h-full min-h-[300px]">
-                      <p className={`text-sm ${c.ts}`}>Klik Generate untuk mulai</p>
-                    </div>
-                  )}
-
-                  {/* ── MOBILE FLOATING DYNAMIC ISLAND ── */}
-                  {generatedPages.length > 0 && (
-                    <motion.div
-                      initial={{ y: 50, x: "-50%", opacity: 0 }}
-                      animate={{ y: 0, x: "-50%", opacity: 1 }}
-                      className="fixed bottom-8 left-1/2 z-[60] flex items-center p-1.5 rounded-full shadow-2xl backdrop-blur-xl border transition-all"
-                      style={{
-                        background: D ? "rgba(15,15,22,0.85)" : "rgba(255,255,255,0.95)",
-                        borderColor: D ? "rgba(255,255,255,0.1)" : "rgba(139,92,246,0.2)",
-                        boxShadow: D ? "0 12px 40px rgba(0,0,0,0.6)" : "0 12px 40px rgba(139,92,246,0.2)"
-                      }}
-                    >
-                      {/* Tombol Kembali ke Editor */}
-                      <button onClick={() => setActiveTab("editor" as any)} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`}>
-                        <PenTool className="w-4 h-4" />
-                      </button>
-
-                      <div className={`w-px h-5 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
-
-                      {/* Navigasi Halaman (Hanya muncul jika > 1 halaman) */}
-                      {generatedPages.length > 1 && (
-                        <>
-                          <button onClick={() => setActivePageIndex(i => Math.max(0, i - 1))} disabled={activePageIndex === 0} className={`w-8 h-10 flex items-center justify-center transition-all ${activePageIndex === 0 ? "opacity-30" : "text-violet-500"}`}>
-                            <ChevronDown className="w-4 h-4 rotate-90" />
-                          </button>
-                          <span className={`text-[11px] font-bold font-mono px-1 ${c.tp}`}>
-                            {activePageIndex + 1}/{generatedPages.length}
-                          </span>
-                          <button onClick={() => setActivePageIndex(i => Math.min(generatedPages.length - 1, i + 1))} disabled={activePageIndex === generatedPages.length - 1} className={`w-8 h-10 flex items-center justify-center transition-all ${activePageIndex === generatedPages.length - 1 ? "opacity-30" : "text-violet-500"}`}>
-                            <ChevronDown className="w-4 h-4 -rotate-90" />
-                          </button>
-                          <div className={`w-px h-5 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
-                        </>
-                      )}
-
-                      {/* Tombol Aksi Utama: Reset Zoom atau Simpan */}
-                      <div className="ml-1">
-                        {mobileZoom !== 100 ? (
-                          <button
-                            onClick={() => setMobileZoom(100)}
-                            className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-amber-500/15 text-amber-500 hover:bg-amber-500/25 text-[11px] font-bold transition-all"
-                          >
-                            <ZoomOut className="w-3.5 h-3.5" />
-                            <span>Reset ({mobileZoom}%)</span>
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleDownloadSingle(generatedPages[activePageIndex])}
-                            className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[11px] font-bold text-white shadow-lg active:scale-95 transition-all bg-gradient-to-r ${c.accent}`}
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>Simpan</span>
-                          </button>
-                        )}
+                    ) : isGenerating ? (
+                      <div className="flex items-center justify-center h-full min-h-[300px] flex-col gap-4">
+                        <div className="w-12 h-12 rounded-full bg-violet-500/20 flex items-center justify-center animate-pulse">
+                          <PenTool className="w-6 h-6 text-violet-500" />
+                        </div>
+                        <p className={`text-sm font-bold bg-gradient-to-r ${c.accent} bg-clip-text text-transparent`}>
+                          AI Sedang Menulis...
+                        </p>
+                        <p className={`text-[10px] ${c.ts} font-mono tracking-widest uppercase`}>
+                          {Math.round(generateProgress)}% Selesai
+                        </p>
                       </div>
-                    </motion.div>
-                  )}
-                </div>
-              )}
+                    ) : (
+                      <div className="flex items-center justify-center h-full min-h-[300px]">
+                        <p className={`text-sm ${c.ts}`}>Klik Generate untuk mulai</p>
+                      </div>
+                    )}
+
+                    {/* ── MOBILE FLOATING DYNAMIC ISLAND ── */}
+                    {activePages.length > 0 && (
+                      <motion.div
+                        initial={{ y: 50, x: "-50%", opacity: 0 }}
+                        animate={{ y: 0, x: "-50%", opacity: 1 }}
+                        className="fixed bottom-8 left-1/2 z-[60] flex items-center p-1.5 rounded-full shadow-2xl backdrop-blur-xl border transition-all"
+                        style={{
+                          background: D ? "rgba(15,15,22,0.85)" : "rgba(255,255,255,0.95)",
+                          borderColor: D ? "rgba(255,255,255,0.1)" : "rgba(139,92,246,0.2)",
+                          boxShadow: D ? "0 12px 40px rgba(0,0,0,0.6)" : "0 12px 40px rgba(139,92,246,0.2)"
+                        }}
+                      >
+                        <button onClick={() => setActiveTab("editor" as any)} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`}>
+                          <PenTool className="w-4 h-4" />
+                        </button>
+
+                        <div className={`w-px h-5 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
+
+                        {activePages.length > 1 && (
+                          <>
+                            <button onClick={() => setActivePageIndex(i => Math.max(0, i - 1))} disabled={activePageIndex === 0} className={`w-8 h-10 flex items-center justify-center transition-all ${activePageIndex === 0 ? "opacity-30" : "text-violet-500"}`}>
+                              <ChevronDown className="w-4 h-4 rotate-90" />
+                            </button>
+                            <span className={`text-[11px] font-bold font-mono px-1 ${c.tp}`}>
+                              {activePageIndex + 1}/{activePages.length}
+                            </span>
+                            <button onClick={() => setActivePageIndex(i => Math.min(activePages.length - 1, i + 1))} disabled={activePageIndex === activePages.length - 1} className={`w-8 h-10 flex items-center justify-center transition-all ${activePageIndex === activePages.length - 1 ? "opacity-30" : "text-violet-500"}`}>
+                              <ChevronDown className="w-4 h-4 -rotate-90" />
+                            </button>
+                            <div className={`w-px h-5 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
+                          </>
+                        )}
+
+                        <div className="ml-1">
+                          {mobileZoom !== 100 ? (
+                            <button onClick={() => setMobileZoom(100)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-amber-500/15 text-amber-500 hover:bg-amber-500/25 text-[11px] font-bold transition-all">
+                              <ZoomOut className="w-3.5 h-3.5" /><span>Reset ({mobileZoom}%)</span>
+                            </button>
+                          ) : (
+                            <button onClick={() => handleDownloadSingle(activePages[activePageIndex])} className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[11px] font-bold text-white shadow-lg active:scale-95 transition-all bg-gradient-to-r ${c.accent}`}>
+                              <Download className="w-3.5 h-3.5" /><span>Simpan</span>
+                            </button>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
-
           </div>
 
           {/* ── EXPORT DROPDOWN PORTAL — fixed di atas semua layer ── */}
