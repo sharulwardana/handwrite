@@ -98,7 +98,7 @@ const SECTION_COLORS: Record<string, {
     dark: { bg: "bg-[#1a0a12]", border: "border-pink-900/40", header: "hover:bg-pink-950/30", label: "text-pink-400", icon: "🖐️" },
   },
   "Font Tulisan": {
-    light: { bg: "bg-indigo-100/95", border: "border-indigo-300", header: "hover:bg-indigo-200/60", label: "text-indigo-600", icon: "✍️" },
+    light: { bg: "bg-indigo-100/60", border: "border-indigo-300", header: "hover:bg-indigo-200/60", label: "text-indigo-600", icon: "✍️" },
     dark: { bg: "bg-[#0a0a1a]", border: "border-indigo-900/40", header: "hover:bg-indigo-950/30", label: "text-indigo-400", icon: "✍️" },
   },
   "Gaya Tulisan": {
@@ -132,7 +132,7 @@ function SidebarSection({
   const theme = SECTION_COLORS[title];
   const t = theme ? (isDark ? theme.dark : theme.light) : null;
 
-  const bg = t ? t.bg : (isDark ? "bg-[#13131f]" : "bg-white/90");
+  const bg = t ? t.bg : (isDark ? "bg-white/[0.04]" : "bg-white/60");
   const border = t ? t.border : (isDark ? "border-[#ffffff0d]" : "border-violet-100");
   const headerHover = t ? t.header : (isDark ? "hover:bg-white/[0.03]" : "hover:bg-violet-50/80");
   const labelColor = t ? t.label : (isDark ? "text-[#52525b]" : "text-violet-400");
@@ -1488,8 +1488,8 @@ export default function Home() {
       : "bg-white/60 border-b border-violet-100/50 backdrop-blur-xl supports-[backdrop-filter]:bg-white/40 shadow-sm",
 
     sidebar: D
-      ? "bg-[#0A0A0C]/40 border-r border-[#ffffff08] backdrop-blur-2xl"
-      : "bg-white/50 border-r border-violet-100/50 backdrop-blur-2xl",
+      ? "bg-[#0A0A0C]/30 border-r border-[#ffffff0a] backdrop-blur-3xl supports-[backdrop-filter]:bg-[#0A0A0C]/20"
+      : "bg-white/40 border-r border-violet-100/60 backdrop-blur-3xl supports-[backdrop-filter]:bg-white/30",
 
     card: D
       ? "bg-[#13131f] border-[#ffffff0d] shadow-[0_2px_16px_rgba(0,0,0,0.4)] backdrop-blur-sm transition-colors"
@@ -2049,7 +2049,7 @@ export default function Home() {
       {/* --- TAMBAHKAN KODE INI MULAI DARI SINI --- */}
       {!showEditor && !user ? (
         /* ══ LANDING PAGE SECTION ══ */
-        <div className="relative min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 text-center overflow-x-hidden">
+        <div className={`relative min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 text-center overflow-x-hidden overflow-y-auto ${isDark ? "bg-[#0A0A0C]" : "bg-[#f8f7ff]"}`}>
           {/* Background Ambient Glow */}
           <div className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none">
             <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/20 blur-[150px] animate-pulse" />
@@ -2099,11 +2099,11 @@ export default function Home() {
 
             {/* 5. Tombol Aksi */}
             <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } }} className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto px-6">
-              <button onClick={handleLogin} className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white text-black font-black text-lg shadow-[0_0_40px_rgba(255,255,255,0.3)] transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
+              <button onClick={handleLogin} className={`w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-lg transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 shadow-lg ${isDark ? "bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]" : "bg-violet-600 text-white shadow-violet-500/40"}`}>
                 <LogIn className="w-5 h-5" />
                 Mulai Gratis Sekarang
               </button>
-              <button onClick={() => setShowEditor(true)} className={`w-full sm:w-auto px-8 py-4 rounded-2xl border font-bold text-lg transition-all hover:bg-white/10 active:scale-95 border-[#ffffff15] text-white flex items-center justify-center gap-2`}>
+              <button onClick={() => setShowEditor(true)} className={`w-full sm:w-auto px-8 py-4 rounded-2xl border font-bold text-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${isDark ? "border-[#ffffff15] text-white hover:bg-white/10" : "border-violet-300 text-violet-700 hover:bg-violet-100 bg-white/60"}`}>
                 <PenTool className="w-5 h-5 opacity-70" />
                 Coba Demo Editor
               </button>
@@ -2380,7 +2380,7 @@ export default function Home() {
                   transition={{ type: "spring", damping: 28, stiffness: 300 }}
                   className={`fixed top-0 left-0 bottom-0 w-[300px] md:w-[320px] max-w-[85vw] z-[70] overflow-y-auto border-r ${c.sidebar}`}
                 >
-                  <div className={`sticky top-0 flex items-center justify-between px-4 h-14 border-b ${c.divider} ${D ? "bg-[#121217]/90" : "bg-white/90"} backdrop-blur-md z-10`}>
+                  <div className={`sticky top-0 flex items-center justify-between px-4 h-14 border-b ${c.divider} ${D ? "bg-[#121217]" : "bg-white"} z-20`}>
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-lg flex items-center justify-center">
                         <PenTool className="w-3 h-3 text-white" />
@@ -2706,10 +2706,8 @@ export default function Home() {
                     <span className="font-bold text-sm bg-clip-text text-transparent hidden xs:block"
                       style={{
                         backgroundImage: D
-                          ? "linear-gradient(90deg, #a78bfa, #818cf8, #c4b5fd)"
-                          : "linear-gradient(90deg, #7c3aed, #4f46e5, #7c3aed)",
-                        backgroundSize: "200% auto",
-                        animation: "shimmer 3s linear infinite"
+                          ? "linear-gradient(135deg, #a78bfa, #818cf8)"
+                          : "linear-gradient(135deg, #7c3aed, #4f46e5)",
                       }}>
                       HandWrite AI
                     </span>
@@ -4095,7 +4093,7 @@ export default function Home() {
           <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden pointer-events-none p-4 safe-area-pb">
 
             {/* Dock Kaca (Glassmorphism) */}
-            <div className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl shadow-2xl pointer-events-auto backdrop-blur-xl border transition-all duration-500 ease-in-out ${activeTab === "result" ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+            <div className={`w-full max-w-[calc(100vw-2rem)] mx-auto flex items-center gap-3 px-3 py-2.5 rounded-2xl shadow-2xl pointer-events-auto backdrop-blur-xl border transition-all duration-500 ease-in-out ${activeTab === "result" ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
               } ${D
                 ? "bg-[#0d0d14]/90 border-[#ffffff10] shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
                 : "bg-white/90 border-violet-200 shadow-[0_8px_32px_rgba(139,92,246,0.15)]"}`}>
