@@ -2839,7 +2839,7 @@ export default function Home() {
                       whileHover={!(isGenerating || !text.trim() || !selectedFolio) ? { scale: 1.03 } : {}}
                       whileTap={!(isGenerating || !text.trim() || !selectedFolio) ? { scale: 0.95 } : {}}
                       animate={isGenerating ? { boxShadow: ["0px 0px 0px rgba(139,92,246,0)", "0px 0px 20px rgba(139,92,246,0.6)", "0px 0px 0px rgba(139,92,246,0)"] } : {}}
-                      transition={{ type: "spring", stiffness: 400, damping: 25, ...(isGenerating && { duration: 2, repeat: Infinity, ease: "easeInOut" }) }}
+                      transition={isGenerating ? { duration: 2, repeat: Infinity, ease: "easeInOut" } : { type: "spring", stiffness: 400, damping: 25 }}
                       className={`relative flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl font-bold text-xs transition-all min-w-[110px] overflow-hidden ${isGenerating || !text.trim() || !selectedFolio
                         ? D ? "bg-[#ffffff05] text-white/30 cursor-not-allowed border border-[#ffffff0a]" : "bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-200"
                         : `bg-gradient-to-r ${c.accent} text-white shadow-[0_4px_12px_rgba(139,92,246,0.25)] hover:shadow-[0_8px_24px_rgba(139,92,246,0.4)]`
