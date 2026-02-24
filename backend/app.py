@@ -553,6 +553,38 @@ def ai_writer():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/ai-expand", methods=["POST"])
+def ai_expand():
+    """Parafrase & panjangkan teks agar lolos plagiasi dan pas 1 halaman folio."""
+    try:
+        data = request.json
+        text = data.get("text", "")
+        if not text.strip():
+            return jsonify({"error": "Teks tidak boleh kosong"}), 400
+
+        # Prompt khusus AI Anti-Deteksi
+        full_prompt = (
+            "Kamu adalah seorang pelajar/mahasiswa. Tugasmu adalah memparafrase dan memperluas materi dari teks berikut "
+            "agar terlihat lebih natural, elaboratif, tidak terdeteksi sebagai hasil copas dari Wikipedia/AI, "
+            "dan cukup panjang/detail untuk memenuhi setidaknya 1 hingga 2 halaman folio penuh.\n\n"
+            "Aturan ketat:\n"
+            "1. JANGAN gunakan formatting Markdown seperti **tebal**, *miring*, atau # heading.\n"
+            "2. Gunakan bahasa Indonesia yang baik, mengalir, dan seperti esai pemikiran manusia.\n"
+            "3. BERIKAN HANYA TEKS HASILNYA SAJA, tanpa kalimat pembuka/penutup seperti 'Tentu, ini hasilnya'.\n\n"
+            f"Teks asli:\n{text}"
+        )
+
+        response = ai_client.models.generate_content(
+            model="gemini-2.5-flash", contents=full_prompt
+        )
+
+        return jsonify({"success": True, "text": response.text})
+
+    except Exception as e:
+        print("Gemini API Error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/download/<int:page_num>", methods=["POST"])
 def download_page(page_num):
     try:

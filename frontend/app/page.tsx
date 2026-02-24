@@ -6,7 +6,7 @@ import {
   PanelLeftClose, PanelLeftOpen, Maximize2, FileDown,
   Clock, Trash2, CheckCircle2, Loader2, PenTool, Save, Copy,
   Link, Clipboard, Wifi, WifiOff, Menu, Bot, Mic, LogIn, LogOut,
-  Zap, MessageCircle, BookOpen
+  Zap, MessageCircle, BookOpen, Wand2
 } from "lucide-react";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 import toast, { Toaster } from "react-hot-toast";
@@ -466,6 +466,36 @@ export default function Home() {
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isAiDrafting, setIsAiDrafting] = useState(false);
+  const [isAiExpanding, setIsAiExpanding] = useState(false);
+
+  const handleAiExpand = async () => {
+    if (!text.trim()) {
+      toast.error("Ketik/paste teks yang mau dipoles dulu!");
+      return;
+    }
+    setIsAiExpanding(true);
+    const tid = toast.loading("AI sedang merombak & memanjangkan teks...");
+    try {
+      const res = await fetch(`${API_URL}/api/ai-expand`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const newText = data.text.trim();
+        setInputText(newText);
+        setText(newText);
+        toast.success("Teks berhasil dipoles & dipanjangkan! ✨", { id: tid });
+      } else {
+        throw new Error(data.error || "Gagal menghubungi AI");
+      }
+    } catch (e: any) {
+      toast.error(e.message, { id: tid });
+    } finally {
+      setIsAiExpanding(false);
+    }
+  };
   const [aiDraftResult, setAiDraftResult] = useState("");
   const recognitionRef = useRef<any>(null);
   const previewDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -2896,6 +2926,21 @@ export default function Home() {
                             <span>Tulis AI</span>
                           </button>
 
+                          {/* Poles & Panjangkan AI */}
+                          <button
+                            onClick={handleAiExpand}
+                            disabled={!text.trim() || isAiExpanding}
+                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-all whitespace-nowrap flex-shrink-0 ${!text.trim()
+                              ? "opacity-35 cursor-not-allowed " + c.btn
+                              : D
+                                ? "bg-purple-500/10 text-purple-400 border-purple-500/30 hover:bg-purple-500/20"
+                                : "bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100"
+                              }`}
+                          >
+                            {isAiExpanding ? <Loader2 className="w-3.5 h-3.5 flex-shrink-0 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 flex-shrink-0" />}
+                            <span>Poles & Panjangkan</span>
+                          </button>
+
                           {/* Dikte */}
                           <button
                             onClick={toggleListening}
@@ -3763,6 +3808,12 @@ export default function Home() {
                         <button onClick={() => setShowAiModal(true)}
                           className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${D ? "bg-indigo-500/8 text-indigo-400 border-indigo-500/20" : "bg-indigo-50 text-indigo-600 border-indigo-200"}`}>
                           <Bot className="w-3.5 h-3.5" /><span>Tulis AI</span>
+                        </button>
+                        {/* Poles AI Mobile */}
+                        <button onClick={handleAiExpand} disabled={!text.trim() || isAiExpanding}
+                          className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${!text.trim() ? "opacity-35 cursor-not-allowed " + c.btn : D ? "bg-purple-500/10 text-purple-400 border-purple-500/30" : "bg-purple-50 text-purple-600 border-purple-200"}`}>
+                          {isAiExpanding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                          <span>Poles AI</span>
                         </button>
                         <button onClick={toggleListening}
                           className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${isListening ? "bg-red-500/15 text-red-400 border-red-500/30 animate-pulse" : c.btn}`}>
