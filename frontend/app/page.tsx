@@ -143,7 +143,7 @@ function SidebarSection({
   const isOverflowVisible = className.includes("!overflow-visible");
 
   return (
-    <div className={`glass-panel rounded-2xl border backdrop-blur-2xl shadow-lg transition-all duration-300 ${bg} ${border} ${className} ${isOverflowVisible ? "" : "overflow-hidden"}`}>
+    <div className={`rounded-xl border backdrop-blur-sm shadow-sm ${bg} ${border} ${className} ${isOverflowVisible ? "" : "overflow-hidden"}`}>
       <button
         onClick={() => setOpen(!open)}
         className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-t-xl transition-all duration-200 ${open ? `border-b ${divider}` : "rounded-b-xl"} ${headerHover} hover:ring-1 ${isDark ? "hover:ring-white/5" : "hover:ring-violet-200"}`}
@@ -194,20 +194,12 @@ function ToggleSwitch({
   return (
     <button
       onClick={() => onChange(!value)}
-      className={`relative flex-shrink-0 w-12 h-7 rounded-full transition-all duration-300 shadow-inner ${value
+      className={`relative flex-shrink-0 w-11 h-6 rounded-full border-2 transition-all duration-300 ${value
         ? colorClass
-        : isDark ? "bg-white/10 border-transparent ring-1 ring-white/10" : "bg-gray-200 border-transparent ring-1 ring-black/5"
+        : isDark ? "bg-white/10 border-[#ffffff18]" : "bg-gray-200 border-gray-300"
         }`}
     >
-      <motion.div
-        layout
-        className={`absolute top-[2px] w-[24px] h-[24px] rounded-full bg-white shadow-[0_3px_8px_rgba(0,0,0,0.15),0_1px_1px_rgba(0,0,0,0.16)] flex items-center justify-center ${value ? "left-[22px]" : "left-[2px]"}`}
-        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-      >
-        {/* Detail garis mikroskopis khas tombol fisik Apple */}
-        <div className="w-[1px] h-3 bg-gray-200/50 rounded-full mx-[0.5px]"></div>
-        <div className="w-[1px] h-3 bg-gray-200/50 rounded-full mx-[0.5px]"></div>
-      </motion.div>
+      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-all duration-300 ${value ? "left-[22px]" : "left-0.5"}`} />
     </button>
   );
 }
@@ -571,21 +563,6 @@ export default function Home() {
 
   // ── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => { setSeed(Date.now()); }, []);
-
-  // Efek untuk mendeteksi Sistem Operasi (iOS / Android / Desktop)
-  useEffect(() => {
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const isIOS = /iphone|ipad|ipod/.test(userAgent);
-    const isAndroid = /android/.test(userAgent);
-
-    if (isIOS) {
-      document.documentElement.classList.add('theme-ios');
-    } else if (isAndroid) {
-      document.documentElement.classList.add('theme-android');
-    } else {
-      document.documentElement.classList.add('theme-desktop');
-    }
-  }, []);
 
   // Efek untuk membaca parameter URL Kolaborasi
   useEffect(() => {
@@ -1558,15 +1535,15 @@ export default function Home() {
 
     header: D
       ? "bg-[#0A0A0C]/50 border-b border-[#ffffff08] backdrop-blur-xl supports-[backdrop-filter]:bg-[#0A0A0C]/30"
-      : "glass-panel border-b border-violet-100/50 shadow-sm", // Liquid Glass diterapkan di sini!
+      : "bg-white/70 border-b border-violet-100/50 backdrop-blur-xl supports-[backdrop-filter]:bg-white/40",
 
     sidebar: D
       ? "bg-[#0A0A0C]/30 border-r border-[#ffffff0a] backdrop-blur-3xl supports-[backdrop-filter]:bg-[#0A0A0C]/20"
-      : "glass-panel border-r border-violet-100/60", // Liquid Glass diterapkan di sini!
+      : "bg-[#FAFAFB]/60 border-r border-violet-100/60 backdrop-blur-2xl",
 
     card: D
       ? "bg-[#13131f] border-[#ffffff0d] shadow-[0_2px_16px_rgba(0,0,0,0.4)] backdrop-blur-sm transition-colors"
-      : "glass-panel border-violet-200 shadow-[0_4px_20px_rgba(139,92,246,0.18)] transition-colors", // Liquid Glass diterapkan di sini!
+      : "bg-white border-violet-200 shadow-[0_4px_20px_rgba(139,92,246,0.12)] transition-colors",
 
     cardHover: D
       ? "hover:border-violet-500/30 hover:shadow-[0_4px_24px_rgba(139,92,246,0.15)] transition-all duration-300"
@@ -1605,8 +1582,8 @@ export default function Home() {
       : "hover:bg-violet-50",
 
     dropdown: D
-      ? "glass-panel bg-[#13131f]/50 border-[#ffffff12] shadow-2xl"
-      : "glass-panel bg-white/50 border-violet-200 shadow-2xl",
+      ? "bg-[#13131f] border-[#ffffff12] shadow-2xl"
+      : "bg-white border-violet-200 shadow-2xl",
 
     accent: "from-violet-600 to-indigo-500",
 
@@ -1681,44 +1658,59 @@ export default function Home() {
         </div>
       </SidebarSection>
 
-      <SidebarSection title="Font Tulisan" isDark={D} className="relative z-40 !overflow-visible">
-        <div className="relative">
-          {isLoadingFonts ? (
-            <div className="flex gap-3 overflow-hidden p-1">
-              {[1, 2, 3].map(i => <div key={i} className={`h-12 w-24 rounded-xl animate-pulse flex-shrink-0 ${D ? "bg-white/10" : "bg-gray-200"}`} />)}
-            </div>
-          ) : (
-            <div className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory gap-2 p-1.5 rounded-2xl bg-black/5 dark:bg-black/20 shadow-inner ring-1 ring-inset ring-black/5 dark:ring-white/5">
-              {Object.entries(fonts).map(([key, font]) => {
-                const isSelected = selectedFont === key;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => setSelectedFont(key)}
-                    className="relative px-5 py-3 rounded-xl snap-center shrink-0 transition-all duration-300 outline-none"
-                  >
-                    {/* Gelembung Liquid yang Meluncur */}
-                    {isSelected && (
-                      <motion.div
-                        layoutId="activeFontBubble"
-                        className={`absolute inset-0 rounded-2xl shadow-md border ${D ? "bg-[#2c2c35] border-[#ffffff15]" : "bg-white border-white"}`}
-                        transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                      />
-                    )}
+      <SidebarSection title="Font Tulisan" isDark={D} className="relative z-[60] !overflow-visible">
+        <div ref={fontDropdownRef} className="relative z-50">
+          <button
+            onClick={() => setFontDropdownOpen(!fontDropdownOpen)}
+            disabled={isLoadingFonts}
+            className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border transition-all ${fontDropdownOpen
+              ? D ? "border-violet-500/50 bg-violet-500/8" : "border-violet-400 bg-violet-50"
+              : D ? "border-[#ffffff0f] bg-[#ffffff06] hover:border-[#ffffff18]"
+                : "border-[#d1d5db] bg-gray-50 hover:border-[#9ca3af]"
+              }`}
+          >
+            {isLoadingFonts ? (
+              <div className={`h-4 w-28 rounded animate-pulse ${D ? "bg-white/8" : "bg-gray-200"}`} />
+            ) : currentFont ? (
+              <span className={`text-[15px] font-medium truncate ${c.tp}`}
+                style={{ fontFamily: FONT_FAMILY_MAP[currentFont.name] || currentFont.name }}>
+                {currentFont.name}
+              </span>
+            ) : (
+              <span className={c.ts}>Pilih font...</span>
+            )}
+            <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 ${c.ts} transition-transform ${fontDropdownOpen ? "rotate-180" : ""}`} />
+          </button>
 
-                    {/* Teks Font */}
-                    <div className="relative z-10 flex flex-col items-center gap-1">
-                      <span className={`text-[15px] leading-none ${isSelected ? (D ? "text-white" : "text-gray-900") : (D ? "text-white/50 hover:text-white/80" : "text-gray-500 hover:text-gray-800")}`}
-                        style={{ fontFamily: FONT_FAMILY_MAP[font.name] || font.name }}>
+          {fontDropdownOpen && Object.keys(fonts).length > 0 && (
+            <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border z-50 overflow-hidden ${c.dropdown}`}>
+              <div className="max-h-52 overflow-y-auto py-1">
+                {Object.entries(fonts).map(([key, font]) => (
+                  <button key={key}
+                    onClick={() => { setSelectedFont(key); setFontDropdownOpen(false); }}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 transition-colors ${c.rowHover} ${selectedFont === key ? D ? "bg-violet-500/12" : "bg-violet-50" : ""}`}
+                  >
+                    <div className="flex flex-col gap-0.5 text-left">
+                      <span className={`text-[13px] font-medium ${c.tp}`} style={{ fontFamily: FONT_FAMILY_MAP[font.name] || font.name }}>
                         {font.name}
                       </span>
-                      <span className={`text-[9px] uppercase tracking-widest ${isSelected ? "text-violet-500" : "text-transparent"}`}>
-                        Aktif
+                      <span className={`text-[12px] ${c.ts}`} style={{ fontFamily: FONT_FAMILY_MAP[font.name] || font.name }}>
+                        Halo, ini contoh tulisanku hari ini.
                       </span>
                     </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={`text-[10px] capitalize ${c.ts}`}>{font.style}</span>
+                      {selectedFont === key && (
+                        <div className="w-3.5 h-3.5 rounded-full bg-violet-500 flex items-center justify-center">
+                          <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -1742,7 +1734,7 @@ export default function Home() {
             onChange={(e) => setWriteSpeed(Number(e.target.value))}
             className="w-full cursor-pointer"
             style={{
-              WebkitAppearance: "none", height: "24px", borderRadius: "99px",
+              WebkitAppearance: "none", height: "5px", borderRadius: "99px",
               background: `linear-gradient(to right, ${D ? "#fb923c" : "#ea580c"} 0%, ${D ? "#fb923c" : "#ea580c"} ${writeSpeed * 100}%, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} ${writeSpeed * 100}%, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} 100%)`
             }}
           />
@@ -1762,7 +1754,7 @@ export default function Home() {
             onChange={(e) => setSlantAngle(Number(e.target.value))}
             className="w-full cursor-pointer"
             style={{
-              WebkitAppearance: "none", appearance: "none", height: "24px", borderRadius: "99px",
+              WebkitAppearance: "none", appearance: "none", height: "5px", borderRadius: "99px",
               background: `linear-gradient(to right, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} 0%, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} ${((slantAngle + 15) / 30) * 100}%, ${D ? "#818cf8" : "#6366f1"} ${((slantAngle + 15) / 30) * 100}%, ${D ? "#818cf8" : "#6366f1"} 100%)`
             }}
           />
@@ -1908,7 +1900,7 @@ export default function Home() {
             onChange={(e) => updateConfig({ ...config, wordSpacing: Number(e.target.value) })}
             className="w-full cursor-pointer"
             style={{
-              WebkitAppearance: "none", height: "24px", borderRadius: "99px",
+              WebkitAppearance: "none", height: "5px", borderRadius: "99px",
               background: `linear-gradient(to right, ${D ? "#38bdf8" : "#0ea5e9"} 0%, ${D ? "#38bdf8" : "#0ea5e9"} ${((config.wordSpacing + 10) / 50) * 100}%, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} ${((config.wordSpacing + 10) / 50) * 100}%, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} 100%)`
             }}
           />
