@@ -824,14 +824,14 @@ def cache_load(session_id):
     """Load hasil generate dari file JSON di disk."""
     cache_path = os.path.join(CACHE_FOLDER, f"cache_{secure_filename(session_id)}.json")
     if not os.path.exists(cache_path):
-        return jsonify({"found": False}), 404
+        return jsonify({"found": False}), 200  # <--- Ubah 404 menjadi 200
 
     try:
         with open(cache_path, "r") as f:
             pages = json.load(f)
         return jsonify({"found": True, "pages": pages})
     except Exception:
-        return jsonify({"found": False}), 500
+        return jsonify({"found": False}), 200  # <--- Ubah 500 menjadi 200
 
 
 @app.route("/health", methods=["GET"])
