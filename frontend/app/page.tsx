@@ -2049,7 +2049,7 @@ export default function Home() {
       {/* --- TAMBAHKAN KODE INI MULAI DARI SINI --- */}
       {!showEditor && !user ? (
         /* ══ LANDING PAGE SECTION ══ */
-        <div className={`relative min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 text-center overflow-x-hidden overflow-y-auto ${isDark ? "bg-[#0A0A0C]" : "bg-[#f8f7ff]"}`}>
+        <div className={`relative min-h-screen flex flex-col items-center p-4 sm:p-6 text-center overflow-x-hidden overflow-y-auto ${isDark ? "bg-[#0A0A0C]" : "bg-[#f8f7ff]"}`}>
           {/* Background Ambient Glow */}
           <div className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none">
             <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/20 blur-[150px] animate-pulse" />
@@ -2380,7 +2380,7 @@ export default function Home() {
                   transition={{ type: "spring", damping: 28, stiffness: 300 }}
                   className={`fixed top-0 left-0 bottom-0 w-[300px] md:w-[320px] max-w-[85vw] z-[70] overflow-y-auto border-r ${c.sidebar}`}
                 >
-                  <div className={`sticky top-0 flex items-center justify-between px-4 h-14 border-b ${c.divider} ${D ? "bg-[#121217]" : "bg-white"} z-20`}>
+                  <div className={`sticky top-0 flex items-center justify-between px-4 h-14 border-b ${c.divider} ${D ? "bg-[#121217]" : "bg-white"} z-[80]`}>
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-lg flex items-center justify-center">
                         <PenTool className="w-3 h-3 text-white" />
@@ -4090,10 +4090,10 @@ export default function Home() {
           </AnimatePresence>
 
           {/* ── MOBILE BOTTOM BAR (Modern Floating Dock) ── */}
-          <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden pointer-events-none p-4 safe-area-pb">
+          <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden pointer-events-none px-4 safe-area-pb flex justify-center">
 
             {/* Dock Kaca (Glassmorphism) */}
-            <div className={`w-full max-w-[calc(100vw-2rem)] mx-auto flex items-center gap-3 px-3 py-2.5 rounded-2xl shadow-2xl pointer-events-auto backdrop-blur-xl border transition-all duration-500 ease-in-out ${activeTab === "result" ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+            <div className={`w-full max-w-sm flex items-center gap-3 px-3 py-2.5 rounded-2xl shadow-2xl pointer-events-auto backdrop-blur-xl border transition-all duration-500 ease-in-out ${activeTab === "result" ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
               } ${D
                 ? "bg-[#0d0d14]/90 border-[#ffffff10] shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
                 : "bg-white/90 border-violet-200 shadow-[0_8px_32px_rgba(139,92,246,0.15)]"}`}>
