@@ -3936,50 +3936,68 @@ export default function Home() {
                       </div>
                     )}
 
-                    {/* ── MOBILE FLOATING DYNAMIC ISLAND ── */}
-                    {activePages.length > 0 && (
+                    {/* ── MOBILE FLOATING DYNAMIC ISLAND (MORPHING) ── */}
+                    {(activePages.length > 0 || isGenerating) && (
                       <motion.div
+                        layout
                         initial={{ y: 50, x: "-50%", opacity: 0 }}
                         animate={{ y: 0, x: "-50%", opacity: 1 }}
-                        className="fixed bottom-8 left-1/2 z-[60] flex items-center p-1.5 rounded-full shadow-2xl backdrop-blur-xl border transition-all"
+                        className="fixed bottom-8 left-1/2 z-[60] flex items-center p-1.5 rounded-full shadow-2xl backdrop-blur-xl border overflow-hidden"
                         style={{
                           background: D ? "rgba(15,15,22,0.85)" : "rgba(255,255,255,0.95)",
                           borderColor: D ? "rgba(255,255,255,0.1)" : "rgba(139,92,246,0.2)",
                           boxShadow: D ? "0 12px 40px rgba(0,0,0,0.6)" : "0 12px 40px rgba(139,92,246,0.2)"
                         }}
                       >
-                        <button onClick={() => setActiveTab("editor" as any)} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`}>
-                          <PenTool className="w-4 h-4" />
-                        </button>
-
-                        <div className={`w-px h-5 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
-
-                        {activePages.length > 1 && (
-                          <>
-                            <button onClick={() => setActivePageIndex(i => Math.max(0, i - 1))} disabled={activePageIndex === 0} className={`w-8 h-10 flex items-center justify-center transition-all ${activePageIndex === 0 ? "opacity-30" : "text-violet-500"}`}>
-                              <ChevronDown className="w-4 h-4 rotate-90" />
-                            </button>
-                            <span className={`text-[11px] font-bold font-mono px-1 ${c.tp}`}>
-                              {activePageIndex + 1}/{activePages.length}
+                        {isGenerating ? (
+                          /* ── STATE 1: SEDANG LOADING ── */
+                          <motion.div layout className="flex items-center gap-3 px-4 py-1.5">
+                            <Loader2 className="w-4 h-4 animate-spin text-violet-500" />
+                            <span className={`text-[11px] font-bold tracking-wide whitespace-nowrap ${c.tp}`}>
+                              Menulis {streamedPages.length}/{totalStreamPages} hal...
                             </span>
-                            <button onClick={() => setActivePageIndex(i => Math.min(activePages.length - 1, i + 1))} disabled={activePageIndex === activePages.length - 1} className={`w-8 h-10 flex items-center justify-center transition-all ${activePageIndex === activePages.length - 1 ? "opacity-30" : "text-violet-500"}`}>
-                              <ChevronDown className="w-4 h-4 -rotate-90" />
+                            <div className={`w-px h-4 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
+                            <button onClick={() => setActiveTab("editor" as any)} className={`text-[10px] font-bold text-violet-500 hover:text-violet-400 transition-colors uppercase tracking-widest`}>
+                              Tutup
                             </button>
-                            <div className={`w-px h-5 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
-                          </>
-                        )}
+                          </motion.div>
+                        ) : (
+                          /* ── STATE 2: SELESAI (TOOLS MUNCUL) ── */
+                          <motion.div layout className="flex items-center">
+                            <button onClick={() => setActiveTab("editor" as any)} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`}>
+                              <PenTool className="w-4 h-4" />
+                            </button>
 
-                        <div className="ml-1">
-                          {mobileZoom !== 100 ? (
-                            <button onClick={() => setMobileZoom(100)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-amber-500/15 text-amber-500 hover:bg-amber-500/25 text-[11px] font-bold transition-all">
-                              <ZoomOut className="w-3.5 h-3.5" /><span>Reset ({mobileZoom}%)</span>
-                            </button>
-                          ) : (
-                            <button onClick={() => handleDownloadSingle(activePages[activePageIndex])} className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[11px] font-bold text-white shadow-lg active:scale-95 transition-all bg-gradient-to-r ${c.accent}`}>
-                              <Download className="w-3.5 h-3.5" /><span>Simpan</span>
-                            </button>
-                          )}
-                        </div>
+                            <div className={`w-px h-5 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
+
+                            {activePages.length > 1 && (
+                              <>
+                                <button onClick={() => setActivePageIndex(i => Math.max(0, i - 1))} disabled={activePageIndex === 0} className={`w-8 h-10 flex items-center justify-center transition-all ${activePageIndex === 0 ? "opacity-30" : "text-violet-500"}`}>
+                                  <ChevronDown className="w-4 h-4 rotate-90" />
+                                </button>
+                                <span className={`text-[11px] font-bold font-mono px-1 ${c.tp}`}>
+                                  {activePageIndex + 1}/{activePages.length}
+                                </span>
+                                <button onClick={() => setActivePageIndex(i => Math.min(activePages.length - 1, i + 1))} disabled={activePageIndex === activePages.length - 1} className={`w-8 h-10 flex items-center justify-center transition-all ${activePageIndex === activePages.length - 1 ? "opacity-30" : "text-violet-500"}`}>
+                                  <ChevronDown className="w-4 h-4 -rotate-90" />
+                                </button>
+                                <div className={`w-px h-5 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
+                              </>
+                            )}
+
+                            <div className="ml-1">
+                              {mobileZoom !== 100 ? (
+                                <button onClick={() => setMobileZoom(100)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-amber-500/15 text-amber-500 hover:bg-amber-500/25 text-[11px] font-bold transition-all">
+                                  <ZoomOut className="w-3.5 h-3.5" /><span>Reset ({mobileZoom}%)</span>
+                                </button>
+                              ) : (
+                                <button onClick={() => handleDownloadSingle(activePages[activePageIndex])} className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[11px] font-bold text-white shadow-lg active:scale-95 transition-all bg-gradient-to-r ${c.accent}`}>
+                                  <Download className="w-3.5 h-3.5" /><span>Simpan</span>
+                                </button>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
                       </motion.div>
                     )}
                   </div>
@@ -4075,22 +4093,6 @@ export default function Home() {
 
           {/* ── MOBILE BOTTOM BAR (Modern Floating Dock) ── */}
           <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden pointer-events-none p-4 safe-area-pb">
-            {/* Notifikasi proses tulis melayang di atas dock */}
-            <AnimatePresence>
-              {isGenerating && totalStreamPages > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                  className={`absolute -top-12 left-0 right-0 mx-auto w-max max-w-[90%] px-4 py-2 rounded-full text-[10px] font-medium text-center shadow-lg pointer-events-auto backdrop-blur-md border ${D ? "bg-violet-500/20 text-violet-300 border-violet-500/30" : "bg-white/90 text-violet-700 border-violet-200"}`}>
-                  <Loader2 className="w-3 h-3 animate-spin inline mr-1.5 -mt-0.5" />
-                  Menulis halaman {streamedPages.length} dari {totalStreamPages}
-                  {totalStreamPages > 0 && streamedPages.length > 0 && (
-                    <span className="ml-1 opacity-60">
-                      · ~{Math.ceil((totalStreamPages - streamedPages.length) * 3)}s lagi
-                    </span>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             {/* Dock Kaca (Glassmorphism) */}
             <div className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl shadow-2xl pointer-events-auto backdrop-blur-xl border transition-all duration-500 ease-in-out ${activeTab === "result" ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
