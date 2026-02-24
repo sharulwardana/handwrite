@@ -255,7 +255,7 @@ function BeforeAfterSlider() {
   return (
     <div
       ref={containerRef}
-      className="relative w-full max-w-4xl mx-auto h-[250px] sm:h-[350px] rounded-3xl overflow-hidden cursor-ew-resize shadow-[0_24px_64px_rgba(139,92,246,0.15)] border border-[#ffffff15] select-none group bg-[#0A0A0C]"
+      className="relative w-full max-w-4xl mx-auto h-[250px] sm:h-[350px] rounded-3xl overflow-hidden cursor-ew-resize touch-pan-y shadow-[0_24px_64px_rgba(139,92,246,0.15)] border border-[#ffffff15] select-none group bg-[#0A0A0C]"
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
     >
@@ -541,6 +541,21 @@ export default function Home() {
 
   // ── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => { setSeed(Date.now()); }, []);
+
+  // Efek untuk mendeteksi Sistem Operasi (iOS / Android / Desktop)
+  useEffect(() => {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isIOS = /iphone|ipad|ipod/.test(userAgent);
+    const isAndroid = /android/.test(userAgent);
+
+    if (isIOS) {
+      document.documentElement.classList.add('theme-ios');
+    } else if (isAndroid) {
+      document.documentElement.classList.add('theme-android');
+    } else {
+      document.documentElement.classList.add('theme-desktop');
+    }
+  }, []);
 
   // Efek untuk membaca parameter URL Kolaborasi
   useEffect(() => {
@@ -1107,6 +1122,34 @@ export default function Home() {
     } catch (e) {
       if ((e as Error).name !== "AbortError") toast.error("Gagal membagikan gambar");
     }
+  };
+
+  // Fungsi navigasi Onboarding agar sidebar kebuka otomatis di HP
+  const handleNextOnboardingStep = () => {
+    const isMobile = window.innerWidth < 1024;
+
+    if (onboardingStep === 0 && isMobile) {
+      setMobileSidebarOpen(true);
+      setTimeout(() => setOnboardingStep(1), 300); // Tunggu sidebar kebuka
+    } else if (onboardingStep === 1 && isMobile) {
+      setMobileSidebarOpen(false);
+      setTimeout(() => setOnboardingStep(2), 300); // Tutup sidebar lanjut nulis
+    } else if (onboardingStep < 3) {
+      setOnboardingStep(s => s + 1);
+    } else {
+      setShowOnboarding(false);
+      localStorage.setItem("hw_onboarded", "1");
+    }
+  };
+
+  const handlePrevOnboardingStep = () => {
+    const isMobile = window.innerWidth < 1024;
+    if (onboardingStep === 1 && isMobile) {
+      setMobileSidebarOpen(false); // Tutup sidebar kalau balik ke welcome
+    } else if (onboardingStep === 2 && isMobile) {
+      setMobileSidebarOpen(true); // Buka sidebar lagi kalau balik dari nulis
+    }
+    setOnboardingStep(s => s - 1);
   };
 
   // ── FUNGSI SHARE LINK PUBLIK ──
@@ -2049,7 +2092,7 @@ export default function Home() {
       {/* --- TAMBAHKAN KODE INI MULAI DARI SINI --- */}
       {!showEditor && !user ? (
         /* ══ LANDING PAGE SECTION ══ */
-        <div className={`relative min-h-screen flex flex-col items-center p-4 sm:p-6 text-center overflow-x-hidden overflow-y-auto ${isDark ? "bg-[#0A0A0C]" : "bg-[#f8f7ff]"}`}>
+        <div className={`relative min-h-screen flex flex-col items-center p-4 sm:p-6 text-center overflow-x-hidden ${isDark ? "bg-[#0A0A0C]" : "bg-[#f8f7ff]"}`}>
           {/* Background Ambient Glow */}
           <div className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none">
             <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/20 blur-[150px] animate-pulse" />
@@ -2459,12 +2502,12 @@ export default function Home() {
                   </p>
                   <div className="flex gap-2">
                     {onboardingStep > 0 && (
-                      <button onClick={() => setOnboardingStep(s => s - 1)}
+                      <button onClick={handlePrevOnboardingStep}
                         className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all ${isDark ? "border-white/10 text-white/60 hover:bg-white/5" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
                         ← Kembali
                       </button>
                     )}
-                    <button onClick={() => { if (onboardingStep < 3) setOnboardingStep(s => s + 1); else { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); } }}
+                    <button onClick={handleNextOnboardingStep}
                       className="flex-1 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 transition-all">
                       {onboardingStep < 3 ? "Lanjut →" : "Mulai Sekarang! 🚀"}
                     </button>
@@ -3936,67 +3979,69 @@ export default function Home() {
 
                     {/* ── MOBILE FLOATING DYNAMIC ISLAND (MORPHING) ── */}
                     {(activePages.length > 0 || isGenerating) && (
-                      <motion.div
-                        layout
-                        initial={{ y: 50, x: "-50%", opacity: 0 }}
-                        animate={{ y: 0, x: "-50%", opacity: 1 }}
-                        className="fixed bottom-8 left-1/2 z-[60] flex items-center p-1.5 rounded-full shadow-2xl backdrop-blur-xl border overflow-hidden"
-                        style={{
-                          background: D ? "rgba(15,15,22,0.85)" : "rgba(255,255,255,0.95)",
-                          borderColor: D ? "rgba(255,255,255,0.1)" : "rgba(139,92,246,0.2)",
-                          boxShadow: D ? "0 12px 40px rgba(0,0,0,0.6)" : "0 12px 40px rgba(139,92,246,0.2)"
-                        }}
-                      >
-                        {isGenerating ? (
-                          /* ── STATE 1: SEDANG LOADING ── */
-                          <motion.div layout className="flex items-center gap-3 px-4 py-1.5">
-                            <Loader2 className="w-4 h-4 animate-spin text-violet-500" />
-                            <span className={`text-[11px] font-bold tracking-wide whitespace-nowrap ${c.tp}`}>
-                              Menulis {streamedPages.length}/{totalStreamPages} hal...
-                            </span>
-                            <div className={`w-px h-4 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
-                            <button onClick={() => setActiveTab("editor" as any)} className={`text-[10px] font-bold text-violet-500 hover:text-violet-400 transition-colors uppercase tracking-widest`}>
-                              Tutup
-                            </button>
-                          </motion.div>
-                        ) : (
-                          /* ── STATE 2: SELESAI (TOOLS MUNCUL) ── */
-                          <motion.div layout className="flex items-center">
-                            <button onClick={() => setActiveTab("editor" as any)} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`}>
-                              <PenTool className="w-4 h-4" />
-                            </button>
+                      <div className="fixed bottom-8 left-0 right-0 z-[60] flex justify-center px-4 pointer-events-none">
+                        <motion.div
+                          layout
+                          initial={{ y: 50, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          className="flex items-center p-1.5 rounded-full shadow-2xl backdrop-blur-xl border overflow-hidden pointer-events-auto"
+                          style={{
+                            background: D ? "rgba(15,15,22,0.85)" : "rgba(255,255,255,0.95)",
+                            borderColor: D ? "rgba(255,255,255,0.1)" : "rgba(139,92,246,0.2)",
+                            boxShadow: D ? "0 12px 40px rgba(0,0,0,0.6)" : "0 12px 40px rgba(139,92,246,0.2)"
+                          }}
+                        >
+                          {isGenerating ? (
+                            /* ── STATE 1: SEDANG LOADING ── */
+                            <motion.div layout className="flex items-center gap-3 px-4 py-1.5">
+                              <Loader2 className="w-4 h-4 animate-spin text-violet-500" />
+                              <span className={`text-[11px] font-bold tracking-wide whitespace-nowrap ${c.tp}`}>
+                                Menulis {streamedPages.length}/{totalStreamPages} hal...
+                              </span>
+                              <div className={`w-px h-4 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
+                              <button onClick={() => setActiveTab("editor" as any)} className={`text-[10px] font-bold text-violet-500 hover:text-violet-400 transition-colors uppercase tracking-widest`}>
+                                Tutup
+                              </button>
+                            </motion.div>
+                          ) : (
+                            /* ── STATE 2: SELESAI (TOOLS MUNCUL) ── */
+                            <motion.div layout className="flex items-center">
+                              <button onClick={() => setActiveTab("editor" as any)} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`}>
+                                <PenTool className="w-4 h-4" />
+                              </button>
 
-                            <div className={`w-px h-5 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
+                              <div className={`w-px h-5 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
 
-                            {activePages.length > 1 && (
-                              <>
-                                <button onClick={() => setActivePageIndex(i => Math.max(0, i - 1))} disabled={activePageIndex === 0} className={`w-8 h-10 flex items-center justify-center transition-all ${activePageIndex === 0 ? "opacity-30" : "text-violet-500"}`}>
-                                  <ChevronDown className="w-4 h-4 rotate-90" />
-                                </button>
-                                <span className={`text-[11px] font-bold font-mono px-1 ${c.tp}`}>
-                                  {activePageIndex + 1}/{activePages.length}
-                                </span>
-                                <button onClick={() => setActivePageIndex(i => Math.min(activePages.length - 1, i + 1))} disabled={activePageIndex === activePages.length - 1} className={`w-8 h-10 flex items-center justify-center transition-all ${activePageIndex === activePages.length - 1 ? "opacity-30" : "text-violet-500"}`}>
-                                  <ChevronDown className="w-4 h-4 -rotate-90" />
-                                </button>
-                                <div className={`w-px h-5 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
-                              </>
-                            )}
-
-                            <div className="ml-1">
-                              {mobileZoom !== 100 ? (
-                                <button onClick={() => setMobileZoom(100)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-amber-500/15 text-amber-500 hover:bg-amber-500/25 text-[11px] font-bold transition-all">
-                                  <ZoomOut className="w-3.5 h-3.5" /><span>Reset ({mobileZoom}%)</span>
-                                </button>
-                              ) : (
-                                <button onClick={() => handleDownloadSingle(activePages[activePageIndex])} className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[11px] font-bold text-white shadow-lg active:scale-95 transition-all bg-gradient-to-r ${c.accent}`}>
-                                  <Download className="w-3.5 h-3.5" /><span>Simpan</span>
-                                </button>
+                              {activePages.length > 1 && (
+                                <>
+                                  <button onClick={() => setActivePageIndex(i => Math.max(0, i - 1))} disabled={activePageIndex === 0} className={`w-8 h-10 flex items-center justify-center transition-all ${activePageIndex === 0 ? "opacity-30" : "text-violet-500"}`}>
+                                    <ChevronDown className="w-4 h-4 rotate-90" />
+                                  </button>
+                                  <span className={`text-[11px] font-bold font-mono px-1 ${c.tp}`}>
+                                    {activePageIndex + 1}/{activePages.length}
+                                  </span>
+                                  <button onClick={() => setActivePageIndex(i => Math.min(activePages.length - 1, i + 1))} disabled={activePageIndex === activePages.length - 1} className={`w-8 h-10 flex items-center justify-center transition-all ${activePageIndex === activePages.length - 1 ? "opacity-30" : "text-violet-500"}`}>
+                                    <ChevronDown className="w-4 h-4 -rotate-90" />
+                                  </button>
+                                  <div className={`w-px h-5 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
+                                </>
                               )}
-                            </div>
-                          </motion.div>
-                        )}
-                      </motion.div>
+
+                              <div className="ml-1">
+                                {mobileZoom !== 100 ? (
+                                  <button onClick={() => setMobileZoom(100)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-amber-500/15 text-amber-500 hover:bg-amber-500/25 text-[11px] font-bold transition-all">
+                                    <ZoomOut className="w-3.5 h-3.5" /><span>Reset ({mobileZoom}%)</span>
+                                  </button>
+                                ) : (
+                                  <button onClick={() => handleDownloadSingle(activePages[activePageIndex])} className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[11px] font-bold text-white shadow-lg active:scale-95 transition-all bg-gradient-to-r ${c.accent}`}>
+                                    <Download className="w-3.5 h-3.5" /><span>Simpan</span>
+                                  </button>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </motion.div>
+                      </div>
                     )}
                   </div>
                 );
@@ -4093,10 +4138,7 @@ export default function Home() {
           <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden pointer-events-none px-4 safe-area-pb flex justify-center">
 
             {/* Dock Kaca (Glassmorphism) */}
-            <div className={`w-full max-w-sm flex items-center gap-3 px-3 py-2.5 rounded-2xl shadow-2xl pointer-events-auto backdrop-blur-xl border transition-all duration-500 ease-in-out ${activeTab === "result" ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
-              } ${D
-                ? "bg-[#0d0d14]/90 border-[#ffffff10] shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
-                : "bg-white/90 border-violet-200 shadow-[0_8px_32px_rgba(139,92,246,0.15)]"}`}>
+            <div className={`glass-panel w-full max-w-sm flex items-center gap-3 px-3 py-2.5 rounded-2xl pointer-events-auto transition-all duration-500 ease-in-out ${activeTab === "result" ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}>
               {/* Ubah md:hidden menjadi lg:hidden di bawah ini */}
               <button onClick={() => setMobileSidebarOpen(true)}
                 className={`flex lg:hidden w-8 h-8 rounded-lg items-center justify-center transition-all ${c.btn}`}>

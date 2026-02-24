@@ -243,3 +243,43 @@ input[type="color"]::-webkit-color-swatch {
   color: #e5e7eb;
   background-color: transparent;
 }
+
+/* ── DETEKSI OS THEME ── */
+/* 1. iOS Liquid Glass (Super Blur, Transparan) */
+.theme-ios .glass-panel {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.1);
+}
+.dark.theme-ios .glass-panel {
+  background: rgba(15, 15, 22, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* 2. Android Modern Solid (Solid, Bayangan Tegas) */
+.theme-android .glass-panel {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 40px rgba(139, 92, 246, 0.12);
+  border-radius: 20px;
+}
+.dark.theme-android .glass-panel {
+  background: #18181b;
+  border: 1px solid #27272a;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* 3. Desktop / Default (Glassmorphism standar) */
+.theme-desktop .glass-panel {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+.dark.theme-desktop .glass-panel {
+  background: rgba(13, 13, 20, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
