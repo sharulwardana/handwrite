@@ -1597,8 +1597,8 @@ export default function Home() {
       : "hover:bg-violet-50",
 
     dropdown: D
-      ? "bg-[#13131f]/95 border-[#ffffff12] shadow-2xl backdrop-blur-xl"
-      : "bg-white/95 border-violet-200 shadow-2xl shadow-violet-500/10 backdrop-blur-xl",
+      ? "glass-panel bg-[#13131f]/50 border-[#ffffff12] shadow-2xl"
+      : "glass-panel bg-white/50 border-violet-200 shadow-2xl",
 
     accent: "from-violet-600 to-indigo-500",
 
@@ -1919,12 +1919,23 @@ export default function Home() {
               background: `linear-gradient(to right, ${D ? "#38bdf8" : "#0ea5e9"} 0%, ${D ? "#38bdf8" : "#0ea5e9"} ${((config.wordSpacing + 10) / 50) * 100}%, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} ${((config.wordSpacing + 10) / 50) * 100}%, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} 100%)`
             }}
           />
-          <div className="grid grid-cols-3 gap-1 mt-2">
+          {/* Animasi Gelembung Liquid iOS */}
+          <div className={`relative flex p-1 mt-2 rounded-xl overflow-hidden ${D ? "bg-black/30 shadow-inner" : "bg-black/5 shadow-inner"}`}>
+
+            {/* Ini Gelembung yang meluncur (Sliding Pill) */}
+            <div
+              className={`absolute top-1 bottom-1 w-[calc(33.33%-4px)] rounded-lg shadow-sm transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${D ? "bg-[#2c2c35]" : "bg-white"}`}
+              style={{
+                left: config.wordSpacing === -5 ? '4px' : config.wordSpacing === 8 ? 'calc(33.33% + 2px)' : 'calc(66.66% - 1px)'
+              }}
+            />
+
+            {/* Tombol Teksnya (Di atas gelembung) */}
             {[{ l: "Rapat", v: -5 }, { l: "Normal", v: 8 }, { l: "Lebar", v: 25 }].map((p) => (
               <button key={p.v} onClick={() => updateConfig({ ...config, wordSpacing: p.v })}
-                className={`py-1.5 rounded-lg text-[11px] font-medium transition-all border ${config.wordSpacing === p.v
-                  ? D ? "bg-sky-500/20 text-sky-400 border-sky-500/30" : "bg-sky-600 text-white border-sky-600"
-                  : D ? "bg-white/4 text-white/50 border-[#ffffff08] hover:border-[#ffffff15]" : "bg-white text-gray-600 border-[#d1d5db] hover:bg-gray-50"
+                className={`relative z-10 flex-1 py-1.5 text-[11px] font-semibold transition-colors duration-300 ${config.wordSpacing === p.v
+                  ? (D ? "text-white" : "text-gray-900")
+                  : (D ? "text-white/40 hover:text-white/70" : "text-gray-500 hover:text-gray-700")
                   }`}>
                 {p.l}
               </button>
@@ -3827,8 +3838,16 @@ export default function Home() {
             {/* ══ MOBILE & TABLET: Editor + Output tabs (< lg) ══ */}
             <div className="flex lg:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
               {/* Mobile tab switcher (Modern iOS Style) */}
-              <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} ${D ? "bg-[#09090b]" : "bg-white"}`}>
-                <div className={`flex p-1 rounded-xl relative ${D ? "bg-[#ffffff08]" : "bg-violet-100/60"}`}>
+              <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} ${D ? "glass-panel" : "bg-white/80 backdrop-blur-md"}`}>
+                <div className={`flex p-1 rounded-xl relative ${D ? "bg-black/30 shadow-inner" : "bg-black/5 shadow-inner"}`}>
+
+                  {/* Animasi Gelembung Sliding */}
+                  <div
+                    className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg shadow-md transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${D ? "bg-[#2c2c35]" : "bg-white"}`}
+                    style={{ left: (activeTab === "result" ? "calc(50% + 2px)" : "4px") }}
+                  />
+
+                  {/* Tombol Teks Tab */}
                   {[
                     { id: "editor", label: "✏️ Editor" },
                     { id: "result", label: "✨ Hasil" },
@@ -3837,19 +3856,12 @@ export default function Home() {
                     return (
                       <button key={tab.id}
                         onClick={() => setActiveTab(tab.id as any)}
-                        className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-300 relative z-10 ${isActive ? (D ? "text-white" : "text-gray-900") : c.ts
+                        className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors duration-300 relative z-10 ${isActive ? (D ? "text-white" : "text-gray-900") : (D ? "text-white/40" : "text-gray-500")
                           }`}>
                         {tab.label}
                       </button>
                     );
                   })}
-                  {/* Animasi background pill (kapsul yang bergeser) */}
-                  <div
-                    className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg transition-all duration-300 ease-out shadow-sm ${D
-                      ? "bg-[#13131f] border border-[#ffffff0d]"
-                      : "bg-white border border-violet-200 shadow-violet-100"}`}
-                    style={{ left: (activeTab === "result" ? "calc(50% + 2px)" : "4px") }}
-                  />
                 </div>
               </div>
 

@@ -245,18 +245,23 @@ input[type="color"]::-webkit-color-swatch {
 }
 
 /* ── DETEKSI OS THEME ── */
-/* 1. iOS Liquid Glass (Super Blur, Transparan) */
+/* 1. iOS Liquid Glass (Super Blur, Transparan, Glossy Edge) */
 .theme-ios .glass-panel {
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
   border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.1);
+  /* Tambahan efek pantulan cahaya di ujung atas (inset shadow) */
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 .dark.theme-ios .glass-panel {
-  background: rgba(15, 15, 22, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  background: rgba(15, 15, 20, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 /* 2. Android Modern Solid (Solid, Bayangan Tegas) */
