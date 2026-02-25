@@ -14,4 +14,17 @@ export const supabaseConfigured = isConfigured;
 // Hanya buat client jika ENV sudah diset, hindari request ke placeholder domain
 export const supabase = isConfigured
     ? createClient(supabaseUrl, supabaseAnonKey)
-    : createClient('https://placeholder.supabase.co', 'placeholder-key-no-network-calls');
+    : ({
+        auth: {
+            getUser: async () => ({ data: null, error: null }),
+            onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => { } } } }),
+            signInWithOAuth: async () => { },
+            signOut: async () => { },
+        },
+        from: () => ({
+            select: async () => ({ data: null, error: null }),
+            insert: async () => ({}),
+            update: async () => ({}),
+            delete: async () => ({})
+        }),
+    } as any);

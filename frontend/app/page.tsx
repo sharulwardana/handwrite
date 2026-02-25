@@ -324,14 +324,14 @@ export default function Home() {
 
   // Cek apakah user sudah login saat web dibuka
   useEffect(() => {
-    supabase.auth.getUser().then(({ data, error }) => {
+    supabase.auth.getUser().then(({ data, error }: { data: any; error: any }) => {
       if (!error && data?.user) {
         setUser(data.user);
         setShowEditor(true); // Langsung ke editor kalau sudah login
       }
     });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event: any, session: any) => {
       setUser(session?.user ?? null);
       if (session?.user) setShowEditor(true); // <--- Tambahkan ini juga
     });
@@ -383,6 +383,18 @@ export default function Home() {
         await supabase.from('user_credits').insert([{ email: user.email, energy_balance: 5 }]);
         setEnergy(5);
       }
+
+      // 3. Ambil Draft Terakhir dari Cloud saat login
+      const { data: draftData } = await supabase
+        .from('user_drafts')
+        .select('text_content')
+        .eq('id', user.id)
+        .single();
+
+      if (draftData && draftData.text_content) {
+        setText(draftData.text_content);
+        setInputText(draftData.text_content);
+      }
     };
 
     fetchCloudData();
@@ -410,8 +422,11 @@ export default function Home() {
   // ── Mencegah Lag saat mengetik (Debounce) ──
   useEffect(() => {
     const timer = setTimeout(() => {
-      setText(inputText);
-    }, 300); // Update perhitungan berat 300ms setelah berhenti mengetik
+      // Hanya perbarui jika teks benar-benar berubah untuk mencegah render ulang grafis 3D
+      if (text !== inputText) {
+        setText(inputText);
+      }
+    }, 500); // Naikkan delay sedikit menjadi 500ms agar UI tidak patah-patah saat user mengetik cepat
     return () => clearTimeout(timer);
   }, [inputText]);
   const [selectedFolio, setSelectedFolio] = useState("");
@@ -424,6 +439,7 @@ export default function Home() {
   const [presets, setPresets] = useState<SavedPreset[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateProgress, setGenerateProgress] = useState(0);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [isDark, setIsDark] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -663,11 +679,27 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
+      // 1. Simpan di penyimpanan lokal browser
       localStorage.setItem("hw_draft_text", text);
-    }, 1000);
+
+      // 2. Auto-save ke Cloud (Supabase) jika user sudah login
+      if (user && text.trim().length > 0) {
+        try {
+          await supabase.from('user_drafts').upsert({
+            id: user.id,
+            email: user.email,
+            text_content: text,
+            updated_at: new Date().toISOString()
+          });
+        } catch (err) {
+          console.warn("Gagal auto-save ke cloud", err);
+        }
+      }
+    }, 1500); // Jeda 1.5 detik setelah berhenti mengetik agar tidak spam database
+
     return () => clearTimeout(timer);
-  }, [text]);
+  }, [text, user]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -903,7 +935,8 @@ export default function Home() {
     if (!text.trim()) { toast.error("Masukkan teks dulu!"); return; }
     if (!selectedFolio) { toast.error("Pilih folio dulu!"); return; }
     // ── KODE RAHASIA DEVELOPER (GOD MODE) ──
-    const isDeveloper = user?.email === "sharulwrdn10@gmail.com"; // GANTI DENGAN EMAIL ASLI ANDA
+    const DEV_EMAIL = process.env.NEXT_PUBLIC_DEV_EMAIL ?? "";
+    const isDeveloper = user?.email === DEV_EMAIL;
 
     // Cek apakah energi cukup (Developer bebas batas)
     if (!isDeveloper && energy < estimatedPages) {
@@ -929,6 +962,9 @@ export default function Home() {
     });
 
     const tid = toast.loading("Menulis halaman pertama...");
+    const controller = new AbortController();
+    setAbortController(controller);
+
     try {
       // Retry otomatis SSE — maksimal 3 kali jika koneksi terputus
       const MAX_RETRY = 3;
@@ -939,8 +975,12 @@ export default function Home() {
         try {
           res = await fetch(`${API_URL}/api/generate/stream`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "X-User-Email": user?.email || ""
+            },
             body,
+            signal: controller.signal,
           });
 
           // KODE BARU: Baca pesan error asli dari backend Python
@@ -1066,10 +1106,15 @@ export default function Home() {
         }
       }
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Gagal generate", { id: tid, duration: 4000 });
+      if (e instanceof Error && e.name === "AbortError") {
+        toast("Proses dibatalkan.", { id: tid, icon: "🛑" });
+      } else {
+        toast.error(e instanceof Error ? e.message : "Gagal generate", { id: tid, duration: 4000 });
+      }
     } finally {
       setIsGenerating(false);
       setIsStreaming(false);
+      setAbortController(null);
 
       setTimeout(() => setGenerateProgress(0), 1500);
     }
@@ -1188,7 +1233,8 @@ export default function Home() {
 
   // ── FUNGSI UPDATE ENERGI (KHUSUS ADMIN) ──
   const handleAdminUpdateEnergy = async () => {
-    if (user?.email !== "sharulwrdn10@gmail.com") {
+    const DEV_EMAIL = process.env.NEXT_PUBLIC_DEV_EMAIL ?? "";
+    if (user?.email !== DEV_EMAIL) {
       toast.error("Akses ditolak: Anda bukan admin.");
       return;
     }
@@ -2081,6 +2127,12 @@ export default function Home() {
           </p>
         </div>
       )}
+      <div className="mt-8 px-4 pb-6 flex justify-center select-none pointer-events-none">
+        <div className={`flex flex-col items-center justify-center px-4 py-3 rounded-2xl border backdrop-blur-sm ${D ? "bg-black/20 border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]" : "bg-white/50 border-violet-200 shadow-sm"}`}>
+          <span className={`text-[8px] uppercase tracking-[0.2em] font-bold mb-1 ${D ? "text-white/40" : "text-violet-400"}`}>Developed By</span>
+          <span className={`text-[11px] font-black tracking-wide ${D ? "text-white/80" : "text-violet-700"}`}>MOHAMMAD ADAM MAHFUD</span>
+        </div>
+      </div>
     </div>
   );
 
@@ -2091,9 +2143,26 @@ export default function Home() {
     <div className={`min-h-screen ${c.page} transition-colors duration-300`} style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}>
 
       <Toaster position="top-center" toastOptions={{
-        duration: 3000,
+        duration: 4000,
+        success: {
+          iconTheme: { primary: '#10b981', secondary: '#fff' },
+          style: {
+            border: D ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(16, 185, 129, 0.4)',
+            background: D ? 'rgba(6, 78, 59, 0.85)' : '#ecfdf5',
+            color: D ? '#34d399' : '#065f46'
+          },
+        },
+        error: {
+          duration: 5000,
+          iconTheme: { primary: '#ef4444', secondary: '#fff' },
+          style: {
+            border: D ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(239, 68, 68, 0.4)',
+            background: D ? 'rgba(127, 29, 29, 0.85)' : '#fef2f2',
+            color: D ? '#f87171' : '#991b1b'
+          },
+        },
         style: {
-          background: D ? "rgba(10, 10, 12, 0.85)" : "rgba(255, 255, 255, 0.85)",
+          background: D ? "rgba(15, 15, 20, 0.85)" : "rgba(255, 255, 255, 0.95)",
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
           color: D ? "#fff" : "#111",
@@ -2189,6 +2258,16 @@ export default function Home() {
                 <div className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-700"}`}>AI Anti-Plagiasi</div>
               </div>
             </motion.div>
+
+            {/* WATERMARK DEVELOPER */}
+            <div className="mt-auto w-full pt-16 pb-6 text-center z-10 select-none pointer-events-none">
+              <p className={`text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-white/30" : "text-violet-400/50"}`}>
+                Engineered & Designed by
+              </p>
+              <p className={`text-sm font-black tracking-widest mt-1.5 ${isDark ? "text-white/50" : "text-violet-600/60"}`}>
+                MOHAMMAD ADAM MAHFUD
+              </p>
+            </div>
 
           </motion.div>
         </div>
@@ -2785,6 +2864,9 @@ export default function Home() {
                     <span className={`text-xs font-medium ${D ? "text-violet-400" : "text-violet-700"}`}>
                       Generating {Math.round(generateProgress)}%
                     </span>
+                    <button onClick={() => abortController?.abort()} className="ml-2 text-red-500 hover:text-red-400 bg-red-500/10 rounded-md p-1" title="Batalkan">
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
                 ) : generatedPages.length > 0 ? (
                   <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${D ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-50 border border-emerald-200"}`}>
@@ -2832,7 +2914,7 @@ export default function Home() {
                   <span className="hidden lg:inline">{backendOnline === null ? "..." : backendOnline ? "Online" : "Offline"}</span>
                 </div>
                 {/* INDIKATOR ENERGI / ADMIN DASHBOARD */}
-                {user?.email === "sharulwrdn10@gmail.com" ? (
+                {user?.email === (process.env.NEXT_PUBLIC_DEV_EMAIL ?? "") ? (
                   <div className="flex items-center gap-1">
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-l-lg border bg-violet-500/10 text-violet-500 border-violet-500/30 text-[10px] font-bold tracking-widest cursor-default">
                       <Zap className="w-3.5 h-3.5" fill="currentColor" />
@@ -3162,8 +3244,12 @@ export default function Home() {
                       className={`light-textarea w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-all duration-300 outline-none border ${D
                         ? "bg-[#0a0a0c] border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50 focus:bg-[#0f0f12] shadow-inner"
                         : "bg-gray-50/50 hover:bg-white border-gray-200/80 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400 focus:bg-white focus:shadow-[0_4px_24px_rgba(0,0,0,0.04)]"
-                        } font-[inherit]`}
-                      style={{ minHeight: "200px", height: "auto" }}
+                        }`}
+                      style={{
+                        minHeight: "200px",
+                        height: "auto",
+                        fontFamily: currentFont ? (FONT_FAMILY_MAP[currentFont.name] || currentFont.name) : "inherit"
+                      }}
                     />
 
                     {/* Char progress */}
@@ -3205,15 +3291,11 @@ export default function Home() {
                           {showSeedCopied ? <CheckCircle2 className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                         </button>
                       </div>
+                      {/* Tombol regenerate digabung agar user tidak bingung */}
                       <button
-                        onClick={handleGenerate}
-                        disabled={isGenerating || !generatedPages.length}
-                        title="Regenerate dengan seed yang sama"
-                        className={`p-2.5 rounded-xl border transition-all ${c.btn}`}
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => setSeed(Date.now())} className={`p-2.5 rounded-xl border transition-all ${c.btn}`}>
+                        onClick={() => setSeed(Date.now())}
+                        title="Ganti seed — hasil tulisan akan berbeda"
+                        className={`p-2.5 rounded-xl border transition-all ${c.btn}`}>
                         <RefreshCw className="w-4 h-4" />
                       </button>
                     </div>
@@ -3316,6 +3398,9 @@ export default function Home() {
                         <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${D ? "bg-violet-500/12 border border-violet-500/20" : "bg-violet-50 border border-violet-200"}`}>
                           <Loader2 className="w-3 h-3 text-violet-500 animate-spin flex-shrink-0" />
                           <span className={`text-[11px] font-medium ${D ? "text-violet-400" : "text-violet-700"}`}>Generating {Math.round(generateProgress)}%</span>
+                          <button onClick={() => abortController?.abort()} className="ml-1 text-red-500 hover:text-red-400 bg-red-500/10 rounded-md p-0.5" title="Batalkan">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       ) : generatedPages.length > 0 ? (
                         <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${D ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-50 border border-emerald-200"}`}>
@@ -3916,7 +4001,12 @@ export default function Home() {
                       className={`flex-1 w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-all duration-300 outline-none border ${D
                         ? "bg-[#0a0a0c] border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50 focus:bg-[#0f0f12] shadow-inner"
                         : "bg-gray-50/50 hover:bg-white border-gray-200/80 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400 focus:bg-white focus:shadow-[0_4px_24px_rgba(0,0,0,0.04)]"
-                        }`} style={{ minHeight: "280px" }} />
+                        }`}
+                      style={{
+                        minHeight: "280px",
+                        fontFamily: currentFont ? (FONT_FAMILY_MAP[currentFont.name] || currentFont.name) : "inherit"
+                      }}
+                    />
 
                     {/* Progress bar — Ditambahkan flex-shrink-0 agar tidak gepeng */}
                     {text.length > 0 && (

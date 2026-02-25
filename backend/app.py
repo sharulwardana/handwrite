@@ -47,8 +47,12 @@ try:
     from flask_limiter import Limiter
     from flask_limiter.util import get_remote_address
 
+    # Fitur Baru: Cek limit berdasarkan email user, jika tidak login baru pakai IP
+    def get_limit_key():
+        return request.headers.get("X-User-Email") or get_remote_address()
+
     limiter = Limiter(
-        get_remote_address, app=app, default_limits=[], storage_uri="memory://"
+        get_limit_key, app=app, default_limits=[], storage_uri="memory://"
     )
     RATE_LIMIT_ENABLED = True
 except ImportError:
@@ -58,7 +62,10 @@ except ImportError:
     print("⚠️  flask-limiter not installed. Rate limiting disabled.")
 
 # Ubah baris ini di app.py
-allowed_origins = ["http://localhost:3000", "https://handwrite-ai.vercel.app"]
+allowed_origins = [
+    "http://localhost:3000",
+    os.getenv("FRONTEND_URL", "https://handwrite-ai.vercel.app"),
+]
 CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
 
 
@@ -93,7 +100,7 @@ CACHE_FILE = "uploads/cache/folio_cache.json"
 _active_folios = set()
 _active_lock = threading.Lock()
 _folio_lock = threading.Lock()
-generation_lock = threading.Lock()  # <--- TAMBAHKAN BARIS INI
+generation_semaphore = threading.Semaphore(3)  # Max 3 generate sekaligus
 
 
 def save_folio_cache():
@@ -263,7 +270,6 @@ def analyze_folio(image_path_or_url):
         right_dark = np.where(col_means[int(width * 0.25) :] < col_threshold)[0]
         if len(right_dark) > 8:
             paper_type = "grid"
-        confidence_points += 10
         confidence_points += 10
 
         # ── 5. HITUNG CONFIDENCE SCORE ──────────────────────────────────────
@@ -515,6 +521,27 @@ def upload_folio():
     if not is_valid:
         return jsonify({"error": "File korup atau bukan gambar yang valid"}), 400
 
+    # --- FITUR BARU: Validasi Resolusi Gambar Maksimal ---
+    try:
+        img_check = Image.open(file)
+        width, height = img_check.size
+        if width > 3500 or height > 4500:
+            return (
+                jsonify(
+                    {
+                        "error": f"Resolusi gambar terlalu raksasa ({width}x{height}). Maksimal 3500x4500 piksel agar server tidak nge-lag."
+                    }
+                ),
+                400,
+            )
+        file.seek(0)  # Kembalikan kursor file ke awal setelah dibaca PIL
+    except Exception:
+        return (
+            jsonify({"error": "File tidak bisa dibaca sebagai gambar yang valid."}),
+            400,
+        )
+    # -----------------------------------------------------
+
     try:
         upload_result = cloudinary.uploader.upload(file, folder="handwrite_folios")
         secure_url = upload_result["secure_url"]
@@ -743,7 +770,10 @@ def generate_handwriting_stream():
             import json as _json
             import gc
 
-            with generation_lock:
+            if not generation_semaphore.acquire(blocking=False):
+                yield f"data: {_json.dumps({'type': 'error', 'message': 'Server sibuk, antrean penuh. Coba lagi dalam beberapa detik.'})}\n\n"
+                return
+            try:
                 # Tandai folio sedang dipakai
                 with _active_lock:
                     _active_folios.add(folio_path)
@@ -778,8 +808,21 @@ def generate_handwriting_stream():
                         del b64
                         del payload
 
-                        # Jalankan Garbage Collection setiap 3 halaman saja agar stream tidak patah-patah
-                        if (idx + 1) % 3 == 0:
+                        # Hapus cache gambar grafis untuk mencegah RAM jebol (OOM)
+                        with HandwritingGenerator._cache_lock:
+                            if len(HandwritingGenerator._image_cache) > 2:
+                                HandwritingGenerator._image_cache.clear()
+
+                        import ctypes
+
+                        try:
+                            # Paksa Linux/Server membebaskan RAM secara instan
+                            ctypes.CDLL("libc.so.6").malloc_trim(0)
+                        except Exception:
+                            pass
+
+                        # Jalankan Garbage Collection setiap 2 halaman
+                        if (idx + 1) % 2 == 0:
                             gc.collect()
 
                     # Pembersihan final
@@ -790,6 +833,8 @@ def generate_handwriting_stream():
                         _active_folios.discard(folio_path)
                         if folio_even_path:
                             _active_folios.discard(folio_even_path)
+            finally:
+                generation_semaphore.release()
 
         # CORS header harus ditambahkan MANUAL di streaming response
         # karena Flask-CORS tidak otomatis inject ke app.response_class()

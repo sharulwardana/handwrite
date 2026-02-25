@@ -79,12 +79,18 @@ div[class*="border-"] {
 }
 
 /* Pengecualian: animasi & transform tidak ikut transition tema */
-.animate-spin,
-.animate-pulse,
-.animate-bounce,
-[class*="animate-"],
-[class*="transition-"] {
-  transition-property: none;
+/* Animasi spesifik agar tidak tabrakan dengan utility transition Tailwind */
+.animate-spin {
+  animation-play-state: running !important;
+  transition: none !important;
+}
+.animate-pulse {
+  animation-play-state: running !important;
+  transition: none !important;
+}
+.animate-bounce {
+  animation-play-state: running !important;
+  transition: none !important;
 }
 
 /* ── SCROLLBAR MODERN (ALA MAC) ── */
@@ -236,24 +242,44 @@ input[type="color"]::-webkit-color-swatch {
   background-color: transparent;
 }
 
-/* ── DETEKSI OS THEME ── */
-/* 1. iOS Liquid Glass (Super Blur, Transparan, Glossy Edge) */
-.theme-ios .glass-panel {
-  background: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(32px) saturate(200%);
-  -webkit-backdrop-filter: blur(32px) saturate(200%);
+/* ── LIQUID GLASS EFFECT ── */
+.glass-panel {
+  /* Warna dasar sangat transparan */
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  /* Blur tingkat tinggi & saturasi warna latar */
+  backdrop-filter: blur(40px) saturate(150%);
+  -webkit-backdrop-filter: blur(40px) saturate(150%);
+
+  /* Multilayer border untuk ilusi ketebalan kaca */
   border: 1px solid rgba(255, 255, 255, 0.4);
-  /* Tambahan efek pantulan cahaya di ujung atas (inset shadow) */
+  border-top-color: rgba(255, 255, 255, 0.8);
+  border-left-color: rgba(255, 255, 255, 0.6);
+
+  /* Shadow luar lembut + Inset shadow untuk pantulan cahaya dalam */
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    0 10px 40px -10px rgba(0, 0, 0, 0.1),
+    inset 0 1px 1px rgba(255, 255, 255, 0.8),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
 }
-.dark.theme-ios .glass-panel {
-  background: rgba(15, 15, 20, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+
+/* Penyesuaian untuk Dark Mode */
+.dark .glass-panel {
+  background: linear-gradient(
+    135deg,
+    rgba(30, 30, 35, 0.6) 0%,
+    rgba(15, 15, 20, 0.4) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top-color: rgba(255, 255, 255, 0.2);
+  border-left-color: rgba(255, 255, 255, 0.15);
   box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    0 20px 50px -10px rgba(0, 0, 0, 0.5),
+    inset 0 1px 1px rgba(255, 255, 255, 0.15);
 }
 
 /* 2. Android Modern Solid (Solid, Bayangan Tegas) */

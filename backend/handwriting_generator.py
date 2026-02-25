@@ -16,7 +16,8 @@ def hex_to_rgb(hex_color):
 
 class HandwritingGenerator:
     _image_cache: dict = {}  # Cache gambar folio antar request
-    _MAX_CACHE = 10  # Maksimal 10 folio di memory
+    _MAX_CACHE = 5  # Turunkan ke 5
+    _MAX_CACHE_SIZE_MB = 50  # Batas total maksimal 50 MB
     _cache_lock = threading.Lock()
 
     def __init__(self, config, folio_path_or_url, font_path):
@@ -43,12 +44,21 @@ class HandwritingGenerator:
                 img = Image.open(path_or_url).convert("RGB")
 
             with HandwritingGenerator._cache_lock:
-                if (
+                total_size = sum(
+                    img.size[0] * img.size[1] * 3 / (1024 * 1024)
+                    for img in HandwritingGenerator._image_cache.values()
+                )
+                while (
                     len(HandwritingGenerator._image_cache)
                     >= HandwritingGenerator._MAX_CACHE
+                    or total_size > HandwritingGenerator._MAX_CACHE_SIZE_MB
                 ):
                     oldest_key = next(iter(HandwritingGenerator._image_cache))
                     del HandwritingGenerator._image_cache[oldest_key]
+                    total_size = sum(
+                        img.size[0] * img.size[1] * 3 / (1024 * 1024)
+                        for img in HandwritingGenerator._image_cache.values()
+                    )
                 HandwritingGenerator._image_cache[cache_key] = img
 
             return img.copy()
@@ -59,6 +69,51 @@ class HandwritingGenerator:
         self.folio_even = (
             load_image(folio_even_path) if folio_even_path else self.folio_odd
         )
+
+        # === AUTO RESIZE HD FOLIO (MENCEGAH HANG/TIMEOUT) ===
+        # Standar lebar A4 pada layar adalah sekitar 1240 - 1400 pixel.
+        # Jika gambar HD lebih lebar dari 1400px, kompres di memori agar proses instan!
+        MAX_WIDTH = 1400
+        if self.folio_odd.width > MAX_WIDTH:
+            scale_ratio = MAX_WIDTH / float(self.folio_odd.width)
+            new_height = int(self.folio_odd.height * scale_ratio)
+
+            # Resize gambar dengan kualitas tinggi (LANCZOS)
+            self.folio_odd = self.folio_odd.resize(
+                (MAX_WIDTH, new_height), Image.Resampling.LANCZOS
+            )
+
+            if folio_even_path and hasattr(self, "folio_even"):
+                new_even_height = int(self.folio_even.height * scale_ratio)
+                self.folio_even = self.folio_even.resize(
+                    (MAX_WIDTH, new_even_height), Image.Resampling.LANCZOS
+                )
+            else:
+                self.folio_even = self.folio_odd
+
+            # === SANGAT PENTING: Sesuaikan koordinat Config agar teks tidak meleset ===
+            self.config["startX"] = int(self.config.get("startX", 0) * scale_ratio)
+            self.config["startY"] = int(self.config.get("startY", 0) * scale_ratio)
+            self.config["lineHeight"] = int(
+                self.config.get("lineHeight", 0) * scale_ratio
+            )
+            self.config["maxWidth"] = int(self.config.get("maxWidth", 0) * scale_ratio)
+            self.config["pageBottom"] = int(
+                self.config.get("pageBottom", 0) * scale_ratio
+            )
+            self.config["fontSize"] = max(
+                10, int(self.config.get("fontSize", 0) * scale_ratio)
+            )
+
+            if "marginJitter" in self.config:
+                self.config["marginJitter"] = max(
+                    1, int(self.config["marginJitter"] * scale_ratio)
+                )
+            if "wordSpacing" in self.config:
+                self.config["wordSpacing"] = int(
+                    self.config["wordSpacing"] * scale_ratio
+                )
+
         self.folio_template = self.folio_odd  # default untuk kompatibilitas
 
         self.font_path = font_path
@@ -579,43 +634,67 @@ class HandwritingGenerator:
 
             margin_jitter = int(random.gauss(0, self.config.get("marginJitter", 6)))
             current_line = ""
+
             for word in paragraph.split(" "):
-                test = current_line + word + " "
-                if (
-                    self.calculate_text_width(test)
-                    > (self.config["maxWidth"] - self.config["startX"])
-                    and current_line
-                ):
-                    vertical_jitter = int(random.gauss(0, 1.8))
+                test_line = current_line + word + " "
+                max_w = self.config["maxWidth"] - self.config["startX"]
+
+                if self.calculate_text_width(test_line) > max_w and current_line:
+                    remaining_space = max_w - self.calculate_text_width(current_line)
+
+                    # FITUR: Pemecah kata panjang (hyphenation)
+                    if (
+                        remaining_space > self.config["fontSize"] * 2.5
+                        and len(word) > 6
+                    ):
+                        split_idx = int(
+                            len(word)
+                            * (remaining_space / self.calculate_text_width(word))
+                        )
+                        if split_idx >= 3:
+                            part1 = word[:split_idx] + "-"
+                            part2 = word[split_idx:]
+
+                            current_line += part1
+                            current_lines.append(
+                                {
+                                    "text": current_line.strip(),
+                                    "y": y + int(random.gauss(0, 1.8)),
+                                    "line_index": line_index,
+                                    "margin_jitter": margin_jitter,
+                                }
+                            )
+                            current_line = part2 + " "
+                            y += self.config["lineHeight"]
+                            line_index += 1
+                            continue
+
+                    # Jika tidak bisa dipotong, turun ke baris baru
                     current_lines.append(
                         {
                             "text": current_line.strip(),
-                            "y": y + vertical_jitter,
+                            "y": y + int(random.gauss(0, 1.8)),
                             "line_index": line_index,
                             "margin_jitter": margin_jitter,
                         }
                     )
-                    margin_jitter = int(
-                        random.gauss(0, self.config.get("marginJitter", 6))
-                    )
                     current_line = word + " "
                     y += self.config["lineHeight"]
                     line_index += 1
+
                     if y > self.config["pageBottom"]:
                         pages.append(current_lines)
                         current_lines = []
                         y = self.config["startY"]
                         line_index = 0
                 else:
-                    current_line = test
+                    current_line = test_line
 
             if current_line.strip():
-                # Variasi vertikal kecil per baris — simulasi posisi tangan naik/turun
-                vertical_jitter = int(random.gauss(0, 1.8))
                 current_lines.append(
                     {
                         "text": current_line.strip(),
-                        "y": y + vertical_jitter,
+                        "y": y + int(random.gauss(0, 1.8)),
                         "line_index": line_index,
                         "margin_jitter": margin_jitter,
                     }
@@ -630,6 +709,7 @@ class HandwritingGenerator:
 
         if current_lines:
             pages.append(current_lines)
+
         return pages
 
     def apply_paper_texture(self, image):
