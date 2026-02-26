@@ -2033,13 +2033,13 @@ export default function Home() {
             }}
           />
           {/* Animasi Gelembung Liquid iOS */}
-          <div className={`relative flex p-1 mt-2 rounded-xl overflow-hidden border-[0.5px] ${D ? "border-white/10 bg-black/20" : "border-black/5 bg-black/5 bg-opacity-50"}`}>
+          <div className={`relative flex rounded-xl overflow-hidden border-[0.5px] p-0.5 ${isAppleDevice ? (D ? "border-white/10 bg-black/20" : "border-black/5 bg-black/5 bg-opacity-50") : (D ? "border-[#ffffff10] bg-black/30" : "border-gray-200 bg-gray-100")}`}>
 
             {/* Ini Gelembung yang meluncur (Sliding Pill) */}
             <div
-              className={`absolute inset-y-1 w-[calc(33.33%-4px)] rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.06)] border-[0.5px] transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${D ? "bg-white/10 backdrop-blur-3xl border-white/10" : "liquid-glass-light border-white/60"}`}
+              className={`absolute inset-y-0.5 w-[calc(33.33%-0.33rem)] rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.06)] border-[0.5px] transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? (D ? "bg-white/10 backdrop-blur-3xl border-white/10" : "liquid-glass-light border-white/60") : (D ? "bg-[#2c2c35] border-[#ffffff10]" : "bg-white border-gray-300")}`}
               style={{
-                left: config.wordSpacing === -5 ? '4px' : config.wordSpacing === 8 ? 'calc(33.33% + 2px)' : 'calc(66.66% - 1px)'
+                left: config.wordSpacing === -5 ? '0.25rem' : config.wordSpacing === 8 ? 'calc(33.33% + 0.08rem)' : 'calc(66.66% - 0.08rem)'
               }}
             />
 
@@ -2644,9 +2644,9 @@ export default function Home() {
                   key="mob-drawer"
                   initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
                   transition={{ type: "spring", damping: 28, stiffness: 300 }}
-                  className={`fixed top-0 left-0 bottom-0 w-[300px] md:w-[320px] max-w-[85vw] z-[70] overflow-y-auto border-r ${isDark ? "bg-black/70 backdrop-blur-3xl border-[#ffffff10]" : "liquid-glass-light"}`}
+                  className={`fixed top-0 left-0 bottom-0 w-[300px] md:w-[320px] max-w-[85vw] z-[70] overflow-y-auto border-r ${isAppleDevice ? (isDark ? "bg-black/70 backdrop-blur-3xl border-[#ffffff10]" : "liquid-glass-light") : (isDark ? "bg-[#18181b] border-[#ffffff10]" : "bg-white border-gray-200")}`}
                 >
-                  <div className={`sticky top-0 flex items-center justify-between px-4 h-14 border-b ${c.divider} ${D ? "bg-black/70 backdrop-blur-3xl" : "liquid-glass-light"} z-[80]`}>
+                  <div className={`sticky top-0 flex items-center justify-between px-4 h-14 border-b ${c.divider} ${isAppleDevice ? (D ? "bg-black/70 backdrop-blur-3xl" : "liquid-glass-light") : (D ? "bg-[#18181b]" : "bg-white")} z-[80]`}>
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-lg flex items-center justify-center">
                         <PenTool className="w-3 h-3 text-white" />
@@ -2661,7 +2661,7 @@ export default function Home() {
                   {renderSidebarContent()}
 
                   {/* ── MOBILE LOGOUT BUTTON ── */}
-                  <div className={`mt-auto border-t ${c.divider} p-4 mt-8 ${D ? "bg-black/70 backdrop-blur-3xl" : "bg-gray-50 bg-opacity-80"}`}>
+                  <div className={`mt-auto border-t ${c.divider} p-4 mt-8 ${isAppleDevice ? (D ? "bg-black/70 backdrop-blur-3xl" : "bg-gray-50 bg-opacity-80") : (D ? "bg-[#18181b]" : "bg-gray-50")}`}>
                     {user ? (
                       <div className="flex items-center justify-between">
                         <div className="flex flex-col">
@@ -4057,12 +4057,12 @@ export default function Home() {
             <div className="flex lg:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
               {/* Mobile tab switcher (Modern iOS Style - Liquid Glass Active Tab) */}
               <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} bg-transparent`}>
-                <div className={`flex p-1 rounded-xl relative bg-transparent`}>
+                <div className={`flex p-0.5 rounded-xl border-[0.5px] relative ${isAppleDevice ? (D ? "border-white/10 bg-black/20" : "border-black/5 bg-black/5 bg-opacity-50") : (D ? "border-[#ffffff10] bg-black/30" : "border-gray-200 bg-gray-100")}`}>
 
                   {/* Animasi Gelembung Sliding (Bentuk Kotak Melengkung dan Full) */}
                   <div
-                    className={`absolute inset-y-1 w-[calc(50%-4px)] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] border-[0.5px] transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${D ? "bg-white/10 backdrop-blur-3xl border-white/10" : "liquid-glass-light border-white/60"}`}
-                    style={{ left: (activeTab === "result" ? "calc(50% + 2px)" : "4px") }}
+                    className={`absolute inset-y-0.5 w-[calc(50%-0.25rem)] rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.06)] border-[0.5px] transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? (D ? "bg-white/10 backdrop-blur-3xl border-white/10" : "liquid-glass-light border-white/60") : (D ? "bg-[#2c2c35] border-[#ffffff10]" : "bg-white border-gray-300")}`}
+                    style={{ left: (activeTab === "result" ? "calc(50% + 0.125rem)" : "0.125rem") }}
                   />
 
                   {/* Tombol Teks Tab */}
@@ -4152,10 +4152,13 @@ export default function Home() {
                         setText(val);
                       }}
                       placeholder="Ketik atau paste teks di sini..."
-                      className={`flex-1 w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-colors duration-300 outline-none border ${D
+                      className={`flex-1 w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-colors duration-300 outline-none border ${isAppleDevice ? (D
                         ? "bg-black/50 backdrop-blur-3xl border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50 shadow-inner"
+                        : "bg-white/40 backdrop-blur-3xl border-white/60 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400 shadow-[0_4px_24px_rgba(0,0,0,0.04)]"
+                      ) : (D
+                        ? "bg-black/50 border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50"
                         : "bg-gray-50/50 border-gray-200/80 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400"
-                        }`}
+                      )}`}
                       style={{
                         minHeight: "280px",
                         fontFamily: currentFont ? (FONT_FAMILY_MAP[currentFont.name] || currentFont.name) : "inherit"
@@ -4255,7 +4258,13 @@ export default function Home() {
                         </p>
                       </div>
                     ) : (
-                      <div className={`flex items-center justify-center h-full min-h-[300px] mx-4 my-6 rounded-3xl ${isAppleDevice ? (D ? "bg-[#ffffff03] backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(255,255,255,0.02)]" : "bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.05)]") : ""}`}>
+                      <div className={`flex items-center justify-center h-full min-h-[300px] mb-6 rounded-2xl outline-none border ${isAppleDevice ? (D
+                        ? "bg-black/50 backdrop-blur-3xl border-[#ffffff10] shadow-inner"
+                        : "bg-white/40 backdrop-blur-3xl border-white/60 shadow-[0_4px_24px_rgba(0,0,0,0.04)]"
+                      ) : (D
+                        ? "bg-black/50 border-[#ffffff10]"
+                        : "bg-gray-50/50 border-gray-200/80"
+                      )}`}>
                         <p className={`text-sm ${c.ts}`}>Klik Generate untuk mulai</p>
                       </div>
                     )}
@@ -4422,7 +4431,7 @@ export default function Home() {
           <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden pointer-events-none px-4 safe-area-pb flex justify-center">
 
             {/* Dock Kaca (Glassmorphism) */}
-            <div className={`w-full max-w-sm flex items-center gap-3 px-3 py-2.5 rounded-2xl pointer-events-auto transition-[transform,opacity] duration-500 ease-in-out ${activeTab === "result" || hideMobileDock ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"} ${D ? "liquid-glass shadow-2xl" : "glass-panel"}`}>
+            <div className={`w-full max-w-sm flex items-center gap-3 px-3 py-2.5 rounded-2xl pointer-events-auto transition-[transform,opacity] duration-500 ease-in-out ${activeTab === "result" || hideMobileDock ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"} ${isAppleDevice ? (D ? "liquid-glass shadow-2xl" : "glass-panel") : (D ? "bg-[#2c2c35] border border-[#ffffff10] shadow-2xl" : "bg-white border border-gray-200 shadow-xl")}`}>
               {/* Ubah md:hidden menjadi lg:hidden di bawah ini */}
               <button onClick={() => setMobileSidebarOpen(true)}
                 className={`flex lg:hidden w-8 h-8 rounded-lg items-center justify-center transition-colors ${c.btn}`}>
