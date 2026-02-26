@@ -331,7 +331,7 @@ function BeforeAfterSlider() {
   return (
     <div
       ref={containerRef}
-      className="relative w-full max-w-4xl mx-auto h-[250px] sm:h-[350px] rounded-3xl overflow-hidden cursor-ew-resize touch-pan-y shadow-[0_24px_64px_rgba(139,92,246,0.15)] border border-[#ffffff15] select-none group bg-[#0A0A0C]"
+      className="relative w-full max-w-4xl mx-auto h-[250px] sm:h-[350px] rounded-3xl overflow-hidden cursor-ew-resize touch-pan-y shadow-[0_24px_64px_rgba(139,92,246,0.15)] border border-[#ffffff15] select-none group bg-[#000000]"
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
     >
@@ -347,7 +347,7 @@ function BeforeAfterSlider() {
 
       {/* Gambar BEFORE (Teks Ketikan) - Lapisan Atas yang Terpotong */}
       <div
-        className="absolute inset-0 bg-[#0A0A0C] flex items-center justify-center p-8 sm:p-12 border-r-[3px] border-violet-500 overflow-hidden shadow-[10px_0_20px_rgba(0,0,0,0.5)]"
+        className="absolute inset-0 bg-[#000000] flex items-center justify-center p-8 sm:p-12 border-r-[3px] border-violet-500 overflow-hidden shadow-[10px_0_20px_rgba(0,0,0,0.5)]"
         style={{ width: `${sliderPosition}%` }}
       >
         <div className="w-full max-w-3xl absolute left-8 sm:left-12 pr-8">
@@ -1653,15 +1653,15 @@ export default function Home() {
   const D = isDark;
   const c = useMemo(() => ({
     page: D
-      ? "bg-[#0A0A0C]" // Deep Space pekat
+      ? "bg-[#000000]" // Deep Space pekat
       : "bg-[#FAFAFB]", // Putih bersih modern
 
     header: D
-      ? "bg-[#0A0A0C]/50 border-b border-[#ffffff08] backdrop-blur-xl supports-[backdrop-filter]:bg-[#0A0A0C]/30"
+      ? "bg-[#000000]/50 border-b border-[#ffffff08] backdrop-blur-xl supports-[backdrop-filter]:bg-[#000000]/30"
       : "bg-white/70 border-b border-violet-100/50 backdrop-blur-xl supports-[backdrop-filter]:bg-white/40",
 
     sidebar: D
-      ? "bg-[#0A0A0C]/30 border-r border-[#ffffff0a] backdrop-blur-3xl supports-[backdrop-filter]:bg-[#0A0A0C]/20"
+      ? "bg-[#000000]/30 border-r border-[#ffffff0a] backdrop-blur-3xl supports-[backdrop-filter]:bg-[#000000]/20"
       : "bg-[#FAFAFB]/60 border-r border-violet-100/60 backdrop-blur-2xl",
 
     card: D
@@ -2301,7 +2301,7 @@ export default function Home() {
       {/* --- TAMBAHKAN KODE INI MULAI DARI SINI --- */}
       {!showEditor && !user ? (
         /* ══ LANDING PAGE SECTION ══ */
-        <div className={`relative min-h-[100dvh] w-full flex flex-col items-center p-4 sm:p-6 text-center overflow-clip ${isDark ? "bg-[#0A0A0C]" : "bg-[#f8f7ff]"}`}>
+        <div className={`relative min-h-[100dvh] w-full flex flex-col items-center p-4 sm:p-6 text-center overflow-clip ${isDark ? "bg-[#000000]" : "bg-[#f8f7ff]"}`}>
           {/* Background Ambient Glow */}
           <div className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none">
             <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/20 blur-[150px] animate-pulse" />
@@ -2639,7 +2639,7 @@ export default function Home() {
                   key="mob-drawer"
                   initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
                   transition={{ type: "spring", damping: 28, stiffness: 300 }}
-                  className={`fixed top-0 left-0 bottom-0 w-[300px] md:w-[320px] max-w-[85vw] z-[70] overflow-y-auto border-r ${c.sidebar}`}
+                  className={`fixed top-0 left-0 bottom-0 w-[300px] md:w-[320px] max-w-[85vw] z-[70] overflow-y-auto border-r ${isDark ? "bg-[#000000] border-[#ffffff10]" : "liquid-glass-light"}`}
                 >
                   <div className={`sticky top-0 flex items-center justify-between px-4 h-14 border-b ${c.divider} ${D ? "bg-black/70 backdrop-blur-3xl" : "liquid-glass-light"} z-[80]`}>
                     <div className="flex items-center gap-2">
@@ -3074,14 +3074,14 @@ export default function Home() {
                 </div>
                 {/* INDIKATOR ENERGI / ADMIN DASHBOARD */}
                 {user?.email === (process.env.NEXT_PUBLIC_DEV_EMAIL || "sharulwrdn10@gmail.com") ? (
-                  <div className="flex items-center gap-0.5 sm:gap-1">
-                    <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-3 py-1.5 rounded-l-lg border bg-violet-500/10 text-violet-500 border-violet-500/30 text-[9px] sm:text-[10px] font-bold tracking-widest cursor-default">
-                      <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="currentColor" />
+                  <div className="flex items-center flex-shrink-0">
+                    <div className="flex items-center gap-1 px-1.5 py-1.5 sm:px-2.5 sm:py-1.5 rounded-l-lg border bg-violet-500/10 text-violet-500 border-violet-500/30 text-[8px] sm:text-[10px] font-bold tracking-widest cursor-default">
+                      <Zap className="w-3 h-3" fill="currentColor" />
                       <span className="hidden sm:inline">DEV</span>
                     </div>
                     <button
                       onClick={() => setShowAdminModal(true)}
-                      className="px-1.5 sm:px-2 py-1.5 rounded-r-lg border border-l-0 bg-violet-600 text-white text-[8px] sm:text-[9px] font-bold hover:bg-violet-700 transition-colors">
+                      className="px-1.5 py-1.5 sm:px-2 sm:py-1.5 rounded-r-lg border border-l-0 bg-violet-600 text-white text-[8px] sm:text-[9px] font-bold hover:bg-violet-700 transition-colors flex-shrink-0">
                       MANAGE
                     </button>
                   </div>
@@ -4050,13 +4050,13 @@ export default function Home() {
 
             {/* ══ MOBILE & TABLET: Editor + Output tabs (< lg) ══ */}
             <div className="flex lg:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
-              {/* Mobile tab switcher (Modern iOS Style) */}
-              <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} ${D ? "bg-black/80 backdrop-blur-3xl" : "bg-white/90 backdrop-blur-md"}`}>
-                <div className={`flex p-1 rounded-xl relative ${D ? "bg-[#111] shadow-inner" : "bg-black/5 shadow-inner"}`}>
+              {/* Mobile tab switcher (Modern iOS Style - Liquid Glass Active Tab) */}
+              <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} bg-transparent`}>
+                <div className={`flex p-1 rounded-xl relative bg-transparent`}>
 
-                  {/* Animasi Gelembung Sliding */}
+                  {/* Animasi Gelembung Sliding (Bentuk Kotak Melengkung dan Full) */}
                   <div
-                    className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg shadow-xl transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${D ? "bg-[#222]" : "liquid-glass-light"}`}
+                    className={`absolute inset-y-1 w-[calc(50%-4px)] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] border-[0.5px] transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${D ? "bg-white/10 backdrop-blur-3xl border-white/10" : "liquid-glass-light border-white/60"}`}
                     style={{ left: (activeTab === "result" ? "calc(50% + 2px)" : "4px") }}
                   />
 
