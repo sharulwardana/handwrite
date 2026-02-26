@@ -10,17 +10,27 @@ import {
 } from "lucide-react";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 import toast, { Toaster } from "react-hot-toast";
-import { saveAs } from "file-saver";
+// PERF: file-saver di-import dinamis di handleDownloadZip & handleExportDocx
 import { useDropzone } from "react-dropzone";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
+import { Caveat } from "next/font/google";
 import "react-image-crop/dist/ReactCrop.css";
 import type { Crop, PixelCrop } from "react-image-crop";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
-import { QRCodeSVG } from "qrcode.react";
+// PERF: QRCodeSVG di-load dinamis (hanya muncul saat modal QRIS terbuka)
+const QRCodeSVG = dynamic(() => import("qrcode.react").then(mod => ({ default: mod.QRCodeSVG })), { ssr: false, loading: () => <div className="w-full h-full bg-gray-100 animate-pulse rounded" /> });
 // Kita manipulasi tipenya menjadi "any" agar TypeScript React 18 tidak protes
 const FlipBook = dynamic(() => import("react-pageflip"), { ssr: false }) as any;
 const ReactCrop = dynamic(() => import("react-image-crop"), { ssr: false });
+
+// PERF: Caveat font di-load di level page (hanya dipakai di landing hero)
+const caveat = Caveat({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
+  variable: "--font-caveat",
+});
 
 /* ─── TYPES ─────────────────────────────────────────── */
 interface Font { name: string; file: string; style: string }
@@ -217,9 +227,12 @@ const getApiUrl = () => {
 const API_URL = getApiUrl();
 
 // === KOMPONEN OPTIMASI INP (Mencegah Lag saat Ngetik di React 18) ===
+// PERF FIX: Menggunakan useRef per-instance, bukan global window timer (race condition)
 const OptimizedTextarea = React.forwardRef(({ value, onChange, debounce = 300, ...props }: any, ref: any) => {
   const [localValue, setLocalValue] = useState(value);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => { setLocalValue(value); }, [value]);
+  useEffect(() => () => { clearTimeout(timerRef.current); }, []);
   return (
     <textarea
       {...props}
@@ -228,8 +241,8 @@ const OptimizedTextarea = React.forwardRef(({ value, onChange, debounce = 300, .
       onChange={(e) => {
         const val = e.target.value;
         setLocalValue(val);
-        clearTimeout((window as any)._ta_timer);
-        (window as any)._ta_timer = setTimeout(() => {
+        clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => {
           React.startTransition(() => onChange(val));
         }, debounce);
       }}
@@ -238,9 +251,11 @@ const OptimizedTextarea = React.forwardRef(({ value, onChange, debounce = 300, .
 });
 OptimizedTextarea.displayName = "OptimizedTextarea";
 
-const OptimizedInput = React.forwardRef(({ value, onChange, ...props }: any, ref: any) => {
+const OptimizedInput = React.forwardRef(({ value, onChange, debounce = 150, ...props }: any, ref: any) => {
   const [localValue, setLocalValue] = useState(value);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => { setLocalValue(value); }, [value]);
+  useEffect(() => () => { clearTimeout(timerRef.current); }, []);
   return (
     <input
       {...props}
@@ -249,7 +264,10 @@ const OptimizedInput = React.forwardRef(({ value, onChange, ...props }: any, ref
       onChange={(e) => {
         const val = e.target.value;
         setLocalValue(val);
-        React.startTransition(() => onChange(val));
+        clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => {
+          React.startTransition(() => onChange(val));
+        }, debounce);
       }}
     />
   );
@@ -355,6 +373,11 @@ function BeforeAfterSlider() {
 }
 
 export default function Home() {
+
+  // PERF + HYDRATION FIX: Mounted guard — useState dan useEffect harus di atas.
+  // Tapi `return null` dipindah ke bawah (setelah semua hooks) agar tidak melanggar Rules of Hooks.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -475,6 +498,10 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isLoadingFonts, setIsLoadingFonts] = useState(true);
   const [isLoadingFolios, setIsLoadingFolios] = useState(true);
+
+  // ── Area 3: OS Detection untuk tema spesifik platform ──
+  const isAppleDevice = typeof navigator !== "undefined" && /iPhone|iPad|iPod|Mac/.test(navigator.userAgent);
+  const platformTheme = isAppleDevice ? "theme-ios" : "theme-futuristic";
   const [zoomLevel, setZoomLevel] = useState(100);
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -499,7 +526,11 @@ export default function Home() {
   const [totalStreamPages, setTotalStreamPages] = useState(0);
   const [streamedPages, setStreamedPages] = useState<GeneratedPage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [sessionId] = useState(() => `hw_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+  const sessionIdRef = useRef<string>("");
+  if (!sessionIdRef.current && typeof window !== "undefined") {
+    sessionIdRef.current = `hw_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  }
+  const sessionId = sessionIdRef.current || "hw_ssr";
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const ONBOARDING_SPOTLIGHT = [
@@ -738,21 +769,26 @@ export default function Home() {
     }
   }, [text]);
 
+  // PERF: Debounce resize handler agar tidak thrash layout
   useEffect(() => {
+    let rafId: number;
     const onResize = () => {
-      const w = window.innerWidth;
-      if (w >= 1280) {
-        setSidebarOpen(true);
-      } else if (w >= 768) {
-        setSidebarOpen(false); // tablet: sidebar collapse by default biar editor lebih luas
-      } else {
-        setSidebarOpen(false);
-      }
-      if (w >= 1024) setMobileSidebarOpen(false);
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const w = window.innerWidth;
+        if (w >= 1280) {
+          setSidebarOpen(true);
+        } else if (w >= 768) {
+          setSidebarOpen(false); // tablet: sidebar collapse by default biar editor lebih luas
+        } else {
+          setSidebarOpen(false);
+        }
+        if (w >= 1024) setMobileSidebarOpen(false);
+      });
     };
     onResize();
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    return () => { window.removeEventListener("resize", onResize); cancelAnimationFrame(rafId); };
   }, []);
 
   useEffect(() => {
@@ -1352,6 +1388,7 @@ export default function Home() {
       });
       if (!res.ok) throw new Error("Server gagal buat ZIP");
       const blob = await res.blob();
+      const { saveAs } = await import("file-saver");
       saveAs(blob, "Tugas_Handwriting.zip");
       toast.success("ZIP berhasil didownload!", { id: tid });
     } catch (e: unknown) {
@@ -1423,6 +1460,7 @@ export default function Home() {
           spacing: { after: 0 },
         }));
       }
+      const { saveAs } = await import("file-saver");
       saveAs(await Packer.toBlob(new Document({ sections: [{ children }] })), "Tugas_Handwriting_AI.docx");
       toast.success("Word berhasil didownload!", { id: tid });
     } catch (e) {
@@ -1748,7 +1786,7 @@ export default function Home() {
               }`}
           >
             {isLoadingFonts ? (
-              <div className={`h-4 w-28 rounded animate-pulse ${D ? "bg-white/8" : "bg-gray-200"}`} />
+              <div className="h-4 w-28 rounded skeleton" />
             ) : currentFont ? (
               <span className={`text-[15px] font-medium truncate ${c.tp}`}
                 style={{ fontFamily: FONT_FAMILY_MAP[currentFont.name] || currentFont.name }}>
@@ -2198,6 +2236,8 @@ export default function Home() {
               src={p.image}
               alt={`Hal ${p.page}`}
               className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
+              loading="lazy"
+              decoding="async"
               onDoubleClick={() => generatedPages.length > 0 && setFullscreenPage(p)}
             />
           </div>
@@ -2206,18 +2246,16 @@ export default function Home() {
     );
   }, [activePagesMemo, generatedPages.length]);
 
-  // Tampilkan loading elegan selama 0.sekian detik agar tidak terjadi Layout Shift (CLS 0)
-  // WAJIB ditaruh DI BAWAH semua tipe Hooks (termasuk useMemo di atas)
-  if (isAuthChecking) {
-    return (
-      <div className={`min-h-[100dvh] flex items-center justify-center ${isDark ? "bg-[#0A0A0C]" : "bg-[#f8f7ff]"}`}>
-        <Loader2 className={`w-8 h-8 animate-spin ${isDark ? "text-violet-500" : "text-violet-600"}`} />
-      </div>
-    );
-  }
+  // PERF FIX LCP: isAuthChecking TIDAK memblokir render lagi.
+  // Landing page tetap tampil (!showEditor && !user) selama auth check berjalan.
+  // Saat auth selesai dan user terdeteksi login, setShowEditor(true) otomatis switch ke editor.
+
+  // HYDRATION FIX: Return null saat SSR agar tidak ada mismatch server↔client.
+  // WAJIB ditaruh DI BAWAH semua hooks (Rules of Hooks).
+  if (!mounted) return null;
 
   return (
-    <div className={`min-h-screen ${c.page} transition-colors duration-300`} style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+    <div className={`min-h-screen ${c.page} ${platformTheme}`} style={{ fontFamily: "'DM Sans', system-ui, sans-serif", contain: "layout style" }} suppressHydrationWarning>
 
       <Toaster position="top-center" toastOptions={{
         duration: 4000,
@@ -2281,15 +2319,13 @@ export default function Home() {
               </div>
             </motion.div>
 
-            {/* 2. Headline (Tanpa animasi JS agar LCP instan / sangat cepat) */}
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000">
-              <h1 className={`text-5xl sm:text-6xl md:text-8xl font-black mb-6 tracking-tight leading-[1.1] ${c.tp}`}>
-                Tugas Tulis Tangan <br />
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-400 via-indigo-400 to-cyan-400">
-                  Selesai dalam 5 Detik.
-                </span>
-              </h1>
-            </div>
+            {/* 2. Headline — DILUAR motion.div agar render langsung tanpa animasi = LCP optimal */}
+            <h1 className={`text-3xl xs:text-4xl sm:text-6xl md:text-8xl font-black mb-6 tracking-tight leading-[1.1] ${c.tp} ${caveat.variable}`} style={{ fontFamily: "var(--font-caveat), 'Caveat Fallback', cursive" }}>
+              Tugas Tulis Tangan <br />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-400 via-indigo-400 to-cyan-400">
+                Selesai dalam 5 Detik.
+              </span>
+            </h1>
 
             {/* 3. Deskripsi */}
             <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } }}>
@@ -2832,11 +2868,16 @@ export default function Home() {
                   className="absolute inset-0 bg-black/80 backdrop-blur-md"
                   onClick={() => setShowAdminModal(false)} />
                 <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-                  className={`relative w-full max-w-sm rounded-3xl p-6 border shadow-2xl ${D ? "bg-[#0d0d14] border-violet-500/30" : "bg-white border-violet-200"}`}>
+                  className={`relative w-[95vw] max-w-md rounded-3xl p-5 sm:p-6 border shadow-2xl max-h-[85vh] overflow-y-auto ${D ? "bg-[#0d0d14] border-violet-500/30" : "bg-white border-violet-200"}`}>
+
+                  {/* Close button */}
+                  <button onClick={() => setShowAdminModal(false)} className={`absolute top-4 right-4 p-1.5 rounded-full hover:bg-white/10 transition-colors ${c.ts}`}>
+                    <X className="w-4 h-4" />
+                  </button>
 
                   <div className="flex items-center gap-2 mb-4">
-                    <Settings className="w-5 h-5 text-violet-500" />
-                    <h3 className={`font-bold ${c.tp}`}>Admin Control Panel</h3>
+                    <Settings className="w-5 h-5 text-violet-500 shrink-0" />
+                    <h3 className={`font-bold text-sm sm:text-base ${c.tp}`}>Admin Control Panel</h3>
                   </div>
 
                   <div className="space-y-4">
@@ -2847,7 +2888,7 @@ export default function Home() {
                         placeholder="contoh: maba@gmail.com"
                         value={targetUserEmail}
                         onChange={(e) => setTargetUserEmail(e.target.value)}
-                        className={`w-full px-4 py-2.5 rounded-xl text-sm border ${c.input}`}
+                        className={`w-full min-w-0 px-3 sm:px-4 py-2.5 rounded-xl text-sm border ${c.input}`}
                       />
                     </div>
                     <div>
@@ -2856,15 +2897,25 @@ export default function Home() {
                         type="number"
                         value={addAmount}
                         onChange={(e) => setAddAmount(Number(e.target.value))}
-                        className={`w-full px-4 py-2.5 rounded-xl text-sm border ${c.input}`}
+                        className={`w-full min-w-0 px-3 sm:px-4 py-2.5 rounded-xl text-sm border ${c.input}`}
                       />
                     </div>
 
                     <button
                       onClick={handleAdminUpdateEnergy}
-                      className="w-full py-3 rounded-xl font-bold text-white bg-violet-600 hover:bg-violet-700 shadow-lg shadow-violet-500/25 transition-all">
+                      className="w-full py-3 rounded-xl font-bold text-white bg-violet-600 hover:bg-violet-700 shadow-lg shadow-violet-500/25 transition-all text-sm sm:text-base min-h-[44px]">
                       Update Energi Sekarang
                     </button>
+
+                    {/* Area 2: Logout Button */}
+                    <div className={`border-t pt-4 mt-2 ${D ? "border-white/10" : "border-gray-200"}`}>
+                      <button
+                        onClick={async () => { setShowAdminModal(false); await handleLogout(); }}
+                        className="w-full py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/25 transition-all text-sm sm:text-base min-h-[44px] flex items-center justify-center gap-2">
+                        <LogOut className="w-4 h-4" />
+                        Logout dari Akun
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               </div>
@@ -2883,7 +2934,7 @@ export default function Home() {
                 <p className="text-white/35 text-[11px] mb-3 tracking-widest uppercase">
                   Halaman {fullscreenPage.page} · ESC untuk tutup
                 </p>
-                <img src={fullscreenPage.image} alt="" className="max-h-[88vh] max-w-[92vw] rounded-xl shadow-2xl object-contain" />
+                <img src={fullscreenPage.image} alt={`Halaman ${fullscreenPage.page}`} className="max-h-[88vh] max-w-[92vw] rounded-xl shadow-2xl object-contain" decoding="async" />
                 <div className="flex justify-center gap-3 mt-4">
                   <button onClick={() => handleDownloadSingle(fullscreenPage)}
                     className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-all">
@@ -4130,12 +4181,17 @@ export default function Home() {
                             swipeStartXRef.current = null; swipeStartYRef.current = null;
                           }}>
 
-                          <img
-                            src={activePages[activePageIndex]?.image}
-                            alt="Hasil"
-                            className="w-full rounded-xl shadow-xl select-none"
-                            onClick={() => mobileZoom === 100 && setFullscreenPage(activePages[activePageIndex])}
-                          />
+                          {/* PERF: aspect-ratio mencegah CLS + lazy loading */}
+                          <div style={{ aspectRatio: '210/297' }}>
+                            <img
+                              src={activePages[activePageIndex]?.image}
+                              alt={`Halaman ${activePageIndex + 1}`}
+                              className="w-full h-full object-contain rounded-xl shadow-xl select-none"
+                              loading="lazy"
+                              decoding="async"
+                              onClick={() => mobileZoom === 100 && setFullscreenPage(activePages[activePageIndex])}
+                            />
+                          </div>
 
                           {/* Indikator Halaman Minimalis ala Instagram */}
                           {activePages.length > 1 && (
@@ -4299,6 +4355,7 @@ export default function Home() {
                         });
                         if (!res.ok) throw new Error();
                         const blob = await res.blob();
+                        const { saveAs } = await import("file-saver");
                         saveAs(blob, `tulisan_transparan_hal${activePageIndex + 1}.png`);
                         toast.success("PNG transparan berhasil!", { id: tid });
                       } catch { toast.error("Gagal export", { id: tid }); }

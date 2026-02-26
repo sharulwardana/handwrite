@@ -10,6 +10,7 @@
     },
     "dependencies": {
         "@supabase/supabase-js": "^2.97.0",
+        "critters": "^0.0.23",
         "docx": "^9.5.3",
         "file-saver": "^2.0.5",
         "framer-motion": "^12.34.2",

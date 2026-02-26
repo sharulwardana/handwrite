@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Caveat:wght@400;600&family=Gochi+Hand&family=Indie+Flower&family=Kalam:wght@300;400;700&family=Patrick+Hand&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -51,36 +50,7 @@ body {
     color 0.4s ease;
 }
 
-/* Transisi halus HANYA untuk elemen struktural saat ganti tema */
-/* Tidak include input/textarea agar tidak lag saat mengetik */
-body,
-header,
-aside,
-nav,
-footer,
-main,
-section,
-article,
-button,
-a,
-label,
-span,
-p,
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-div[class*="bg-"],
-div[class*="border-"] {
-  transition-property: background-color, border-color, color, box-shadow;
-  transition-duration: 0.25s;
-  transition-timing-function: ease;
-}
-
 /* Pengecualian: animasi & transform tidak ikut transition tema */
-/* Animasi spesifik agar tidak tabrakan dengan utility transition Tailwind */
 .animate-spin {
   animation-play-state: running !important;
   transition: none !important;
@@ -101,17 +71,16 @@ div[class*="border-"] {
 }
 ::-webkit-scrollbar-track {
   background: transparent;
-  margin: 4px 0; /* Memberi jarak agar tidak mentok atas/bawah */
+  margin: 4px 0;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.3); /* Abu-abu tipis untuk Light Mode */
+  background: rgba(156, 163, 175, 0.3);
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(156, 163, 175, 0.5);
 }
 
-/* Khusus Dark Mode: Putih transparan agar menyatu dengan background */
 .dark ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.08);
 }
@@ -119,7 +88,6 @@ div[class*="border-"] {
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* Dukungan untuk browser Firefox */
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
@@ -130,24 +98,12 @@ div[class*="border-"] {
 
 /* ── ANIMATIONS ── */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 @keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .animate-fadeIn {
@@ -173,9 +129,7 @@ input[type="range"]::-webkit-slider-thumb {
   cursor: pointer;
   border: 2.5px solid rgba(255, 255, 255, 0.25);
   box-shadow: 0 2px 8px rgba(56, 189, 248, 0.45);
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.18);
@@ -243,24 +197,20 @@ input[type="color"]::-webkit-color-swatch {
   background-color: transparent;
 }
 
-/* ── LIQUID GLASS EFFECT ── */
+/* ═══════════════════════════════════════════════════════════════════
+   GLASS PANEL BASE
+   ═══════════════════════════════════════════════════════════════════ */
 .glass-panel {
-  /* Warna dasar sangat transparan */
   background: linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.4) 0%,
     rgba(255, 255, 255, 0.1) 100%
   );
-  /* Blur tingkat tinggi & saturasi warna latar */
   backdrop-filter: blur(40px) saturate(150%);
   -webkit-backdrop-filter: blur(40px) saturate(150%);
-
-  /* Multilayer border untuk ilusi ketebalan kaca */
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-top-color: rgba(255, 255, 255, 0.8);
   border-left-color: rgba(255, 255, 255, 0.6);
-
-  /* Shadow luar lembut + Inset shadow untuk pantulan cahaya dalam */
   box-shadow:
     0 10px 40px -10px rgba(0, 0, 0, 0.1),
     inset 0 1px 1px rgba(255, 255, 255, 0.8),
@@ -268,7 +218,6 @@ input[type="color"]::-webkit-color-swatch {
   border-radius: 24px;
 }
 
-/* Penyesuaian untuk Dark Mode */
 .dark .glass-panel {
   background: linear-gradient(
     135deg,
@@ -283,27 +232,149 @@ input[type="color"]::-webkit-color-swatch {
     inset 0 1px 1px rgba(255, 255, 255, 0.15);
 }
 
-/* 2. Android Modern Solid (Solid, Bayangan Tegas) */
-.theme-android .glass-panel {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 10px 40px rgba(139, 92, 246, 0.12);
-  border-radius: 20px;
+/* ═══════════════════════════════════════════════════════════════════
+   TEMA iOS: LIQUID GLASS (iPhone/iPad — iOS 26 Style)
+   Multi-layer blur, refraksi prismatik, border frosted, cahaya dinamis
+   ═══════════════════════════════════════════════════════════════════ */
+.theme-ios .glass-panel {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(245, 245, 255, 0.25) 50%,
+    rgba(255, 255, 255, 0.35) 100%
+  );
+  backdrop-filter: blur(48px) saturate(180%) brightness(1.05);
+  -webkit-backdrop-filter: blur(48px) saturate(180%) brightness(1.05);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-top-color: rgba(255, 255, 255, 0.9);
+  border-left-color: rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 8px 32px -8px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    inset 0 1px 2px rgba(255, 255, 255, 0.9),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.3);
+  border-radius: 22px;
 }
-.dark.theme-android .glass-panel {
-  background: #18181b;
-  border: 1px solid #27272a;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+.dark.theme-ios .glass-panel {
+  background: linear-gradient(
+    145deg,
+    rgba(45, 45, 55, 0.65) 0%,
+    rgba(25, 25, 35, 0.45) 50%,
+    rgba(35, 35, 45, 0.55) 100%
+  );
+  backdrop-filter: blur(48px) saturate(170%) brightness(0.95);
+  -webkit-backdrop-filter: blur(48px) saturate(170%) brightness(0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(255, 255, 255, 0.25);
+  border-left-color: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 12px 48px -8px rgba(0, 0, 0, 0.6),
+    inset 0 1px 2px rgba(255, 255, 255, 0.18);
+}
+.theme-ios button, .theme-ios input, .theme-ios select { border-radius: 14px !important; }
+.theme-ios .rounded-xl { border-radius: 18px !important; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   TEMA FUTURISTIC (Android / PC)
+   Neon accent borders, geometri tajam, glow efek hover
+   ═══════════════════════════════════════════════════════════════════ */
+.theme-futuristic .glass-panel {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-left: 3px solid rgba(139, 92, 246, 0.4);
+  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.08);
+  border-radius: 16px;
+}
+.dark.theme-futuristic .glass-panel {
+  background: linear-gradient(135deg, rgba(13, 13, 22, 0.95), rgba(18, 18, 28, 0.9));
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-left: 3px solid rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.1), 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+.theme-futuristic input:focus,
+.theme-futuristic textarea:focus,
+.theme-futuristic select:focus {
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3), 0 0 12px rgba(139, 92, 246, 0.15) !important;
+}
+.theme-futuristic button:hover:not(:disabled) {
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.25);
+}
+.theme-futuristic button, .theme-futuristic input, .theme-futuristic select { border-radius: 10px !important; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   SKELETON LOADING (Area 5 — Progressive Loading)
+   ═══════════════════════════════════════════════════════════════════ */
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+.light .skeleton {
+  background: linear-gradient(90deg, rgba(0,0,0,0.06) 25%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.06) 75%);
+  background-size: 200% 100%;
 }
 
-/* 3. Desktop / Default (Glassmorphism standar) */
-.theme-desktop .glass-panel {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(139, 92, 246, 0.2);
+/* ── PERBAIKAN INP: Transisi hanya pada elemen yang membutuhkan ── */
+.theme-transition {
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease;
 }
-.dark.theme-desktop .glass-panel {
-  background: rgba(13, 13, 20, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+
+textarea, input {
+  transition: none !important;
+}
+
+/* ── PERFORMANCE: Kurangi blur di mobile agar GPU tidak overload ── */
+@media (max-width: 768px) {
+  .glass-panel {
+    backdrop-filter: blur(16px) saturate(120%);
+    -webkit-backdrop-filter: blur(16px) saturate(120%);
+  }
+  /* iOS mobile tetap pakai blur lebih tinggi (GPU iPhone lebih kuat) */
+  .theme-ios .glass-panel {
+    backdrop-filter: blur(32px) saturate(160%);
+    -webkit-backdrop-filter: blur(32px) saturate(160%);
+  }
+}
+
+/* ── PERFORMANCE: Fallback untuk user yang prefer reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .glass-panel {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.88);
+  }
+  .dark .glass-panel {
+    background: rgba(30, 30, 35, 0.92);
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── PERFORMANCE: content-visibility untuk off-screen sections ── */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 200px;
+}
+
+/* ── CLS FIX: Caveat font fallback ── */
+@font-face {
+  font-family: 'Caveat Fallback';
+  src: local('Arial');
+  size-adjust: 112%;
+  ascent-override: 95%;
+  descent-override: 22%;
+  line-gap-override: 0%;
 }

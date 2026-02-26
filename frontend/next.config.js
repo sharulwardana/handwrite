@@ -1,15 +1,17 @@
 /** @type {import('next').NextConfig} */
 const isDev = process.env.NODE_ENV === 'development';
 const nextConfig = {
+    compress: true,
     experimental: {
         optimizePackageImports: ['lucide-react', 'framer-motion'],
+        optimizeCss: true,
     },
     async headers() {
         return [
             {
                 source: '/(.*)',
                 headers: [
-                    { key: 'X-Content-Type-Options', value: 'nosniff' },
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
                     { key: 'X-Frame-Options', value: 'DENY' },
                     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
                     {
@@ -28,6 +30,7 @@ const nextConfig = {
         ]
     },
     images: {
+        formats: ['image/avif', 'image/webp'],
         remotePatterns: [
             {
                 protocol: 'http',

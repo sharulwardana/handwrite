@@ -914,10 +914,39 @@ def cache_load(session_id):
 @app.route("/health", methods=["GET"])
 @app.route("/api/health", methods=["GET"])
 def health_check():
+    import gc
+    # Memory monitoring
+    mem_info = {}
+    try:
+        import psutil
+        process = psutil.Process(os.getpid())
+        mem = process.memory_info()
+        mem_info = {
+            "rss_mb": round(mem.rss / 1024 / 1024, 1),
+            "vms_mb": round(mem.vms / 1024 / 1024, 1),
+        }
+    except ImportError:
+        mem_info = {"note": "psutil not installed"}
+
+    # Image cache stats
+    with HandwritingGenerator._cache_lock:
+        cache_items = len(HandwritingGenerator._image_cache)
+
+    # Disk cache size
+    cache_disk_mb = 0
+    try:
+        for f in os.listdir(CACHE_FOLDER):
+            fp = os.path.join(CACHE_FOLDER, f)
+            if os.path.isfile(fp):
+                cache_disk_mb += os.path.getsize(fp)
+        cache_disk_mb = round(cache_disk_mb / 1024 / 1024, 1)
+    except Exception:
+        pass
+
     return jsonify(
         {
             "status": "healthy",
-            "version": "1.2.0",
+            "version": "1.3.0",
             "rate_limiting": RATE_LIMIT_ENABLED,
             "available_fonts": len(
                 [
@@ -927,6 +956,9 @@ def health_check():
                 ]
             ),
             "available_folios": len(FOLIO_TEMPLATES),
+            "memory": mem_info,
+            "image_cache_items": cache_items,
+            "disk_cache_mb": cache_disk_mb,
         }
     )
 

@@ -546,6 +546,45 @@ class HandwritingGenerator:
                             anchor="ls",
                         )
 
+                # ── BARU: Ink Fiber Interaction ──────────────────────────────
+                # Simulasi tinta menyebar di serat kertas pada tekanan tinggi
+                if pen_pressure < -8 and random.random() < 0.12:
+                    r_f, g_f, b_f = self.base_color_rgb
+                    for _ in range(random.randint(1, 3)):
+                        fiber_len = random.uniform(2, 6)
+                        fiber_angle = random.uniform(0, math.pi * 2)
+                        fx = cursor_x + jitter_x + math.cos(fiber_angle) * fiber_len
+                        fy = y_baseline + math.sin(fiber_angle) * fiber_len
+                        draw.line(
+                            [(cursor_x + jitter_x, y_baseline), (fx, fy)],
+                            fill=(r_f, g_f, b_f, random.randint(30, 70)),
+                            width=1,
+                        )
+
+                # ── BARU: Start-of-word Pressure Spike ──────────────────────
+                # Huruf pertama kata ditekan lebih kuat (bolpoin menyentuh kertas)
+                if word_char_idx == 1 and random.random() < 0.35:
+                    draw.text(
+                        (cursor_x + jitter_x + 0.3, y_baseline + 0.3),
+                        char,
+                        fill=(*self.ink_vary(pressure_delta=-12), 60),
+                        font=char_font,
+                        anchor="ls",
+                    )
+
+                # ── BARU: Ink Pooling at Stops ──────────────────────────────
+                # Titik/koma: tinta menggenang sedikit (pena berhenti)
+                if char in ".,:;" and random.random() < 0.4:
+                    pool_r = random.uniform(1.5, 3.0)
+                    r_p, g_p, b_p = self.ink_vary(pressure_delta=-15)
+                    draw.ellipse(
+                        [
+                            (cursor_x + jitter_x - pool_r, y_baseline - pool_r),
+                            (cursor_x + jitter_x + pool_r, y_baseline + pool_r),
+                        ],
+                        fill=(r_p, g_p, b_p, random.randint(25, 55)),
+                    )
+
             # === 2. UPDATE KERNING (Letter Spacing Variation - Claude Poin 3) ===
             char_width = draw.textlength(char, font=char_font)
 
@@ -556,12 +595,19 @@ class HandwritingGenerator:
                 # Variasi jarak antar huruf
                 LONG_TAIL_CHARS = set("frvwy")
 
-                # ── RAPAT DI AKHIR BARIS ─────────────────────────────────────
+                # ── RAPAT DI AKHIR BARIS + End-of-line Lifting ────────────
                 line_fill_ratio = (cursor_x - x) / max(1, available_width)
                 end_squeeze = 0.0
                 if line_fill_ratio > 0.78:
                     squeeze_strength = (line_fill_ratio - 0.78) / 0.22
                     end_squeeze = -random.uniform(0.3, 1.5) * squeeze_strength
+
+                # BARU: End-of-line lifting — huruf terakhir makin ringan
+                if line_fill_ratio > 0.85 and char.strip():
+                    lift_factor = (line_fill_ratio - 0.85) / 0.15
+                    # Buat tinta lebih terang dan transparan di ujung baris
+                    dynamic_alpha = max(140, dynamic_alpha - int(lift_factor * 80))
+                    dynamic_fill = (r_c, g_c, b_c, dynamic_alpha)
                 # ────────────────────────────────────────────────────────────
 
                 if char in LONG_TAIL_CHARS:
@@ -632,7 +678,9 @@ class HandwritingGenerator:
                     line_index = 0
                 continue
 
-            margin_jitter = int(random.gauss(0, self.config.get("marginJitter", 6)))
+            # BARU: Cumulative margin drift (tangan bergeser perlahan di kertas)
+            margin_drift = int(math.sin(line_index * 0.4 + random.random()) * 3)
+            margin_jitter = int(random.gauss(0, self.config.get("marginJitter", 6))) + margin_drift
             current_line = ""
 
             for word in paragraph.split(" "):
