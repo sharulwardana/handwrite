@@ -2641,7 +2641,7 @@ export default function Home() {
                   transition={{ type: "spring", damping: 28, stiffness: 300 }}
                   className={`fixed top-0 left-0 bottom-0 w-[300px] md:w-[320px] max-w-[85vw] z-[70] overflow-y-auto border-r ${c.sidebar}`}
                 >
-                  <div className={`sticky top-0 flex items-center justify-between px-4 h-14 border-b ${c.divider} ${D ? "bg-black/70 backdrop-blur-3xl" : "bg-white"} z-[80]`}>
+                  <div className={`sticky top-0 flex items-center justify-between px-4 h-14 border-b ${c.divider} ${D ? "bg-black/70 backdrop-blur-3xl" : "liquid-glass-light"} z-[80]`}>
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-lg flex items-center justify-center">
                         <PenTool className="w-3 h-3 text-white" />
@@ -4051,12 +4051,12 @@ export default function Home() {
             {/* ══ MOBILE & TABLET: Editor + Output tabs (< lg) ══ */}
             <div className="flex lg:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
               {/* Mobile tab switcher (Modern iOS Style) */}
-              <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} ${D ? "bg-black/80 backdrop-blur-3xl" : "glass-panel"}`}>
+              <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} ${D ? "bg-black/80 backdrop-blur-3xl" : "bg-white/90 backdrop-blur-md"}`}>
                 <div className={`flex p-1 rounded-xl relative ${D ? "bg-[#111] shadow-inner" : "bg-black/5 shadow-inner"}`}>
 
                   {/* Animasi Gelembung Sliding */}
                   <div
-                    className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg shadow-xl transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${D ? "bg-[#222]" : "bg-white"}`}
+                    className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg shadow-xl transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${D ? "bg-[#222]" : "liquid-glass-light"}`}
                     style={{ left: (activeTab === "result" ? "calc(50% + 2px)" : "4px") }}
                   />
 
