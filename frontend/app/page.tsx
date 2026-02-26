@@ -2188,8 +2188,8 @@ export default function Home() {
       </button>
 
       {showConfig && (
-        <div className={`rounded-xl border ${c.card} p-3.5 animate-fadeIn`}>
-          <div className="flex items-center justify-between mb-2.5">
+        <div className={`rounded-2xl border ${isAppleDevice ? "bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl" : c.card} p-4 animate-fadeIn mt-2`}>
+          <div className="flex items-center justify-between mb-3">
             <p className={`text-[10.5px] font-semibold uppercase tracking-widest ${c.label}`}>Advanced Config</p>
             <button onClick={() => updateConfig(DEFAULT_CONFIG)}
               className={`flex items-center gap-1 text-[10.5px] px-2 py-1 rounded-lg transition-colors ${c.btn}`}>
@@ -2772,43 +2772,49 @@ export default function Home() {
                   className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                   onClick={() => setShowShortcuts(false)} />
                 <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-                  className={`relative w-full max-w-sm rounded-2xl p-5 border shadow-2xl ${D ? "bg-[#18181b] border-[#ffffff14]" : "bg-white border-gray-200"}`}>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className={`font-bold text-base ${c.tp}`}>⌨️ Keyboard Shortcuts</h3>
-                    <button onClick={() => setShowShortcuts(false)}
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center ${c.btn}`}>
-                      <X className="w-3.5 h-3.5" />
+                  className={`relative w-full max-w-sm rounded-3xl p-6 border shadow-2xl overflow-hidden ${isAppleDevice ? "bg-white/10 backdrop-blur-2xl border-white/20" : (D ? "bg-[#18181b] border-[#ffffff14]" : "bg-white border-gray-200")}`}>
+
+                  {/* Efek kilauan kaca khusus Apple */}
+                  {isAppleDevice && <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none rounded-3xl" />}
+
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-5">
+                      <h3 className={`font-bold text-base ${c.tp}`}>⌨️ Keyboard Shortcuts</h3>
+                      <button onClick={() => setShowShortcuts(false)}
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center ${c.btn}`}>
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="space-y-1.5">
+                      {[
+                        { keys: ["Ctrl", "Enter"], label: "Generate tulisan" },
+                        { keys: ["←", "→"], label: "Navigasi halaman" },
+                        { keys: ["Esc"], label: "Tutup modal / Fullscreen" },
+                        { keys: ["Ctrl", "Z"], label: "Undo config" },
+                      ].map((s, i) => (
+                        <div key={i} className={`flex items-center justify-between px-3 py-2.5 rounded-xl ${D ? "bg-white/4" : "bg-gray-50"}`}>
+                          <span className={`text-xs ${c.tm}`}>{s.label}</span>
+                          <div className="flex items-center gap-1">
+                            {s.keys.map((k, ki) => (
+                              <span key={ki}>
+                                <kbd className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold border ${D ? "bg-[#09090b] border-[#ffffff15] text-violet-400" : "bg-white border-gray-200 text-violet-600 shadow-sm"}`}>
+                                  {k}
+                                </kbd>
+                                {ki < s.keys.length - 1 && (
+                                  <span className={`mx-0.5 text-[10px] ${c.ts}`}>+</span>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => { setShowShortcuts(false); setShowOnboarding(true); setOnboardingStep(0); }}
+                      className={`w-full mt-5 py-2.5 rounded-xl text-xs font-semibold border transition-all active:scale-95 ${isAppleDevice ? "bg-white/20 hover:bg-white/30 border-white/10 text-white" : c.btn}`}>
+                      Lihat Tutorial Onboarding
                     </button>
                   </div>
-                  <div className="space-y-1.5">
-                    {[
-                      { keys: ["Ctrl", "Enter"], label: "Generate tulisan" },
-                      { keys: ["←", "→"], label: "Navigasi halaman" },
-                      { keys: ["Esc"], label: "Tutup modal / Fullscreen" },
-                      { keys: ["Ctrl", "Z"], label: "Undo config" },
-                    ].map((s, i) => (
-                      <div key={i} className={`flex items-center justify-between px-3 py-2.5 rounded-xl ${D ? "bg-white/4" : "bg-gray-50"}`}>
-                        <span className={`text-xs ${c.tm}`}>{s.label}</span>
-                        <div className="flex items-center gap-1">
-                          {s.keys.map((k, ki) => (
-                            <span key={ki}>
-                              <kbd className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold border ${D ? "bg-[#09090b] border-[#ffffff15] text-violet-400" : "bg-white border-gray-200 text-violet-600 shadow-sm"}`}>
-                                {k}
-                              </kbd>
-                              {ki < s.keys.length - 1 && (
-                                <span className={`mx-0.5 text-[10px] ${c.ts}`}>+</span>
-                              )}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => { setShowShortcuts(false); setShowOnboarding(true); setOnboardingStep(0); }}
-                    className={`w-full mt-4 py-2 rounded-xl text-xs font-medium border transition-colors ${c.btn}`}>
-                    Lihat Tutorial Onboarding
-                  </button>
                 </motion.div>
               </div>
             )}
@@ -2824,73 +2830,78 @@ export default function Home() {
 
                 {/* PERBAIKAN: Tambah max-h-[90dvh], overflow-y-auto, dan penyesuaian ukuran responsif */}
                 <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                  className={`relative w-full max-w-sm sm:max-w-md max-h-[92dvh] overflow-y-auto scrollbar-hide rounded-3xl p-5 sm:p-6 border shadow-2xl flex flex-col items-center text-center ${D ? "bg-[#13131f] border-[#ffffff14]" : "bg-white border-gray-200"}`}>
+                  className={`relative w-full max-w-sm sm:max-w-md max-h-[92dvh] overflow-y-auto scrollbar-hide rounded-[2rem] p-6 sm:p-8 border shadow-2xl flex flex-col items-center text-center ${isAppleDevice ? "bg-black/40 backdrop-blur-3xl border-white/20" : (D ? "bg-[#13131f] border-[#ffffff14]" : "bg-white border-gray-200")}`}>
 
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-full bg-amber-500/20 flex items-center justify-center mb-3 sm:mb-4">
-                    <Zap className="w-6 h-6 sm:w-7 sm:h-7 text-amber-500" fill="currentColor" />
-                  </div>
+                  {/* Kilauan Liquid Glass */}
+                  {isAppleDevice && <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-white/10 via-transparent to-black/20 pointer-events-none" />}
 
-                  <h3 className={`font-bold text-lg sm:text-xl mb-1.5 sm:mb-2 flex-shrink-0 ${c.tp}`}>Energi Habis!</h3>
-                  <p className={`text-xs sm:text-sm mb-4 sm:mb-6 flex-shrink-0 ${c.ts}`}>
-                    Kamu butuh energi untuk menulis halaman. Yuk dukung kreator dengan Top Up untuk mendapatkan fitur Premium!
-                  </p>
-
-                  {/* Tempat Gambar QRIS - Skala responsif menyesuaikan HP */}
-                  <div className="w-40 h-40 sm:w-48 sm:h-48 flex-shrink-0 bg-white p-3 sm:p-4 rounded-2xl border-4 border-amber-500 mb-4 sm:mb-6 shadow-xl flex items-center justify-center relative group">
-                    <QRCodeSVG
-                      value="00020101021126570011ID.DANA.WWW011893600915300202425202090020242520303UMI51440014ID.CO.QRIS.WWW0215ID10254508315380303UMI5204594553033605802ID5909DUA PUTRA600409056105511526304B1DC"
-                      size={140}
-                      level="H"
-                      includeMargin={false}
-                      style={{ width: "100%", height: "100%" }}
-                    />
-                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-end justify-center p-2 rounded-xl">
-                      <span className="text-[9px] sm:text-[10px] font-bold text-amber-600 bg-white/95 px-2 py-1 rounded-full shadow-sm">Scan Aman & Cepat</span>
+                  <div className="relative z-10 flex flex-col items-center justify-center w-full">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0 rounded-full bg-amber-500/20 flex items-center justify-center mb-4 sm:mb-5 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
+                      <Zap className="w-6 h-6 sm:w-7 sm:h-7 text-amber-500" fill="currentColor" />
                     </div>
-                  </div>
 
-                  {/* TIER HARGA BARU - Layout dibuat padat di mobile */}
-                  <div className="w-full space-y-2 mb-4 sm:mb-6 flex-shrink-0">
-                    {[
-                      { name: "Paket Maba", energy: 15, price: "5.000", color: "blue", tag: "Hemat" },
-                      { name: "Paket Deadline", energy: 50, price: "15.000", color: "violet", tag: "Populer" },
-                      { name: "Paket Sultan", energy: 150, price: "35.000", color: "amber", tag: "Terbaik" },
-                    ].map((tier) => (
-                      <div key={tier.name} className={`flex items-center justify-between p-2.5 sm:p-3 rounded-2xl border transition-colors ${tier.tag === "Populer"
-                        ? D ? "bg-violet-500/10 border-violet-500/40 ring-1 ring-violet-500/20" : "bg-violet-50 border-violet-200 ring-1 ring-violet-200"
-                        : D ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-100"
-                        }`}>
-                        <div className="text-left">
-                          <div className="flex items-center gap-1.5 sm:gap-2">
-                            <span className={`text-[9px] sm:text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-md ${tier.color === "blue" ? "bg-blue-500/20 text-blue-500" :
-                              tier.color === "violet" ? "bg-violet-500/20 text-violet-500" : "bg-amber-500/20 text-amber-500"
-                              }`}>{tier.tag}</span>
-                            <span className={`text-[11px] sm:text-xs font-bold ${c.tp}`}>{tier.name}</span>
-                          </div>
-                          <p className={`text-[10px] sm:text-[11px] mt-0.5 ${c.ts}`}>⚡ {tier.energy} Halaman</p>
-                        </div>
-                        <div className="text-right">
-                          <span className={`text-xs sm:text-sm font-black ${c.tp}`}>Rp {tier.price}</span>
-                        </div>
+                    <h3 className={`font-bold text-lg sm:text-xl mb-1.5 sm:mb-2 flex-shrink-0 ${c.tp}`}>Energi Habis!</h3>
+                    <p className={`text-xs sm:text-sm mb-4 sm:mb-6 flex-shrink-0 ${c.ts}`}>
+                      Kamu butuh energi untuk menulis halaman. Yuk dukung kreator dengan Top Up untuk mendapatkan fitur Premium!
+                    </p>
+
+                    {/* Tempat Gambar QRIS - Skala responsif menyesuaikan HP */}
+                    <div className="w-40 h-40 sm:w-48 sm:h-48 flex-shrink-0 bg-white p-3 sm:p-4 rounded-2xl border-4 border-amber-500 mb-4 sm:mb-6 shadow-xl flex items-center justify-center relative group">
+                      <QRCodeSVG
+                        value="00020101021126570011ID.DANA.WWW011893600915300202425202090020242520303UMI51440014ID.CO.QRIS.WWW0215ID10254508315380303UMI5204594553033605802ID5909DUA PUTRA600409056105511526304B1DC"
+                        size={140}
+                        level="H"
+                        includeMargin={false}
+                        style={{ width: "100%", height: "100%" }}
+                      />
+                      <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-end justify-center p-2 rounded-xl">
+                        <span className="text-[9px] sm:text-[10px] font-bold text-amber-600 bg-white/95 px-2 py-1 rounded-full shadow-sm">Scan Aman & Cepat</span>
                       </div>
-                    ))}
+                    </div>
+
+                    {/* TIER HARGA BARU - Layout dibuat padat di mobile */}
+                    <div className="w-full space-y-2 mb-4 sm:mb-6 flex-shrink-0">
+                      {[
+                        { name: "Paket Maba", energy: 15, price: "5.000", color: "blue", tag: "Hemat" },
+                        { name: "Paket Deadline", energy: 50, price: "15.000", color: "violet", tag: "Populer" },
+                        { name: "Paket Sultan", energy: 150, price: "35.000", color: "amber", tag: "Terbaik" },
+                      ].map((tier) => (
+                        <div key={tier.name} className={`flex items-center justify-between p-2.5 sm:p-3 rounded-2xl border transition-colors ${tier.tag === "Populer"
+                          ? D ? "bg-violet-500/10 border-violet-500/40 ring-1 ring-violet-500/20" : "bg-violet-50 border-violet-200 ring-1 ring-violet-200"
+                          : D ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-100"
+                          }`}>
+                          <div className="text-left">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                              <span className={`text-[9px] sm:text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-md ${tier.color === "blue" ? "bg-blue-500/20 text-blue-500" :
+                                tier.color === "violet" ? "bg-violet-500/20 text-violet-500" : "bg-amber-500/20 text-amber-500"
+                                }`}>{tier.tag}</span>
+                              <span className={`text-[11px] sm:text-xs font-bold ${c.tp}`}>{tier.name}</span>
+                            </div>
+                            <p className={`text-[10px] sm:text-[11px] mt-0.5 ${c.ts}`}>⚡ {tier.energy} Halaman</p>
+                          </div>
+                          <div className="text-right">
+                            <span className={`text-xs sm:text-sm font-black ${c.tp}`}>Rp {tier.price}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Tombol Action di bagian bawah (tetap aman walau scroll) */}
+                    <div className="w-full mt-auto flex-shrink-0">
+                      <a href="https://wa.me/6281234567890?text=Halo%20Admin%20HandWrite%20AI,%20saya%20sudah%20transfer%20via%20QRIS%20untuk%20Top%20Up%20Energi.%20Berikut%20bukti%20transfernya:"
+                        target="_blank" rel="noopener noreferrer"
+                        className="w-full py-2.5 sm:py-3 rounded-xl font-bold text-white bg-[#25D366] hover:bg-[#1ebd5a] active:scale-95 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-green-500/30 text-xs sm:text-sm">
+                        <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                        Konfirmasi via WhatsApp
+                      </a>
+
+                      <button onClick={() => setShowQrisModal(false)}
+                        className={`mt-3 sm:mt-4 text-[11px] sm:text-xs font-medium transition-colors p-2 ${D ? "text-white/40 hover:text-white" : "text-gray-400 hover:text-gray-800"}`}>
+                        Tutup dulu, mau lihat-lihat
+                      </button>
+                    </div>
+
                   </div>
-
-                  {/* Tombol Action di bagian bawah (tetap aman walau scroll) */}
-                  <div className="w-full mt-auto flex-shrink-0">
-                    <a href="https://wa.me/6281234567890?text=Halo%20Admin%20HandWrite%20AI,%20saya%20sudah%20transfer%20via%20QRIS%20untuk%20Top%20Up%20Energi.%20Berikut%20bukti%20transfernya:"
-                      target="_blank" rel="noopener noreferrer"
-                      className="w-full py-2.5 sm:py-3 rounded-xl font-bold text-white bg-[#25D366] hover:bg-[#1ebd5a] active:scale-95 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-green-500/30 text-xs sm:text-sm">
-                      <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-                      Konfirmasi via WhatsApp
-                    </a>
-
-                    <button onClick={() => setShowQrisModal(false)}
-                      className={`mt-3 sm:mt-4 text-[11px] sm:text-xs font-medium transition-colors p-2 ${D ? "text-white/40 hover:text-white" : "text-gray-400 hover:text-gray-800"}`}>
-                      Tutup dulu, mau lihat-lihat
-                    </button>
-                  </div>
-
                 </motion.div>
               </div>
             )}
