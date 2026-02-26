@@ -1730,7 +1730,7 @@ export default function Home() {
 
   // ── Sidebar content ─────────────────────────────────────────────────────────
   const renderSidebarContent = () => (
-    <div className="py-3 px-3 space-y-2.5">
+    <div className={`py-3 px-3 space-y-2.5 ${isAppleDevice ? "bg-transparent backdrop-blur-3xl" : ""}`}>
 
       <SidebarSection title="Dari Tulisan Tanganmu" isDark={D} defaultOpen={false} badge="BARU">
         <p className={`text-[11px] leading-relaxed ${c.ts}`}>
@@ -2034,7 +2034,7 @@ export default function Home() {
             }}
           />
           {/* Animasi Gelembung Liquid iOS */}
-          <div className={`relative flex rounded-full overflow-hidden p-0.5 ${isAppleDevice ? (D ? "bg-[#3a3a3c]/70 backdrop-blur-xl" : "bg-[#e5e5ea]/80 backdrop-blur-xl shadow-inner") : (D ? "border border-[#ffffff10] bg-black/30" : "border border-gray-200 bg-gray-100")}`}>
+          <div className={`relative flex rounded-full overflow-hidden p-0.5 ${isAppleDevice ? "bg-transparent border-[0.5px] border-white/20 shadow-inner backdrop-blur-3xl" : (D ? "border border-[#ffffff10] bg-black/30" : "border border-gray-200 bg-gray-100")}`}>
 
             {/* Ini Gelembung yang meluncur (Sliding Pill) */}
             <div
@@ -4058,7 +4058,7 @@ export default function Home() {
             <div className="flex lg:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
               {/* Mobile tab switcher (Modern iOS Style - Liquid Glass Active Tab) */}
               <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} bg-transparent`}>
-                <div className={`flex p-0.5 rounded-full relative ${isAppleDevice ? (D ? "bg-[#3a3a3c]/70 backdrop-blur-xl" : "bg-[#e5e5ea]/80 backdrop-blur-xl shadow-inner") : (D ? "border border-[#ffffff10] bg-black/30" : "border border-gray-200 bg-gray-100")}`}>
+                <div className={`flex p-0.5 rounded-full relative ${isAppleDevice ? "bg-transparent border-[0.5px] border-white/20 shadow-inner backdrop-blur-3xl" : (D ? "border border-[#ffffff10] bg-black/30" : "border border-gray-200 bg-gray-100")}`}>
 
                   {/* Animasi Gelembung Sliding (Bentuk Kotak Melengkung dan Full) */}
                   <div
