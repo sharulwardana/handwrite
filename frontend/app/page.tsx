@@ -2038,7 +2038,7 @@ export default function Home() {
 
             {/* Ini Gelembung yang meluncur (Sliding Pill) */}
             <div
-              className={`absolute inset-y-0.5 w-[calc(33.33%-0.33rem)] rounded-full shadow-md transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? (D ? "bg-[#636366]" : "bg-white") : (D ? "bg-[#2c2c35] border border-[#ffffff10]" : "bg-white border border-gray-300")}`}
+              className={`absolute inset-y-0.5 w-[calc(33.33%-0.33rem)] rounded-full shadow-md backdrop-blur-md transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? (D ? "bg-white/10 border border-white/5" : "bg-white/60 border border-black/5") : (D ? "bg-[#2c2c35] border border-[#ffffff10]" : "bg-white border border-gray-300")}`}
               style={{
                 left: config.wordSpacing === -5 ? '0.25rem' : config.wordSpacing === 8 ? 'calc(33.33% + 0.08rem)' : 'calc(66.66% - 0.08rem)'
               }}
@@ -4062,7 +4062,7 @@ export default function Home() {
 
                   {/* Animasi Gelembung Sliding (Bentuk Kotak Melengkung dan Full) */}
                   <div
-                    className={`absolute inset-y-0.5 w-[calc(50%-0.25rem)] rounded-full shadow-md transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? (D ? "bg-[#636366]" : "bg-white") : (D ? "bg-[#2c2c35] border border-[#ffffff10]" : "bg-white border border-gray-300")}`}
+                    className={`absolute inset-y-0.5 w-[calc(50%-0.25rem)] rounded-full shadow-md backdrop-blur-md transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? (D ? "bg-white/10 border border-white/5" : "bg-white/60 border border-black/5") : (D ? "bg-[#2c2c35] border border-[#ffffff10]" : "bg-white border border-gray-300")}`}
                     style={{ left: (activeTab === "result" ? "calc(50% + 0.125rem)" : "0.125rem") }}
                   />
 
