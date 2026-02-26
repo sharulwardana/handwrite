@@ -1921,7 +1921,12 @@ export default function Home() {
           <input type="range" min="0" max="20" step="1"
             value={config.marginJitter ?? 6}
             onChange={(e) => updateConfig({ ...config, marginJitter: Number(e.target.value) })}
-            className="w-full cursor-pointer" />
+            className="w-full cursor-pointer mt-2"
+            style={{
+              WebkitAppearance: "none", height: "5px", borderRadius: "99px",
+              background: `linear-gradient(to right, ${D ? "#10b981" : "#059669"} 0%, ${D ? "#10b981" : "#059669"} ${((config.marginJitter ?? 6) / 20) * 100}%, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} ${((config.marginJitter ?? 6) / 20) * 100}%, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} 100%)`
+            }}
+          />
           <div className={`flex justify-between text-[10px] mt-1.5 ${c.ts}`}>
             <span>Rata kiri</span><span>Bergelombang</span>
           </div>
@@ -2028,11 +2033,11 @@ export default function Home() {
             }}
           />
           {/* Animasi Gelembung Liquid iOS */}
-          <div className={`relative flex p-1 mt-2 rounded-xl overflow-hidden ${D ? "bg-black/30 shadow-inner" : "bg-black/5 shadow-inner"}`}>
+          <div className={`relative flex p-1 mt-2 rounded-xl overflow-hidden border-[0.5px] ${D ? "border-white/10 bg-black/20" : "border-black/5 bg-black/5 bg-opacity-50"}`}>
 
             {/* Ini Gelembung yang meluncur (Sliding Pill) */}
             <div
-              className={`absolute top-1 bottom-1 w-[calc(33.33%-4px)] rounded-lg shadow-sm transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${D ? "bg-[#2c2c35]" : "bg-white"}`}
+              className={`absolute inset-y-1 w-[calc(33.33%-4px)] rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.06)] border-[0.5px] transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${D ? "bg-white/10 backdrop-blur-3xl border-white/10" : "liquid-glass-light border-white/60"}`}
               style={{
                 left: config.wordSpacing === -5 ? '4px' : config.wordSpacing === 8 ? 'calc(33.33% + 2px)' : 'calc(66.66% - 1px)'
               }}
@@ -2639,7 +2644,7 @@ export default function Home() {
                   key="mob-drawer"
                   initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
                   transition={{ type: "spring", damping: 28, stiffness: 300 }}
-                  className={`fixed top-0 left-0 bottom-0 w-[300px] md:w-[320px] max-w-[85vw] z-[70] overflow-y-auto border-r ${isDark ? "bg-[#000000] border-[#ffffff10]" : "liquid-glass-light"}`}
+                  className={`fixed top-0 left-0 bottom-0 w-[300px] md:w-[320px] max-w-[85vw] z-[70] overflow-y-auto border-r ${isDark ? "bg-black/70 backdrop-blur-3xl border-[#ffffff10]" : "liquid-glass-light"}`}
                 >
                   <div className={`sticky top-0 flex items-center justify-between px-4 h-14 border-b ${c.divider} ${D ? "bg-black/70 backdrop-blur-3xl" : "liquid-glass-light"} z-[80]`}>
                     <div className="flex items-center gap-2">
@@ -4148,8 +4153,8 @@ export default function Home() {
                       }}
                       placeholder="Ketik atau paste teks di sini..."
                       className={`flex-1 w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-colors duration-300 outline-none border ${D
-                        ? "bg-black/50 backdrop-blur-3xl border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50 focus:bg-black shadow-inner"
-                        : "bg-gray-50/50 hover:bg-white border-gray-200/80 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400 focus:bg-white focus:shadow-[0_4px_24px_rgba(0,0,0,0.04)]"
+                        ? "bg-black/50 backdrop-blur-3xl border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50 shadow-inner"
+                        : "bg-gray-50/50 border-gray-200/80 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400"
                         }`}
                       style={{
                         minHeight: "280px",
@@ -4250,7 +4255,7 @@ export default function Home() {
                         </p>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-center h-full min-h-[300px]">
+                      <div className={`flex items-center justify-center h-full min-h-[300px] mx-4 my-6 rounded-3xl ${isAppleDevice ? (D ? "bg-[#ffffff03] backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(255,255,255,0.02)]" : "bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.05)]") : ""}`}>
                         <p className={`text-sm ${c.ts}`}>Klik Generate untuk mulai</p>
                       </div>
                     )}
