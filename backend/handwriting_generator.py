@@ -602,12 +602,7 @@ class HandwritingGenerator:
                     squeeze_strength = (line_fill_ratio - 0.78) / 0.22
                     end_squeeze = -random.uniform(0.3, 1.5) * squeeze_strength
 
-                # BARU: End-of-line lifting — huruf terakhir makin ringan
-                if line_fill_ratio > 0.85 and char.strip():
-                    lift_factor = (line_fill_ratio - 0.85) / 0.15
-                    # Buat tinta lebih terang dan transparan di ujung baris
-                    dynamic_alpha = max(140, dynamic_alpha - int(lift_factor * 80))
-                    dynamic_fill = (r_c, g_c, b_c, dynamic_alpha)
+                # Dibuang: End-of-line lifting agar tinta tetap tebal di ujung
                 # ────────────────────────────────────────────────────────────
 
                 if char in LONG_TAIL_CHARS:
@@ -678,9 +673,8 @@ class HandwritingGenerator:
                     line_index = 0
                 continue
 
-            # BARU: Cumulative margin drift (tangan bergeser perlahan di kertas)
-            margin_drift = int(math.sin(line_index * 0.4 + random.random()) * 3)
-            margin_jitter = int(random.gauss(0, self.config.get("marginJitter", 6))) + margin_drift
+            # PERBAIKAN: Hapus margin drift agar teks tidak tumpah keluar garis
+            margin_jitter = int(random.gauss(0, self.config.get("marginJitter", 2)))
             current_line = ""
 
             for word in paragraph.split(" "):

@@ -167,6 +167,17 @@ AVAILABLE_FONTS = {
         "style": "natural",
     },
     "sriracha": {"name": "Sriracha", "file": "Sriracha-Regular.ttf", "style": "quick"},
+    "architects_daughter": {
+        "name": "Architects Daughter",
+        "file": "ArchitectsDaughter-Regular.ttf",
+        "style": "casual",
+    },
+    "gochi_hand": {
+        "name": "Gochi Hand",
+        "file": "GochiHand-Regular.ttf",
+        "style": "bold",
+    },
+    "virgil": {"name": "Virgil", "file": "Virgil.ttf", "style": "sketch"},
 }
 
 

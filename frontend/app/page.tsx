@@ -61,15 +61,15 @@ interface SavedPreset {
 /* ─── CONSTANTS ──────────────────────────────────────── */
 const FONT_FAMILY_MAP: Record<string, string> = {
   // --- FONT BARU (Super Rapi & Support Angka/Simbol) ---
-  "Virgil": "'Virgil', cursive",
-  "Architects Daughter": "'Architects Daughter', cursive",
-  "Gochi Hand": "'Gochi Hand', cursive",
+  "Virgil": "var(--font-virgil), cursive",
+  "Architects Daughter": "var(--font-architects-daughter), cursive",
+  "Gochi Hand": "var(--font-gochi-hand), cursive",
 
   // --- FONT LAMA (Yang paling bagus dan dipertahankan) ---
-  "Patrick Hand": "'Patrick Hand', cursive",
-  "Kalam": "'Kalam', cursive",
-  "Indie Flower": "'Indie Flower', cursive",
-  "Caveat": "'Caveat', cursive",
+  "Patrick Hand": "var(--font-patrick-hand), cursive",
+  "Kalam": "var(--font-kalam), cursive",
+  "Indie Flower": "var(--font-indie-flower), cursive",
+  "Caveat": "var(--font-caveat), cursive",
 };
 
 const INK_PRESETS = [
@@ -154,7 +154,7 @@ function SidebarSection({
     <div className={`rounded-xl border backdrop-blur-sm shadow-sm ${bg} ${border} ${className} ${isOverflowVisible ? "" : "overflow-hidden"}`}>
       <button
         onClick={() => setOpen(!open)}
-        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-t-xl transition-all duration-200 ${open ? `border-b ${divider}` : "rounded-b-xl"} ${headerHover} hover:ring-1 ${isDark ? "hover:ring-white/5" : "hover:ring-violet-200"}`}
+        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-t-xl transition-colors duration-200 ${open ? `border-b ${divider}` : "rounded-b-xl"} ${headerHover} hover:ring-1 ${isDark ? "hover:ring-white/5" : "hover:ring-violet-200"}`}
       >
         <div className="flex items-center gap-2">
           {icon && <span className="text-sm">{icon}</span>}
@@ -202,12 +202,12 @@ function ToggleSwitch({
   return (
     <button
       onClick={() => onChange(!value)}
-      className={`relative flex-shrink-0 w-11 h-6 rounded-full border-2 transition-all duration-300 ${value
+      className={`relative flex-shrink-0 w-11 h-6 rounded-full border-2 transition-colors duration-300 ${value
         ? colorClass
         : isDark ? "bg-white/10 border-[#ffffff18]" : "bg-gray-200 border-gray-300"
         }`}
     >
-      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-all duration-300 ${value ? "left-[22px]" : "left-0.5"}`} />
+      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-[left] duration-300 ${value ? "left-[22px]" : "left-0.5"}`} />
     </button>
   );
 }
@@ -828,7 +828,7 @@ export default function Home() {
   const loadFonts = useCallback(async () => {
     setIsLoadingFonts(true);
     try {
-      const res = await fetch(`${API_URL}/api/fonts`);
+      const res = await fetch(`${API_URL}/api/fonts`, { cache: "no-store", next: { revalidate: 0 } });
       if (!res.ok) throw new Error();
       const data = await res.json();
       setFonts(data.fonts);
@@ -840,7 +840,7 @@ export default function Home() {
   const loadFolios = useCallback(async () => {
     setIsLoadingFolios(true);
     try {
-      const res = await fetch(`${API_URL}/api/folios`);
+      const res = await fetch(`${API_URL}/api/folios`, { cache: "no-store", next: { revalidate: 0 } });
       if (!res.ok) throw new Error();
       const data = await res.json();
       setFolios(data.folios);
@@ -1000,8 +1000,14 @@ export default function Home() {
   const handleGenerate = useCallback(async () => {
     if (!text.trim()) { toast.error("Masukkan teks dulu!"); return; }
     if (!selectedFolio) { toast.error("Pilih folio dulu!"); return; }
+    if (!user) {
+      toast.error("Silakan Login Cloud untuk fitur ini!", { icon: "🔒" });
+      handleLogin();
+      return;
+    }
+
     // ── KODE RAHASIA DEVELOPER (GOD MODE) ──
-    const DEV_EMAIL = process.env.NEXT_PUBLIC_DEV_EMAIL ?? "";
+    const DEV_EMAIL = process.env.NEXT_PUBLIC_DEV_EMAIL || "sharulwrdn10@gmail.com";
     const isDeveloper = user?.email === DEV_EMAIL;
 
     // Cek apakah energi cukup (Developer bebas batas)
@@ -1107,7 +1113,8 @@ export default function Home() {
               setGenerateProgress(100);
 
               // ── POTONG ENERGI DI UI & DATABASE (Kecuali Developer) ──
-              if (user?.email !== "sharulwrdn10@gmail.com") {
+              const DEV_EMAIL = process.env.NEXT_PUBLIC_DEV_EMAIL || "sharulwrdn10@gmail.com";
+              if (user?.email !== DEV_EMAIL) {
                 // Hitung sisa energi: Energi saat ini dikurangi jumlah halaman yang baru dibuat
                 const deduction = collectedPages.length;
                 const newBalance = Math.max(0, energy - deduction);
@@ -1299,7 +1306,7 @@ export default function Home() {
 
   // ── FUNGSI UPDATE ENERGI (KHUSUS ADMIN) ──
   const handleAdminUpdateEnergy = async () => {
-    const DEV_EMAIL = process.env.NEXT_PUBLIC_DEV_EMAIL ?? "";
+    const DEV_EMAIL = process.env.NEXT_PUBLIC_DEV_EMAIL || "sharulwrdn10@gmail.com";
     if (user?.email !== DEV_EMAIL) {
       toast.error("Akses ditolak: Anda bukan admin.");
       return;
@@ -1662,8 +1669,8 @@ export default function Home() {
       : "bg-white border-violet-200 shadow-[0_4px_20px_rgba(139,92,246,0.12)] transition-colors",
 
     cardHover: D
-      ? "hover:border-violet-500/30 hover:shadow-[0_4px_24px_rgba(139,92,246,0.15)] transition-all duration-300"
-      : "hover:border-violet-300 hover:shadow-[0_4px_24px_rgba(139,92,246,0.15)] transition-all duration-300",
+      ? "hover:border-violet-500/30 hover:shadow-[0_4px_24px_rgba(139,92,246,0.15)] transition-colors duration-300"
+      : "hover:border-violet-300 hover:shadow-[0_4px_24px_rgba(139,92,246,0.15)] transition-colors duration-300",
 
     input: D
       ? "bg-[#0a0a12] border-[#ffffff0f] text-white placeholder-white/20 min-h-[40px] focus:ring-2 focus:ring-violet-500/25 focus:border-violet-500/60"
@@ -1686,12 +1693,12 @@ export default function Home() {
       : "border-violet-200/80",
 
     btn: D
-      ? "bg-[#ffffff08] hover:bg-[#ffffff12] text-[#d4d4d8] border border-[#ffffff0f] shadow-sm hover:scale-[1.02] active:scale-95 transition-all duration-200"
-      : "bg-white hover:bg-violet-50 text-violet-700 border border-violet-300 shadow-sm hover:border-violet-400 hover:scale-[1.02] active:scale-95 transition-all duration-200",
+      ? "bg-[#ffffff08] hover:bg-[#ffffff12] text-[#d4d4d8] border border-[#ffffff0f] shadow-sm hover:scale-[1.02] active:scale-95 transition-colors duration-200"
+      : "bg-white hover:bg-violet-50 text-violet-700 border border-violet-300 shadow-sm hover:border-violet-400 hover:scale-[1.02] active:scale-95 transition-colors duration-200",
 
     btnActive: D
-      ? "bg-white text-black shadow-md hover:scale-[1.02] active:scale-95 transition-all duration-200"
-      : "bg-violet-600 text-white shadow-md shadow-violet-500/30 hover:scale-[1.02] active:scale-95 transition-all duration-200",
+      ? "bg-white text-black shadow-md hover:scale-[1.02] active:scale-95 transition-colors duration-200"
+      : "bg-violet-600 text-white shadow-md shadow-violet-500/30 hover:scale-[1.02] active:scale-95 transition-colors duration-200",
 
     rowHover: D
       ? "hover:bg-[#ffffff06]"
@@ -1753,7 +1760,7 @@ export default function Home() {
         <button
           onClick={() => hwPhotoRef.current?.click()}
           disabled={isAnalyzingPhoto}
-          className={`w-full flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 border-dashed text-sm font-medium transition-all ${isAnalyzingPhoto
+          className={`w-full flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 border-dashed text-sm font-medium transition-colors ${isAnalyzingPhoto
             ? "opacity-50 cursor-not-allowed border-gray-300 dark:border-white/10"
             : D
               ? "border-violet-500/40 text-violet-400 hover:border-violet-500/70 hover:bg-violet-500/8"
@@ -1779,7 +1786,7 @@ export default function Home() {
           <button
             onClick={() => setFontDropdownOpen(!fontDropdownOpen)}
             disabled={isLoadingFonts}
-            className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border transition-all ${fontDropdownOpen
+            className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border transition-colors ${fontDropdownOpen
               ? D ? "border-violet-500/50 bg-violet-500/8" : "border-violet-400 bg-violet-50"
               : D ? "border-[#ffffff0f] bg-[#ffffff06] hover:border-[#ffffff18]"
                 : "border-[#d1d5db] bg-gray-50 hover:border-[#9ca3af]"
@@ -1886,7 +1893,7 @@ export default function Home() {
           <div className="grid grid-cols-2 gap-2">
             {[{ label: "✍️ Kanan", val: false }, { label: "🤚 Kiri", val: true }].map((m) => (
               <button key={String(m.val)} onClick={() => setLeftHanded(m.val)}
-                className={`py-2.5 rounded-xl border-2 text-[12px] font-medium transition-all ${leftHanded === m.val
+                className={`py-2.5 rounded-xl border-2 text-[12px] font-medium transition-colors ${leftHanded === m.val
                   ? D ? "border-violet-500/70 bg-violet-500/12 text-violet-300" : "border-violet-500 bg-violet-50 text-violet-700"
                   : D ? "border-[#ffffff08] text-white/50 hover:border-[#ffffff18]" : "border-[#d1d5db] text-gray-500 hover:border-[#9ca3af]"
                   }`}>
@@ -1951,7 +1958,7 @@ export default function Home() {
             <div className="grid grid-cols-3 gap-1 mt-2">
               {[{ label: "- 1 -", val: "- {n} -" }, { label: "1", val: "{n}" }, { label: "Hal. 1", val: "Hal. {n}" }].map((f) => (
                 <button key={f.val} onClick={() => setPageNumberFormat(f.val)}
-                  className={`py-1.5 rounded-lg text-[11px] font-medium transition-all border ${pageNumberFormat === f.val
+                  className={`py-1.5 rounded-lg text-[11px] font-medium transition-colors border ${pageNumberFormat === f.val
                     ? D ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-emerald-600 text-white border-emerald-600"
                     : D ? "bg-white/4 text-white/50 border-[#ffffff08] hover:border-[#ffffff15]" : "bg-white text-gray-600 border-[#d1d5db] hover:bg-gray-50"
                     }`}>
@@ -2025,7 +2032,7 @@ export default function Home() {
 
             {/* Ini Gelembung yang meluncur (Sliding Pill) */}
             <div
-              className={`absolute top-1 bottom-1 w-[calc(33.33%-4px)] rounded-lg shadow-sm transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${D ? "bg-[#2c2c35]" : "bg-white"}`}
+              className={`absolute top-1 bottom-1 w-[calc(33.33%-4px)] rounded-lg shadow-sm transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${D ? "bg-[#2c2c35]" : "bg-white"}`}
               style={{
                 left: config.wordSpacing === -5 ? '4px' : config.wordSpacing === 8 ? 'calc(33.33% + 2px)' : 'calc(66.66% - 1px)'
               }}
@@ -2049,7 +2056,7 @@ export default function Home() {
           <div className="grid grid-cols-3 gap-1.5 mb-2.5">
             {INK_PRESETS.map((p) => (
               <button key={p.color} onClick={() => updateConfig({ ...config, color: p.color })}
-                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border-2 transition-all text-[11px] font-medium ${config.color === p.color
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border-2 transition-colors text-[11px] font-medium ${config.color === p.color
                   ? D ? "border-violet-500/70 bg-violet-500/12 text-white" : "border-violet-500 bg-violet-50 text-violet-700"
                   : D ? "border-[#ffffff08] text-white/55 hover:border-[#ffffff18]" : "border-[#d1d5db] text-gray-600 hover:border-[#9ca3af] hover:bg-gray-50"
                   }`}>
@@ -2077,7 +2084,7 @@ export default function Home() {
 
       <SidebarSection title="Template Folio" isDark={D}>
         <div {...getRootProps()}
-          className={`p-4 border-2 border-dashed rounded-xl text-center cursor-pointer transition-all ${isAnalyzingFolio
+          className={`p-4 border-2 border-dashed rounded-xl text-center cursor-pointer transition-colors ${isAnalyzingFolio
             ? "border-indigo-500/50 bg-indigo-500/5 cursor-not-allowed"
             : isDragActive
               ? "border-violet-500 bg-violet-50 dark:bg-violet-500/10"
@@ -2111,14 +2118,14 @@ export default function Home() {
             </div>
           ) : (
             folios.map((folio) => (
-              <label key={folio.id} className={`cursor-pointer block rounded-xl overflow-hidden transition-all duration-200 ${selectedFolio === folio.id ? c.folioRing : c.folioUnsel}`}>
+              <label key={folio.id} className={`cursor-pointer block rounded-xl overflow-hidden transition-colors duration-200 ${selectedFolio === folio.id ? c.folioRing : c.folioUnsel}`}>
                 <input type="radio" name="folio" value={folio.id} checked={selectedFolio === folio.id}
                   onChange={(e) => handleFolioChangeWithAnalyze(e.target.value)} className="hidden" />
                 <div className="relative group">
                   <img src={folio.preview.startsWith("http") ? folio.preview : `${API_URL}${folio.preview}`}
                     alt={folio.name} className="w-full h-20 object-cover transition-transform duration-500 group-hover:scale-105" />
                   {selectedFolio === folio.id && (
-                    <div className="absolute inset-0 bg-violet-500/20 flex items-center justify-center backdrop-blur-[1px] transition-all">
+                    <div className="absolute inset-0 bg-violet-500/20 flex items-center justify-center backdrop-blur-[1px] transition-colors">
                       <div className="bg-violet-500 rounded-full p-1 shadow-lg transform scale-100 animate-in zoom-in duration-200">
                         <CheckCircle2 className="w-4 h-4 text-white" />
                       </div>
@@ -2135,12 +2142,12 @@ export default function Home() {
 
         <button
           onClick={() => { setUseDoubleFolio(!useDoubleFolio); setSelectedFolioEven(""); }}
-          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-medium transition-all ${useDoubleFolio
+          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-medium transition-colors ${useDoubleFolio
             ? D ? "border-violet-500/50 bg-violet-500/10 text-violet-400" : "border-violet-500 bg-violet-50 text-violet-700"
             : c.btn}`}>
           <span>📖 Folio Bolak-balik</span>
-          <div className={`w-8 h-4 rounded-full transition-all ${useDoubleFolio ? "bg-violet-500" : D ? "bg-white/20" : "bg-gray-300"}`}>
-            <div className={`w-3 h-3 rounded-full bg-white mt-0.5 transition-all ${useDoubleFolio ? "ml-4" : "ml-0.5"}`} />
+          <div className={`w-8 h-4 rounded-full transition-colors ${useDoubleFolio ? "bg-violet-500" : D ? "bg-white/20" : "bg-gray-300"}`}>
+            <div className={`w-3 h-3 rounded-full bg-white mt-0.5 transition-colors ${useDoubleFolio ? "ml-4" : "ml-0.5"}`} />
           </div>
         </button>
 
@@ -2149,7 +2156,7 @@ export default function Home() {
             <p className={`text-[10px] mb-1.5 ${c.ts}`}>Folio halaman genap:</p>
             <div className="space-y-1.5 max-h-40 overflow-y-auto">
               {folios.map((folio) => (
-                <label key={folio.id} className={`cursor-pointer block rounded-xl overflow-hidden transition-all duration-200 ${selectedFolioEven === folio.id ? c.folioRing : c.folioUnsel}`}>
+                <label key={folio.id} className={`cursor-pointer block rounded-xl overflow-hidden transition-colors duration-200 ${selectedFolioEven === folio.id ? c.folioRing : c.folioUnsel}`}>
                   <input type="radio" name="folioEven" value={folio.id} checked={selectedFolioEven === folio.id}
                     onChange={(e) => setSelectedFolioEven(e.target.value)} className="hidden" />
                   <img src={folio.preview.startsWith("http") ? folio.preview : `${API_URL}${folio.preview}`}
@@ -2166,7 +2173,7 @@ export default function Home() {
       </SidebarSection>
 
       <button onClick={() => setShowConfig(!showConfig)}
-        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-xs font-medium transition-all ${showConfig ? c.btnActive : c.btn}`}>
+        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-xs font-medium transition-colors ${showConfig ? c.btnActive : c.btn}`}>
         <div className="flex items-center gap-2">
           <Settings className="w-3.5 h-3.5" />
           <span>Advanced Config</span>
@@ -2179,7 +2186,7 @@ export default function Home() {
           <div className="flex items-center justify-between mb-2.5">
             <p className={`text-[10.5px] font-semibold uppercase tracking-widest ${c.label}`}>Advanced Config</p>
             <button onClick={() => updateConfig(DEFAULT_CONFIG)}
-              className={`flex items-center gap-1 text-[10.5px] px-2 py-1 rounded-lg transition-all ${c.btn}`}>
+              className={`flex items-center gap-1 text-[10.5px] px-2 py-1 rounded-lg transition-colors ${c.btn}`}>
               <RefreshCw className="w-3 h-3" />Reset
             </button>
           </div>
@@ -2342,11 +2349,11 @@ export default function Home() {
 
             {/* 5. Tombol Aksi */}
             <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } }} className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto px-6">
-              <button onClick={handleLogin} className={`w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-lg transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 shadow-lg ${isDark ? "bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]" : "bg-violet-600 text-white shadow-violet-500/40"}`}>
+              <button onClick={handleLogin} className={`w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-lg transition-colors hover:scale-105 active:scale-95 flex items-center justify-center gap-2 shadow-lg ${isDark ? "bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]" : "bg-violet-600 text-white shadow-violet-500/40"}`}>
                 <LogIn className="w-5 h-5" />
                 Mulai Gratis Sekarang
               </button>
-              <button onClick={() => setShowEditor(true)} className={`w-full sm:w-auto px-8 py-4 rounded-2xl border font-bold text-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${isDark ? "border-[#ffffff15] text-white hover:bg-white/10" : "border-violet-300 text-violet-700 hover:bg-violet-100 bg-white/60"}`}>
+              <button onClick={() => setShowEditor(true)} className={`w-full sm:w-auto px-8 py-4 rounded-2xl border font-bold text-lg transition-colors active:scale-95 flex items-center justify-center gap-2 ${isDark ? "border-[#ffffff15] text-white hover:bg-white/10" : "border-violet-300 text-violet-700 hover:bg-violet-100 bg-white/60"}`}>
                 <PenTool className="w-5 h-5 opacity-70" />
                 Coba Demo Editor
               </button>
@@ -2415,7 +2422,7 @@ export default function Home() {
                       <h3 className={`font-bold text-lg ${c.tp}`}>Potong Area Tulisan</h3>
                       <p className={`text-xs ${c.ts}`}>Buang area meja/background agar AI fokus membaca tulisanmu.</p>
                     </div>
-                    <button onClick={() => setIsCropping(false)} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${c.btn}`}>
+                    <button onClick={() => setIsCropping(false)} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${c.btn}`}>
                       <X className="w-4 h-4" />
                     </button>
                   </div>
@@ -2427,7 +2434,7 @@ export default function Home() {
                   </div>
 
                   <div className="flex justify-end gap-3 mt-5 flex-shrink-0">
-                    <button onClick={() => setIsCropping(false)} className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${c.btn}`}>
+                    <button onClick={() => setIsCropping(false)} className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${c.btn}`}>
                       Batal
                     </button>
                     <button onClick={async () => {
@@ -2445,7 +2452,7 @@ export default function Home() {
                       } else {
                         toast.error("Tarik kotak untuk memilih area tulisan!");
                       }
-                    }} className={`px-6 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r ${c.accent} text-white shadow-lg hover:scale-105 active:scale-95 transition-all`}>
+                    }} className={`px-6 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r ${c.accent} text-white shadow-lg hover:scale-105 active:scale-95 transition-colors`}>
                       <div className="flex items-center gap-2"><Sparkles className="w-4 h-4" /> Analisis AI</div>
                     </button>
                   </div>
@@ -2498,7 +2505,7 @@ export default function Home() {
                   </div>
 
                   <div className="flex gap-2">
-                    <button onClick={() => setPendingHwConfig(null)} className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${c.btn}`}>
+                    <button onClick={() => setPendingHwConfig(null)} className={`flex-1 py-2 rounded-xl text-xs font-medium transition-colors ${c.btn}`}>
                       Batal
                     </button>
                     <button onClick={() => {
@@ -2552,12 +2559,12 @@ export default function Home() {
                               navigator.clipboard.writeText(aiDraftResult);
                               toast.success("Teks AI disalin!");
                             }}
-                            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all border ${c.btn}`}>
+                            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-colors border ${c.btn}`}>
                             <Copy className="w-3 h-3" />Salin
                           </button>
                           <button
                             onClick={() => setAiDraftResult("")}
-                            className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${D ? "text-white/30 hover:text-white/60" : "text-gray-300 hover:text-gray-500"}`}>
+                            className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${D ? "text-white/30 hover:text-white/60" : "text-gray-300 hover:text-gray-500"}`}>
                             <X className="w-3 h-3" />
                           </button>
                         </div>
@@ -2576,7 +2583,7 @@ export default function Home() {
                             setAiPrompt("");
                             toast.success("Teks berhasil ditambahkan ke editor! ✨");
                           }}
-                          className={`w-full py-2 rounded-xl text-xs font-bold bg-gradient-to-r ${c.accent} text-white hover:opacity-90 active:scale-95 transition-all`}>
+                          className={`w-full py-2 rounded-xl text-xs font-bold bg-gradient-to-r ${c.accent} text-white hover:opacity-90 active:scale-95 transition-colors`}>
                           Kirim ke Editor →
                         </button>
                       </div>
@@ -2608,7 +2615,7 @@ export default function Home() {
                         setIsAiDrafting(false);
                       }
                     }}
-                    className={`w-full mt-4 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r ${c.accent} text-white transition-all flex justify-center items-center gap-2 ${isAiDrafting ? "opacity-70" : "hover:scale-[1.02] active:scale-95"}`}>
+                    className={`w-full mt-4 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r ${c.accent} text-white transition-colors flex justify-center items-center gap-2 ${isAiDrafting ? "opacity-70" : "hover:scale-[1.02] active:scale-95"}`}>
                     {isAiDrafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                     {isAiDrafting ? "AI Sedang Menulis..." : "Buat Teks"}
                   </button>
@@ -2634,7 +2641,7 @@ export default function Home() {
                   transition={{ type: "spring", damping: 28, stiffness: 300 }}
                   className={`fixed top-0 left-0 bottom-0 w-[300px] md:w-[320px] max-w-[85vw] z-[70] overflow-y-auto border-r ${c.sidebar}`}
                 >
-                  <div className={`sticky top-0 flex items-center justify-between px-4 h-14 border-b ${c.divider} ${D ? "bg-[#121217]" : "bg-white"} z-[80]`}>
+                  <div className={`sticky top-0 flex items-center justify-between px-4 h-14 border-b ${c.divider} ${D ? "bg-black/70 backdrop-blur-3xl" : "bg-white"} z-[80]`}>
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-lg flex items-center justify-center">
                         <PenTool className="w-3 h-3 text-white" />
@@ -2647,6 +2654,29 @@ export default function Home() {
                     </button>
                   </div>
                   {renderSidebarContent()}
+
+                  {/* ── MOBILE LOGOUT BUTTON ── */}
+                  <div className={`mt-auto border-t ${c.divider} p-4 mt-8 ${D ? "bg-black/70 backdrop-blur-3xl" : "bg-gray-50 bg-opacity-80"}`}>
+                    {user ? (
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <span className={`text-[11px] ${c.ts}`}>Masuk sebagai:</span>
+                          <span className={`text-[12px] font-bold ${c.tp} truncate max-w-[180px]`}>{user.email}</span>
+                        </div>
+                        <button onClick={async () => { setMobileSidebarOpen(false); await handleLogout(); }}
+                          className="p-2.5 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500/20 transition-colors">
+                          <LogOut className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => { setMobileSidebarOpen(false); handleLogin(); }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm transition-colors hover:bg-indigo-700">
+                        <LogIn className="w-4 h-4" />
+                        <span>Login Cloud</span>
+                      </button>
+                    )}
+                  </div>
+
                 </motion.aside>
               </>
             )}
@@ -2696,7 +2726,7 @@ export default function Home() {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex gap-1.5">
                       {[0, 1, 2, 3].map(i => (
-                        <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === onboardingStep ? "w-6 bg-violet-500" : i < onboardingStep ? "w-3 bg-violet-300" : "w-3 bg-gray-300 dark:bg-white/10"}`} />
+                        <div key={i} className={`h-1.5 rounded-full transition-colors duration-300 ${i === onboardingStep ? "w-6 bg-violet-500" : i < onboardingStep ? "w-3 bg-violet-300" : "w-3 bg-gray-300 dark:bg-white/10"}`} />
                       ))}
                     </div>
                     <button onClick={() => { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); }}
@@ -2714,12 +2744,12 @@ export default function Home() {
                   <div className="flex gap-2">
                     {onboardingStep > 0 && (
                       <button onClick={handlePrevOnboardingStep}
-                        className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all ${isDark ? "border-white/10 text-white/60 hover:bg-white/5" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                        className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${isDark ? "border-white/10 text-white/60 hover:bg-white/5" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
                         ← Kembali
                       </button>
                     )}
                     <button onClick={handleNextOnboardingStep}
-                      className="flex-1 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 transition-all">
+                      className="flex-1 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 transition-colors">
                       {onboardingStep < 3 ? "Lanjut →" : "Mulai Sekarang! 🚀"}
                     </button>
                   </div>
@@ -2770,7 +2800,7 @@ export default function Home() {
                   </div>
                   <button
                     onClick={() => { setShowShortcuts(false); setShowOnboarding(true); setOnboardingStep(0); }}
-                    className={`w-full mt-4 py-2 rounded-xl text-xs font-medium border transition-all ${c.btn}`}>
+                    className={`w-full mt-4 py-2 rounded-xl text-xs font-medium border transition-colors ${c.btn}`}>
                     Lihat Tutorial Onboarding
                   </button>
                 </motion.div>
@@ -2820,7 +2850,7 @@ export default function Home() {
                       { name: "Paket Deadline", energy: 50, price: "15.000", color: "violet", tag: "Populer" },
                       { name: "Paket Sultan", energy: 150, price: "35.000", color: "amber", tag: "Terbaik" },
                     ].map((tier) => (
-                      <div key={tier.name} className={`flex items-center justify-between p-2.5 sm:p-3 rounded-2xl border transition-all ${tier.tag === "Populer"
+                      <div key={tier.name} className={`flex items-center justify-between p-2.5 sm:p-3 rounded-2xl border transition-colors ${tier.tag === "Populer"
                         ? D ? "bg-violet-500/10 border-violet-500/40 ring-1 ring-violet-500/20" : "bg-violet-50 border-violet-200 ring-1 ring-violet-200"
                         : D ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-100"
                         }`}>
@@ -2844,7 +2874,7 @@ export default function Home() {
                   <div className="w-full mt-auto flex-shrink-0">
                     <a href="https://wa.me/6281234567890?text=Halo%20Admin%20HandWrite%20AI,%20saya%20sudah%20transfer%20via%20QRIS%20untuk%20Top%20Up%20Energi.%20Berikut%20bukti%20transfernya:"
                       target="_blank" rel="noopener noreferrer"
-                      className="w-full py-2.5 sm:py-3 rounded-xl font-bold text-white bg-[#25D366] hover:bg-[#1ebd5a] active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/30 text-xs sm:text-sm">
+                      className="w-full py-2.5 sm:py-3 rounded-xl font-bold text-white bg-[#25D366] hover:bg-[#1ebd5a] active:scale-95 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-green-500/30 text-xs sm:text-sm">
                       <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                       Konfirmasi via WhatsApp
                     </a>
@@ -2903,7 +2933,7 @@ export default function Home() {
 
                     <button
                       onClick={handleAdminUpdateEnergy}
-                      className="w-full py-3 rounded-xl font-bold text-white bg-violet-600 hover:bg-violet-700 shadow-lg shadow-violet-500/25 transition-all text-sm sm:text-base min-h-[44px]">
+                      className="w-full py-3 rounded-xl font-bold text-white bg-violet-600 hover:bg-violet-700 shadow-lg shadow-violet-500/25 transition-colors text-sm sm:text-base min-h-[44px]">
                       Update Energi Sekarang
                     </button>
 
@@ -2911,7 +2941,7 @@ export default function Home() {
                     <div className={`border-t pt-4 mt-2 ${D ? "border-white/10" : "border-gray-200"}`}>
                       <button
                         onClick={async () => { setShowAdminModal(false); await handleLogout(); }}
-                        className="w-full py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/25 transition-all text-sm sm:text-base min-h-[44px] flex items-center justify-center gap-2">
+                        className="w-full py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/25 transition-colors text-sm sm:text-base min-h-[44px] flex items-center justify-center gap-2">
                         <LogOut className="w-4 h-4" />
                         Logout dari Akun
                       </button>
@@ -2926,7 +2956,7 @@ export default function Home() {
           {fullscreenPage && (
             <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4 backdrop-blur-sm"
               onClick={() => setFullscreenPage(null)}>
-              <button className="absolute top-4 right-4 w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all"
+              <button className="absolute top-4 right-4 w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
                 onClick={() => setFullscreenPage(null)}>
                 <X className="w-5 h-5" />
               </button>
@@ -2937,7 +2967,7 @@ export default function Home() {
                 <img src={fullscreenPage.image} alt={`Halaman ${fullscreenPage.page}`} className="max-h-[88vh] max-w-[92vw] rounded-xl shadow-2xl object-contain" decoding="async" />
                 <div className="flex justify-center gap-3 mt-4">
                   <button onClick={() => handleDownloadSingle(fullscreenPage)}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-all">
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors">
                     <Download className="w-4 h-4" />Download
                   </button>
                 </div>
@@ -2949,7 +2979,7 @@ export default function Home() {
           <header className={`${c.header} border-b sticky top-0 z-50 transition-colors duration-200`}>
             {isGenerating && (
               <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-violet-500/10">
-                <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-all duration-500"
+                <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-[width] duration-500"
                   style={{ width: `${generateProgress}%` }} />
               </div>
             )}
@@ -2958,12 +2988,12 @@ export default function Home() {
               {/* LEFT: toggle + logo */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className={`hidden lg:flex w-8 h-8 rounded-lg items-center justify-center transition-all ${c.btn}`}>
+                  className={`hidden lg:flex w-8 h-8 rounded-lg items-center justify-center transition-colors ${c.btn}`}>
                   {sidebarOpen ? <PanelLeftClose className="w-3.5 h-3.5" /> : <PanelLeftOpen className="w-3.5 h-3.5" />}
                 </button>
                 {/* Ubah md:hidden menjadi lg:hidden di bawah ini */}
                 <button onClick={() => setMobileSidebarOpen(true)}
-                  className={`flex lg:hidden w-8 h-8 rounded-lg items-center justify-center transition-all ${c.btn}`}>
+                  className={`flex lg:hidden w-8 h-8 rounded-lg items-center justify-center transition-colors ${c.btn}`}>
                   <Menu className="w-3.5 h-3.5" />
                 </button>
 
@@ -3022,18 +3052,18 @@ export default function Home() {
                     <span className={`text-[11px] font-medium ${D ? "text-white/70" : "text-gray-600"}`}>
                       {user.user_metadata.full_name}
                     </span>
-                    <button onClick={handleLogout} title="Logout" className="p-1.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-all">
+                    <button onClick={handleLogout} title="Logout" className="p-1.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors">
                       <LogOut className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ) : (
-                  <button onClick={handleLogin} className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-all text-[11px] font-medium mr-2">
+                  <button onClick={handleLogin} className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors text-[11px] font-medium mr-2">
                     <LogIn className="w-3.5 h-3.5" />
                     <span>Login Cloud</span>
                   </button>
                 )}
                 <div title={backendOnline === null ? "Memeriksa..." : backendOnline ? "Backend terhubung" : "Backend offline"}
-                  className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-medium transition-all ${backendOnline === null
+                  className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-medium transition-colors ${backendOnline === null
                     ? D ? "border-[#ffffff10] text-white/30" : "border-gray-200 text-gray-400"
                     : backendOnline
                       ? D ? "border-emerald-500/20 bg-emerald-500/8 text-emerald-400" : "border-emerald-300 bg-emerald-50 text-emerald-700"
@@ -3043,7 +3073,7 @@ export default function Home() {
                   <span className="hidden lg:inline">{backendOnline === null ? "..." : backendOnline ? "Online" : "Offline"}</span>
                 </div>
                 {/* INDIKATOR ENERGI / ADMIN DASHBOARD */}
-                {user?.email === (process.env.NEXT_PUBLIC_DEV_EMAIL ?? "") ? (
+                {user?.email === (process.env.NEXT_PUBLIC_DEV_EMAIL || "sharulwrdn10@gmail.com") ? (
                   <div className="flex items-center gap-1">
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-l-lg border bg-violet-500/10 text-violet-500 border-violet-500/30 text-[10px] font-bold tracking-widest cursor-default">
                       <Zap className="w-3.5 h-3.5" fill="currentColor" />
@@ -3051,13 +3081,13 @@ export default function Home() {
                     </div>
                     <button
                       onClick={() => setShowAdminModal(true)}
-                      className="px-2 py-1.5 rounded-r-lg border border-l-0 bg-violet-600 text-white text-[9px] font-bold hover:bg-violet-700 transition-all">
+                      className="px-2 py-1.5 rounded-r-lg border border-l-0 bg-violet-600 text-white text-[9px] font-bold hover:bg-violet-700 transition-colors">
                       MANAGE
                     </button>
                   </div>
                 ) : (
                   <button onClick={() => setShowQrisModal(true)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-all ${energy < estimatedPages
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-colors ${energy < estimatedPages
                       ? "bg-rose-500/10 text-rose-500 border-rose-500/30 animate-pulse"
                       : D ? "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20" : "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
                       }`}>
@@ -3067,12 +3097,12 @@ export default function Home() {
                 )}
                 <button
                   onClick={() => setShowShortcuts(true)}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all text-[13px] font-bold ${c.btn}`}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors text-[13px] font-bold ${c.btn}`}
                   title="Keyboard Shortcuts">
                   ?
                 </button>
                 <button onClick={() => setIsDark(!isDark)}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${c.btn}`}>
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${c.btn}`}>
                   {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
                 </button>
               </div>
@@ -3109,7 +3139,7 @@ export default function Home() {
                 className={`flex flex-col border-r flex-shrink-0 ${c.sidebar} ${sidebarOpen
                   ? "lg:w-[340px] xl:w-[400px] 2xl:w-[440px] 3xl:w-[600px] 4xl:w-[700px]"
                   : "lg:w-[380px] xl:w-[440px] 2xl:w-[500px] 3xl:w-[700px] 4xl:w-[800px]"
-                  } transition-all duration-300`}>
+                  } transition-[width] duration-300`}>
 
                 {/* Editor header */}
                 <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} flex items-center justify-between ${D
@@ -3140,7 +3170,7 @@ export default function Home() {
                       whileTap={!(isGenerating || !text.trim() || !selectedFolio) ? { scale: 0.95 } : {}}
                       animate={isGenerating ? { boxShadow: ["0px 0px 0px rgba(139,92,246,0)", "0px 0px 20px rgba(139,92,246,0.6)", "0px 0px 0px rgba(139,92,246,0)"] } : {}}
                       transition={isGenerating ? { duration: 2, repeat: Infinity, ease: "easeInOut" } : { type: "spring", stiffness: 400, damping: 25 }}
-                      className={`relative flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl font-bold text-xs transition-all min-w-[110px] overflow-hidden ${isGenerating || !text.trim() || !selectedFolio
+                      className={`relative flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl font-bold text-xs transition-colors min-w-[110px] overflow-hidden ${isGenerating || !text.trim() || !selectedFolio
                         ? D ? "bg-[#ffffff05] text-white/30 cursor-not-allowed border border-[#ffffff0a]" : "bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-200"
                         : `bg-gradient-to-r ${c.accent} text-white shadow-[0_4px_12px_rgba(139,92,246,0.25)] hover:shadow-[0_8px_24px_rgba(139,92,246,0.4)]`
                         }`}>
@@ -3180,7 +3210,7 @@ export default function Home() {
                                 setInputText(t); setText(t); toast.success("Teks ditempel!");
                               } catch { toast.error("Tidak bisa akses clipboard"); }
                             }}
-                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-all whitespace-nowrap flex-shrink-0 ${c.btn}`}>
+                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${c.btn}`}>
                             <Clipboard className="w-3.5 h-3.5 flex-shrink-0" />
                             <span>Tempel</span>
                           </button>
@@ -3188,7 +3218,7 @@ export default function Home() {
                           {/* Tulis dengan AI */}
                           <button
                             onClick={() => setShowAiModal(true)}
-                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-all whitespace-nowrap flex-shrink-0 ${D
+                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${D
                               ? "bg-indigo-500/8 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/15 hover:border-indigo-500/35"
                               : "bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300"
                               }`}>
@@ -3200,7 +3230,7 @@ export default function Home() {
                           <button
                             onClick={handleAiExpand}
                             disabled={!text.trim() || isAiExpanding}
-                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-all whitespace-nowrap flex-shrink-0 ${!text.trim()
+                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${!text.trim()
                               ? "opacity-35 cursor-not-allowed " + c.btn
                               : D
                                 ? "bg-purple-500/10 text-purple-400 border-purple-500/30 hover:bg-purple-500/20"
@@ -3215,7 +3245,7 @@ export default function Home() {
                           <button
                             onClick={toggleListening}
                             title={isListening ? "Berhenti mendikte" : "Mulai mendikte"}
-                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-all whitespace-nowrap flex-shrink-0 ${isListening
+                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${isListening
                               ? "bg-red-500/15 text-red-400 border-red-500/30 animate-pulse"
                               : c.btn
                               }`}>
@@ -3238,12 +3268,12 @@ export default function Home() {
                                     <div className="flex gap-2">
                                       <button
                                         onClick={() => { setInputText(""); setText(""); toast.dismiss(t.id); toast.success("Teks berhasil dihapus!"); }}
-                                        className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-[10px] font-bold transition-all hover:bg-red-600 hover:scale-105 active:scale-95 shadow-md shadow-red-500/20">
+                                        className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-[10px] font-bold transition-colors hover:bg-red-600 hover:scale-105 active:scale-95 shadow-md shadow-red-500/20">
                                         Ya, Hapus
                                       </button>
                                       <button
                                         onClick={() => toast.dismiss(t.id)}
-                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all hover:scale-105 active:scale-95 ${D ? "bg-white/10 text-white hover:bg-white/20" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors hover:scale-105 active:scale-95 ${D ? "bg-white/10 text-white hover:bg-white/20" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
                                         Batal
                                       </button>
                                     </div>
@@ -3256,7 +3286,7 @@ export default function Home() {
                               });
                             }}
                             disabled={!text}
-                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-all whitespace-nowrap flex-shrink-0 ${!text
+                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${!text
                               ? "opacity-35 cursor-not-allowed " + c.btn
                               : D
                                 ? "hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25 " + c.btn
@@ -3270,7 +3300,7 @@ export default function Home() {
                           <button
                             onClick={handleSharePublicLink}
                             disabled={!text.trim()}
-                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-all whitespace-nowrap flex-shrink-0 ${!text.trim()
+                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${!text.trim()
                               ? "opacity-35 cursor-not-allowed " + c.btn
                               : D
                                 ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/20"
@@ -3312,7 +3342,7 @@ export default function Home() {
                             {wordCount.toLocaleString()} kata
                           </span>
                         </div>
-                        <span className={`text-[11px] font-bold tabular-nums px-2 py-0.5 rounded-lg border transition-all ${text.length > 45000
+                        <span className={`text-[11px] font-bold tabular-nums px-2 py-0.5 rounded-lg border transition-colors ${text.length > 45000
                           ? "bg-red-500/10 text-red-400 border-red-500/20"
                           : text.length > 30000
                             ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
@@ -3332,7 +3362,12 @@ export default function Home() {
                       value={inputText}
                       onChange={(val: string) => {
                         setInputText(val);
-                        setText(val);
+                        // OPTIMISASI INP: Beri jeda agar React bisa me-render text di UI dulu tanpa tersendat kalkulasi pagination
+                        setTimeout(() => {
+                          React.startTransition(() => {
+                            setText(val);
+                          });
+                        }, 50);
                       }}
                       onDragOver={(e: any) => e.preventDefault()}
                       onDrop={async (e: any) => {
@@ -3374,8 +3409,8 @@ export default function Home() {
                         }
                       }}
                       placeholder="Ketik atau paste teks di sini...&#10;&#10;Drag & drop file .txt atau .docx (Word) ⚡"
-                      className={`light-textarea w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-all duration-300 outline-none border ${D
-                        ? "bg-[#0a0a0c] border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50 focus:bg-[#0f0f12] shadow-inner"
+                      className={`light-textarea w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-colors duration-300 outline-none border transform-gpu ${D
+                        ? "bg-black/50 backdrop-blur-3xl border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50 focus:bg-black shadow-inner"
                         : "bg-gray-50/50 hover:bg-white border-gray-200/80 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400 focus:bg-white focus:shadow-[0_4px_24px_rgba(0,0,0,0.04)]"
                         }`}
                       style={{
@@ -3388,7 +3423,7 @@ export default function Home() {
                     {/* Char progress */}
                     {text.length > 0 && (
                       <div className={`h-1 rounded-full overflow-hidden ${D ? "bg-[#ffffff08]" : "bg-gray-200"}`}>
-                        <div className={`h-full rounded-full transition-all duration-500 ${text.length > 45000 ? "bg-red-500" : text.length > 30000 ? "bg-amber-500" : D ? "bg-emerald-500" : "bg-emerald-600"
+                        <div className={`h-full rounded-full transition-[width] duration-500 ${text.length > 45000 ? "bg-red-500" : text.length > 30000 ? "bg-amber-500" : D ? "bg-emerald-500" : "bg-emerald-600"
                           }`} style={{ width: `${Math.min(100, (text.length / 50000) * 100)}%` }} />
                       </div>
                     )}
@@ -3428,7 +3463,7 @@ export default function Home() {
                       <button
                         onClick={() => setSeed(Date.now())}
                         title="Ganti seed — hasil tulisan akan berbeda"
-                        className={`p-2.5 rounded-xl border transition-all ${c.btn}`}>
+                        className={`p-2.5 rounded-xl border transition-colors ${c.btn}`}>
                         <RefreshCw className="w-4 h-4" />
                       </button>
                     </div>
@@ -3553,7 +3588,7 @@ export default function Home() {
                               else setActivePageIndex(i => Math.max(0, i - 1));
                             }}
                             disabled={activePageIndex === 0}
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs border transition-all ${activePageIndex === 0
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs border transition-colors ${activePageIndex === 0
                               ? D ? "border-[#ffffff05] text-white/10 cursor-not-allowed" : "border-gray-100 text-gray-200 cursor-not-allowed"
                               : c.btn
                               }`}>←</button>
@@ -3566,7 +3601,7 @@ export default function Home() {
                               else setActivePageIndex(i => Math.min(generatedPages.length - 1, i + 1));
                             }}
                             disabled={activePageIndex === generatedPages.length - 1}
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs border transition-all ${activePageIndex === generatedPages.length - 1
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs border transition-colors ${activePageIndex === generatedPages.length - 1
                               ? D ? "border-[#ffffff05] text-white/10 cursor-not-allowed" : "border-gray-100 text-gray-200 cursor-not-allowed"
                               : c.btn
                               }`}>→</button>
@@ -3578,7 +3613,7 @@ export default function Home() {
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button
                         onClick={() => setActiveTab(activeTab === "history" ? "result" : "history")}
-                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${activeTab === "history" ? c.btnActive : c.btn}`}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${activeTab === "history" ? c.btnActive : c.btn}`}
                         title="Riwayat">
                         <Clock className="w-3.5 h-3.5" />
                         <span className="hidden lg:inline">Riwayat</span>
@@ -3586,7 +3621,7 @@ export default function Home() {
                       </button>
                       <button
                         onClick={() => setActiveTab(activeTab === "presets" ? "result" : "presets")}
-                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${activeTab === "presets" ? c.btnActive : c.btn}`}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${activeTab === "presets" ? c.btnActive : c.btn}`}
                         title="Preset">
                         <Save className="w-3.5 h-3.5" />
                         <span className="hidden lg:inline">Preset</span>
@@ -3601,7 +3636,7 @@ export default function Home() {
                 {/* Progress bar saat generating */}
                 {isGenerating && (
                   <div className={`h-1 w-full relative overflow-hidden ${D ? "bg-[#ffffff08]" : "bg-gray-100"}`}>
-                    <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-all duration-300" style={{ width: `${generateProgress}%` }} />
+                    <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-[width] duration-300" style={{ width: `${generateProgress}%` }} />
                   </div>
                 )}
 
@@ -3610,7 +3645,7 @@ export default function Home() {
 
                   {/* === FLOATING TOOLBAR (Figma Style) === */}
                   {generatedPages.length > 0 && activeTab === "result" && (
-                    <div className="absolute left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1.5 px-3 py-2.5 rounded-2xl shadow-2xl backdrop-blur-2xl border transition-all animate-in slide-in-from-bottom-4 duration-500"
+                    <div className="absolute left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1.5 px-3 py-2.5 rounded-2xl shadow-2xl backdrop-blur-2xl border transition-colors animate-in slide-in-from-bottom-4 duration-500"
                       style={{
                         bottom: "max(2rem, calc(2rem + env(safe-area-inset-bottom)))",
                         maxWidth: "calc(100vw - 2rem)",
@@ -3627,30 +3662,30 @@ export default function Home() {
 
                       {/* Zoom Controls */}
                       <div className={`flex items-center gap-1 rounded-xl p-1 ${D ? "bg-black/40" : "bg-gray-100/80"}`}>
-                        <button onClick={() => setZoomLevel(z => Math.max(40, z - 20))} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-white text-gray-600 hover:shadow-sm"}`}>
+                        <button onClick={() => setZoomLevel(z => Math.max(40, z - 20))} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-white text-gray-600 hover:shadow-sm"}`}>
                           <ZoomOut className="w-4 h-4" />
                         </button>
                         <span className={`text-xs font-mono w-10 text-center font-bold ${D ? "text-gray-200" : "text-gray-800"}`}>{zoomLevel}%</span>
-                        <button onClick={() => setZoomLevel(z => Math.min(200, z + 20))} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-white text-gray-600 hover:shadow-sm"}`}>
+                        <button onClick={() => setZoomLevel(z => Math.min(200, z + 20))} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-white text-gray-600 hover:shadow-sm"}`}>
                           <ZoomIn className="w-4 h-4" />
                         </button>
                       </div>
 
                       <div className={`w-px h-6 mx-1 ${D ? "bg-white/10" : "bg-gray-300"}`} />
 
-                      <button onClick={() => setFullscreenPage(generatedPages[activePageIndex])} className={`hidden sm:flex w-10 h-10 rounded-xl items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`} title="Fullscreen">
+                      <button onClick={() => setFullscreenPage(generatedPages[activePageIndex])} className={`hidden sm:flex w-10 h-10 rounded-xl items-center justify-center transition-colors ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`} title="Fullscreen">
                         <Maximize2 className="w-[18px] h-[18px]" />
                       </button>
-                      <button onClick={() => handleCopyImageToClipboard(generatedPages[activePageIndex])} className={`hidden sm:flex w-10 h-10 rounded-xl items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`} title="Copy Image">
+                      <button onClick={() => handleCopyImageToClipboard(generatedPages[activePageIndex])} className={`hidden sm:flex w-10 h-10 rounded-xl items-center justify-center transition-colors ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`} title="Copy Image">
                         <Copy className="w-[18px] h-[18px]" />
                       </button>
-                      <button onClick={() => setGeneratedPages([])} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${D ? "hover:bg-red-500/20 text-red-400" : "hover:bg-red-50 text-red-500"}`} title="Hapus">
+                      <button onClick={() => setGeneratedPages([])} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${D ? "hover:bg-red-500/20 text-red-400" : "hover:bg-red-50 text-red-500"}`} title="Hapus">
                         <X className="w-5 h-5" />
                       </button>
 
                       <div className={`hidden sm:block w-px h-6 mx-1 ${D ? "bg-white/10" : "bg-gray-300"}`} />
 
-                      <button onClick={() => handleDownloadSingle(generatedPages[activePageIndex])} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95 ${D ? "bg-violet-500 hover:bg-violet-400 text-white shadow-violet-500/25" : "bg-violet-600 hover:bg-violet-700 text-white shadow-violet-600/30"}`}>
+                      <button onClick={() => handleDownloadSingle(generatedPages[activePageIndex])} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-colors shadow-lg active:scale-95 ${D ? "bg-violet-500 hover:bg-violet-400 text-white shadow-violet-500/25" : "bg-violet-600 hover:bg-violet-700 text-white shadow-violet-600/30"}`}>
                         <Download className="w-4 h-4" />
                         <span>JPG</span>
                       </button>
@@ -3664,7 +3699,7 @@ export default function Home() {
                           if (rect) setExportDropdownPos({ top: rect.top, left: rect.left, height: rect.height, width: rect.width });
                           setShowExportDropdown(true);
                         }}
-                        className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all border ${showExportDropdown ? (D ? "bg-white/10 border-white/20" : "bg-gray-200 border-gray-300") : (D ? "border-transparent hover:bg-white/5" : "border-transparent hover:bg-gray-100")}`}>
+                        className={`flex items-center justify-center w-10 h-10 rounded-xl transition-colors border ${showExportDropdown ? (D ? "bg-white/10 border-white/20" : "bg-gray-200 border-gray-300") : (D ? "border-transparent hover:bg-white/5" : "border-transparent hover:bg-gray-100")}`}>
                         <ChevronDown className={`w-4 h-4 ${D ? "text-gray-300" : "text-gray-600"} transition-transform duration-300 ${showExportDropdown ? "rotate-180" : ""}`} />
                       </button>
                     </div>
@@ -3686,7 +3721,7 @@ export default function Home() {
                               setActivePageIndex(idx);
                             }
                           }}
-                          className={`flex-shrink-0 w-full rounded-lg overflow-hidden border-2 transition-all ${idx === activePageIndex
+                          className={`flex-shrink-0 w-full rounded-lg overflow-hidden border-2 transition-colors ${idx === activePageIndex
                             ? "border-violet-500 shadow-lg shadow-violet-500/25 scale-[1.03]"
                             : D ? "border-[#ffffff10] hover:border-violet-500/40" : "border-gray-200 hover:border-violet-300"
                             }`}
@@ -3846,7 +3881,7 @@ export default function Home() {
 
                               <button
                                 onClick={handleLoadDemo}
-                                className={`w-full mb-3 py-2.5 rounded-xl text-xs font-bold border-2 border-dashed transition-all hover:scale-[1.02] active:scale-95 ${D
+                                className={`w-full mb-3 py-2.5 rounded-xl text-xs font-bold border-2 border-dashed transition-colors hover:scale-[1.02] active:scale-95 ${D
                                   ? "border-violet-500/40 text-violet-400 hover:border-violet-500/70 hover:bg-violet-500/8"
                                   : "border-violet-400 text-violet-600 hover:border-violet-500 hover:bg-violet-50"
                                   }`}
@@ -3892,7 +3927,7 @@ export default function Home() {
                                     await supabase.from('user_history').delete().eq('user_id', user.id);
                                   }
                                 }}
-                                  className={`text-[11px] flex items-center gap-1 px-2 py-1 rounded-lg transition-all ${D ? "text-red-400/70 hover:bg-red-500/10 border border-[#ffffff08]" : "text-red-500 hover:bg-red-50 border border-red-200"}`}>
+                                  className={`text-[11px] flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${D ? "text-red-400/70 hover:bg-red-500/10 border border-[#ffffff08]" : "text-red-500 hover:bg-red-50 border border-red-200"}`}>
                                   <Trash2 className="w-3 h-3" />Hapus
                                 </button>
                               )}
@@ -3908,7 +3943,7 @@ export default function Home() {
                                 <p className={`text-sm ${c.tm}`}>Belum ada riwayat</p>
                               </div>
                             ) : history.map((item) => (
-                              <div key={item.id} className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${c.pillBorder} ${c.rowHover}`}>
+                              <div key={item.id} className={`flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer ${c.pillBorder} ${c.rowHover}`}>
                                 <div className={`w-14 h-20 rounded-lg overflow-hidden flex-shrink-0 border shadow-sm ${D ? "border-[#ffffff14]" : "border-gray-200"}`}>
                                   {item.thumbnail
                                     ? <img src={item.thumbnail} alt="" className="w-full h-full object-cover object-top" />
@@ -3930,11 +3965,11 @@ export default function Home() {
                                   <p className={`text-[9px] mt-1 ${c.ts}`}>{formatTime(item.timestamp)}</p>
                                   <div className="flex items-center gap-1 mt-2">
                                     <button onClick={() => restoreHistory(item)}
-                                      className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all border ${D ? "bg-indigo-500/12 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20" : "bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100"}`}>
+                                      className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors border ${D ? "bg-indigo-500/12 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20" : "bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100"}`}>
                                       Pulihkan
                                     </button>
                                     <button onClick={() => deleteHistory(item.id)}
-                                      className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ml-auto ${D ? "text-white/20 hover:bg-red-500/10 hover:text-red-400" : "text-gray-300 hover:bg-red-50 hover:text-red-500"}`}>
+                                      className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors ml-auto ${D ? "text-white/20 hover:bg-red-500/10 hover:text-red-400" : "text-gray-300 hover:bg-red-50 hover:text-red-500"}`}>
                                       <X className="w-3 h-3" />
                                     </button>
                                   </div>
@@ -3986,7 +4021,7 @@ export default function Home() {
                                 <p className={`text-sm ${c.tm}`}>Belum ada preset</p>
                               </div>
                             ) : presets.map((preset) => (
-                              <div key={preset.id} className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all ${c.pillBorder} ${c.rowHover}`}>
+                              <div key={preset.id} className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-colors ${c.pillBorder} ${c.rowHover}`}>
                                 <div className="w-7 h-7 rounded-lg flex-shrink-0 ring-1 ring-black/10" style={{ backgroundColor: preset.config.color }} />
                                 <div className="flex-1 min-w-0">
                                   <p className={`text-xs font-semibold truncate ${c.tp}`}>{preset.name}</p>
@@ -3994,11 +4029,11 @@ export default function Home() {
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <button onClick={() => loadPreset(preset)}
-                                    className={`px-2 py-1 rounded-md text-[10px] font-medium border transition-all ${D ? "bg-violet-500/12 text-violet-400 border-violet-500/20 hover:bg-violet-500/20" : "bg-violet-50 text-violet-600 border-violet-200"}`}>
+                                    className={`px-2 py-1 rounded-md text-[10px] font-medium border transition-colors ${D ? "bg-violet-500/12 text-violet-400 border-violet-500/20 hover:bg-violet-500/20" : "bg-violet-50 text-violet-600 border-violet-200"}`}>
                                     Muat
                                   </button>
                                   <button onClick={() => deletePreset(preset.id)}
-                                    className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${D ? "text-white/20 hover:bg-red-500/10 hover:text-red-400" : "text-gray-300 hover:bg-red-50 hover:text-red-500"}`}>
+                                    className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors ${D ? "text-white/20 hover:bg-red-500/10 hover:text-red-400" : "text-gray-300 hover:bg-red-50 hover:text-red-500"}`}>
                                     <X className="w-3 h-3" />
                                   </button>
                                 </div>
@@ -4021,7 +4056,7 @@ export default function Home() {
 
                   {/* Animasi Gelembung Sliding */}
                   <div
-                    className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg shadow-md transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${D ? "bg-[#2c2c35]" : "bg-white"}`}
+                    className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg shadow-xl ring-1 ring-white/10 transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${D ? "bg-white/10 backdrop-blur-md" : "bg-white"}`}
                     style={{ left: (activeTab === "result" ? "calc(50% + 2px)" : "4px") }}
                   />
 
@@ -4054,11 +4089,11 @@ export default function Home() {
 
                       // Sembunyikan dock jika scroll ke bawah lebih dari 50px
                       if (currentScrollY > lastScrollYRef.current && currentScrollY > 50) {
-                        setHideMobileDock(true);
+                        setHideMobileDock(prev => prev ? prev : true);
                       }
                       // Munculkan dock jika scroll ke atas
                       else if (currentScrollY < lastScrollYRef.current) {
-                        setHideMobileDock(false);
+                        setHideMobileDock(prev => !prev ? prev : false);
                       }
                       lastScrollYRef.current = currentScrollY;
                     }}
@@ -4112,8 +4147,8 @@ export default function Home() {
                         setText(val);
                       }}
                       placeholder="Ketik atau paste teks di sini..."
-                      className={`flex-1 w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-all duration-300 outline-none border ${D
-                        ? "bg-[#0a0a0c] border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50 focus:bg-[#0f0f12] shadow-inner"
+                      className={`flex-1 w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-colors duration-300 outline-none border ${D
+                        ? "bg-black/50 backdrop-blur-3xl border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50 focus:bg-black shadow-inner"
                         : "bg-gray-50/50 hover:bg-white border-gray-200/80 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400 focus:bg-white focus:shadow-[0_4px_24px_rgba(0,0,0,0.04)]"
                         }`}
                       style={{
@@ -4140,7 +4175,7 @@ export default function Home() {
                 const activePages = generatedPages.length > 0 ? generatedPages : streamedPages;
 
                 return (
-                  <div className={`flex-1 overflow-y-auto pb-24 scrollbar-thin ${D ? "bg-[#060608]" : "bg-gray-100"}`}>
+                  <div className={`flex-1 overflow-y-auto pb-24 scrollbar-thin ${D ? "bg-black" : "bg-gray-100"}`}>
                     {activePages.length > 0 ? (
                       <div className="p-4 flex flex-col items-center">
 
@@ -4229,7 +4264,7 @@ export default function Home() {
                           animate={{ y: 0, opacity: 1 }}
                           className="flex items-center p-1.5 rounded-full shadow-2xl backdrop-blur-xl border overflow-hidden pointer-events-auto"
                           style={{
-                            background: D ? "rgba(15,15,22,0.85)" : "rgba(255,255,255,0.95)",
+                            background: D ? "rgba(0,0,0,0.65)" : "rgba(255,255,255,0.95)",
                             borderColor: D ? "rgba(255,255,255,0.1)" : "rgba(139,92,246,0.2)",
                             boxShadow: D ? "0 12px 40px rgba(0,0,0,0.6)" : "0 12px 40px rgba(139,92,246,0.2)"
                           }}
@@ -4249,7 +4284,7 @@ export default function Home() {
                           ) : (
                             /* ── STATE 2: SELESAI (TOOLS MUNCUL) ── */
                             <motion.div layout className="flex items-center">
-                              <button onClick={() => setActiveTab("editor" as any)} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`}>
+                              <button onClick={() => setActiveTab("editor" as any)} className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`}>
                                 <PenTool className="w-4 h-4" />
                               </button>
 
@@ -4257,13 +4292,13 @@ export default function Home() {
 
                               {activePages.length > 1 && (
                                 <>
-                                  <button onClick={() => setActivePageIndex(i => Math.max(0, i - 1))} disabled={activePageIndex === 0} className={`w-8 h-10 flex items-center justify-center transition-all ${activePageIndex === 0 ? "opacity-30" : "text-violet-500"}`}>
+                                  <button onClick={() => setActivePageIndex(i => Math.max(0, i - 1))} disabled={activePageIndex === 0} className={`w-8 h-10 flex items-center justify-center transition-colors ${activePageIndex === 0 ? "opacity-30" : "text-violet-500"}`}>
                                     <ChevronDown className="w-4 h-4 rotate-90" />
                                   </button>
                                   <span className={`text-[11px] font-bold font-mono px-1 ${c.tp}`}>
                                     {activePageIndex + 1}/{activePages.length}
                                   </span>
-                                  <button onClick={() => setActivePageIndex(i => Math.min(activePages.length - 1, i + 1))} disabled={activePageIndex === activePages.length - 1} className={`w-8 h-10 flex items-center justify-center transition-all ${activePageIndex === activePages.length - 1 ? "opacity-30" : "text-violet-500"}`}>
+                                  <button onClick={() => setActivePageIndex(i => Math.min(activePages.length - 1, i + 1))} disabled={activePageIndex === activePages.length - 1} className={`w-8 h-10 flex items-center justify-center transition-colors ${activePageIndex === activePages.length - 1 ? "opacity-30" : "text-violet-500"}`}>
                                     <ChevronDown className="w-4 h-4 -rotate-90" />
                                   </button>
                                   <div className={`w-px h-5 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
@@ -4272,11 +4307,11 @@ export default function Home() {
 
                               <div className="ml-1">
                                 {mobileZoom !== 100 ? (
-                                  <button onClick={() => setMobileZoom(100)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-amber-500/15 text-amber-500 hover:bg-amber-500/25 text-[11px] font-bold transition-all">
+                                  <button onClick={() => setMobileZoom(100)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-amber-500/15 text-amber-500 hover:bg-amber-500/25 text-[11px] font-bold transition-colors">
                                     <ZoomOut className="w-3.5 h-3.5" /><span>Reset ({mobileZoom}%)</span>
                                   </button>
                                 ) : (
-                                  <button onClick={() => handleDownloadSingle(activePages[activePageIndex])} className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[11px] font-bold text-white shadow-lg active:scale-95 transition-all bg-gradient-to-r ${c.accent}`}>
+                                  <button onClick={() => handleDownloadSingle(activePages[activePageIndex])} className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[11px] font-bold text-white shadow-lg active:scale-95 transition-colors bg-gradient-to-r ${c.accent}`}>
                                     <Download className="w-3.5 h-3.5" /><span>Simpan</span>
                                   </button>
                                 )}
@@ -4317,14 +4352,14 @@ export default function Home() {
                     : "bg-white/98 border-violet-200 shadow-[0_16px_48px_rgba(139,92,246,0.2)]"}`}>
                   <div className="p-1">
                     <button onClick={() => { handleDownloadAllPng(); setShowExportDropdown(false); }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${c.rowHover} ${c.tm}`}>
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm}`}>
                       <div className="w-6 h-6 rounded-md flex items-center justify-center bg-violet-500/15">
                         <Download className="w-3.5 h-3.5 text-violet-500" />
                       </div>Semua JPG
                     </button>
                     <button onClick={() => { handleDownloadZip(); setShowExportDropdown(false); }}
                       disabled={isDownloadingZip}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${c.rowHover} ${c.tm} ${isDownloadingZip ? "opacity-50" : ""}`}>
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm} ${isDownloadingZip ? "opacity-50" : ""}`}>
                       <div className="w-6 h-6 rounded-md flex items-center justify-center bg-emerald-500/15">
                         {isDownloadingZip ? <Loader2 className="w-3.5 h-3.5 text-emerald-500 animate-spin" /> : <Package className="w-3.5 h-3.5 text-emerald-500" />}
                       </div>ZIP Archive
@@ -4332,14 +4367,14 @@ export default function Home() {
                     <div className={`my-1 h-px ${D ? "bg-white/8" : "bg-gray-100"}`} />
                     <button onClick={() => { handleExportPdf("high"); setShowExportDropdown(false); }}
                       disabled={isExportingPdf}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${c.rowHover} ${c.tm} ${isExportingPdf ? "opacity-50" : ""}`}>
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm} ${isExportingPdf ? "opacity-50" : ""}`}>
                       <div className="w-6 h-6 rounded-md flex items-center justify-center bg-amber-500/15">
                         {isExportingPdf ? <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin" /> : <FileDown className="w-3.5 h-3.5 text-amber-500" />}
                       </div>PDF (Resolusi Tinggi / Cetak)
                     </button>
                     <button onClick={() => { handleExportPdf("low"); setShowExportDropdown(false); }}
                       disabled={isExportingPdf}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${c.rowHover} ${c.tm} ${isExportingPdf ? "opacity-50" : ""}`}>
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm} ${isExportingPdf ? "opacity-50" : ""}`}>
                       <div className="w-6 h-6 rounded-md flex items-center justify-center bg-rose-500/15">
                         {isExportingPdf ? <Loader2 className="w-3.5 h-3.5 text-rose-500 animate-spin" /> : <FileDown className="w-3.5 h-3.5 text-rose-500" />}
                       </div>PDF (Hemat Kuota / WA)
@@ -4360,14 +4395,14 @@ export default function Home() {
                         toast.success("PNG transparan berhasil!", { id: tid });
                       } catch { toast.error("Gagal export", { id: tid }); }
                     }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${c.rowHover} ${c.tm}`}>
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm}`}>
                       <div className="w-6 h-6 rounded-md flex items-center justify-center bg-purple-500/15">
                         <ImageIcon className="w-3.5 h-3.5 text-purple-500" />
                       </div>PNG Transparan
                     </button>
                     <button onClick={() => { handleExportDocx(); setShowExportDropdown(false); }}
                       disabled={isExportingDocx}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${c.rowHover} ${c.tm} ${isExportingDocx ? "opacity-50" : ""}`}>
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm} ${isExportingDocx ? "opacity-50" : ""}`}>
                       <div className="w-6 h-6 rounded-md flex items-center justify-center bg-blue-500/15">
                         {isExportingDocx ? <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" /> : <FileText className="w-3.5 h-3.5 text-blue-500" />}
                       </div>Word (.docx)
@@ -4382,10 +4417,10 @@ export default function Home() {
           <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden pointer-events-none px-4 safe-area-pb flex justify-center">
 
             {/* Dock Kaca (Glassmorphism) */}
-            <div className={`glass-panel w-full max-w-sm flex items-center gap-3 px-3 py-2.5 rounded-2xl pointer-events-auto transition-all duration-500 ease-in-out ${activeTab === "result" || hideMobileDock ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}>
+            <div className={`glass-panel w-full max-w-sm flex items-center gap-3 px-3 py-2.5 rounded-2xl pointer-events-auto transition-[transform,opacity] duration-500 ease-in-out ${activeTab === "result" || hideMobileDock ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}>
               {/* Ubah md:hidden menjadi lg:hidden di bawah ini */}
               <button onClick={() => setMobileSidebarOpen(true)}
-                className={`flex lg:hidden w-8 h-8 rounded-lg items-center justify-center transition-all ${c.btn}`}>
+                className={`flex lg:hidden w-8 h-8 rounded-lg items-center justify-center transition-colors ${c.btn}`}>
                 <Menu className="w-3.5 h-3.5" />
               </button>
 
@@ -4402,7 +4437,7 @@ export default function Home() {
                 </span>
                 {isGenerating && (
                   <div className="absolute -bottom-2.5 left-0 right-0 h-[2px] opacity-70">
-                    <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-all duration-500" style={{ width: `${generateProgress}%` }} />
+                    <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-[width] duration-500" style={{ width: `${generateProgress}%` }} />
                   </div>
                 )}
               </div>
@@ -4410,7 +4445,7 @@ export default function Home() {
               {generatedPages.length > 0 && typeof navigator !== "undefined" && !!navigator.share && (
                 <button
                   onClick={() => handleSharePage(generatedPages[activePageIndex])}
-                  className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 transition-all ${c.btn}`}
+                  className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 transition-colors ${c.btn}`}
                   title="Bagikan ke WA/Telegram"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4421,7 +4456,7 @@ export default function Home() {
               )}
 
               <button onClick={handleGenerate} disabled={isGenerating || !text.trim() || !selectedFolio}
-                className={`flex items-center gap-1.5 px-5 py-3 rounded-xl font-bold text-sm transition-all flex-shrink-0 shadow-lg ${isGenerating || !text.trim() || !selectedFolio
+                className={`flex items-center gap-1.5 px-5 py-3 rounded-xl font-bold text-sm transition-colors flex-shrink-0 shadow-lg ${isGenerating || !text.trim() || !selectedFolio
                   ? D ? "bg-white/4 text-white/20 cursor-not-allowed border border-[#ffffff06] shadow-none" : "bg-gray-100 text-gray-300 cursor-not-allowed border border-gray-200 shadow-none"
                   : `bg-gradient-to-r ${c.accent} text-white hover:opacity-90 active:scale-95`
                   }`}>
