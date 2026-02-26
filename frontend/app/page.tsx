@@ -3074,14 +3074,14 @@ export default function Home() {
                 </div>
                 {/* INDIKATOR ENERGI / ADMIN DASHBOARD */}
                 {user?.email === (process.env.NEXT_PUBLIC_DEV_EMAIL || "sharulwrdn10@gmail.com") ? (
-                  <div className="flex items-center gap-1">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-l-lg border bg-violet-500/10 text-violet-500 border-violet-500/30 text-[10px] font-bold tracking-widest cursor-default">
-                      <Zap className="w-3.5 h-3.5" fill="currentColor" />
-                      <span>DEV</span>
+                  <div className="flex items-center gap-0.5 sm:gap-1">
+                    <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-3 py-1.5 rounded-l-lg border bg-violet-500/10 text-violet-500 border-violet-500/30 text-[9px] sm:text-[10px] font-bold tracking-widest cursor-default">
+                      <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="currentColor" />
+                      <span className="hidden sm:inline">DEV</span>
                     </div>
                     <button
                       onClick={() => setShowAdminModal(true)}
-                      className="px-2 py-1.5 rounded-r-lg border border-l-0 bg-violet-600 text-white text-[9px] font-bold hover:bg-violet-700 transition-colors">
+                      className="px-1.5 sm:px-2 py-1.5 rounded-r-lg border border-l-0 bg-violet-600 text-white text-[8px] sm:text-[9px] font-bold hover:bg-violet-700 transition-colors">
                       MANAGE
                     </button>
                   </div>
@@ -4051,12 +4051,12 @@ export default function Home() {
             {/* ══ MOBILE & TABLET: Editor + Output tabs (< lg) ══ */}
             <div className="flex lg:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
               {/* Mobile tab switcher (Modern iOS Style) */}
-              <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} ${D ? "glass-panel" : "bg-white/80 backdrop-blur-md"}`}>
-                <div className={`flex p-1 rounded-xl relative ${D ? "bg-black/30 shadow-inner" : "bg-black/5 shadow-inner"}`}>
+              <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} ${D ? "bg-black/80 backdrop-blur-3xl" : "glass-panel"}`}>
+                <div className={`flex p-1 rounded-xl relative ${D ? "bg-[#111] shadow-inner" : "bg-black/5 shadow-inner"}`}>
 
                   {/* Animasi Gelembung Sliding */}
                   <div
-                    className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg shadow-xl ring-1 ring-white/10 transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${D ? "bg-white/10 backdrop-blur-md" : "bg-white"}`}
+                    className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg shadow-xl transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${D ? "bg-[#222]" : "bg-white"}`}
                     style={{ left: (activeTab === "result" ? "calc(50% + 2px)" : "4px") }}
                   />
 
@@ -4417,7 +4417,7 @@ export default function Home() {
           <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden pointer-events-none px-4 safe-area-pb flex justify-center">
 
             {/* Dock Kaca (Glassmorphism) */}
-            <div className={`glass-panel w-full max-w-sm flex items-center gap-3 px-3 py-2.5 rounded-2xl pointer-events-auto transition-[transform,opacity] duration-500 ease-in-out ${activeTab === "result" || hideMobileDock ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}>
+            <div className={`w-full max-w-sm flex items-center gap-3 px-3 py-2.5 rounded-2xl pointer-events-auto transition-[transform,opacity] duration-500 ease-in-out ${activeTab === "result" || hideMobileDock ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"} ${D ? "liquid-glass shadow-2xl" : "glass-panel"}`}>
               {/* Ubah md:hidden menjadi lg:hidden di bawah ini */}
               <button onClick={() => setMobileSidebarOpen(true)}
                 className={`flex lg:hidden w-8 h-8 rounded-lg items-center justify-center transition-colors ${c.btn}`}>
