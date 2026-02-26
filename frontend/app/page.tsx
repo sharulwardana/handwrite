@@ -386,6 +386,8 @@ export default function Home() {
 
   // Cek apakah user sudah login saat web dibuka
   useEffect(() => {
+    setIsAppleDevice(/iPhone|iPad|iPod|Mac/i.test(navigator.userAgent));
+
     supabase.auth.getUser().then(({ data, error }: { data: any; error: any }) => {
       if (!error && data?.user) {
         setUser(data.user);
@@ -499,8 +501,7 @@ export default function Home() {
   const [isLoadingFonts, setIsLoadingFonts] = useState(true);
   const [isLoadingFolios, setIsLoadingFolios] = useState(true);
 
-  // ── Area 3: OS Detection untuk tema spesifik platform ──
-  const isAppleDevice = typeof navigator !== "undefined" && /iPhone|iPad|iPod|Mac/.test(navigator.userAgent);
+  const [isAppleDevice, setIsAppleDevice] = useState(false);
   const platformTheme = isAppleDevice ? "theme-ios" : "theme-futuristic";
   const [zoomLevel, setZoomLevel] = useState(100);
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
@@ -2033,11 +2034,11 @@ export default function Home() {
             }}
           />
           {/* Animasi Gelembung Liquid iOS */}
-          <div className={`relative flex rounded-xl overflow-hidden border-[0.5px] p-0.5 ${isAppleDevice ? (D ? "border-white/10 bg-black/20" : "border-black/5 bg-black/5 bg-opacity-50") : (D ? "border-[#ffffff10] bg-black/30" : "border-gray-200 bg-gray-100")}`}>
+          <div className={`relative flex rounded-full overflow-hidden p-0.5 ${isAppleDevice ? (D ? "bg-[#3a3a3c]/70 backdrop-blur-xl" : "bg-[#e5e5ea]/80 backdrop-blur-xl shadow-inner") : (D ? "border border-[#ffffff10] bg-black/30" : "border border-gray-200 bg-gray-100")}`}>
 
             {/* Ini Gelembung yang meluncur (Sliding Pill) */}
             <div
-              className={`absolute inset-y-0.5 w-[calc(33.33%-0.33rem)] rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.06)] border-[0.5px] transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? (D ? "bg-white/10 backdrop-blur-3xl border-white/10" : "liquid-glass-light border-white/60") : (D ? "bg-[#2c2c35] border-[#ffffff10]" : "bg-white border-gray-300")}`}
+              className={`absolute inset-y-0.5 w-[calc(33.33%-0.33rem)] rounded-full shadow-md transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? (D ? "bg-[#636366]" : "bg-white") : (D ? "bg-[#2c2c35] border border-[#ffffff10]" : "bg-white border border-gray-300")}`}
               style={{
                 left: config.wordSpacing === -5 ? '0.25rem' : config.wordSpacing === 8 ? 'calc(33.33% + 0.08rem)' : 'calc(66.66% - 0.08rem)'
               }}
@@ -4057,11 +4058,11 @@ export default function Home() {
             <div className="flex lg:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
               {/* Mobile tab switcher (Modern iOS Style - Liquid Glass Active Tab) */}
               <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} bg-transparent`}>
-                <div className={`flex p-0.5 rounded-xl border-[0.5px] relative ${isAppleDevice ? (D ? "border-white/10 bg-black/20" : "border-black/5 bg-black/5 bg-opacity-50") : (D ? "border-[#ffffff10] bg-black/30" : "border-gray-200 bg-gray-100")}`}>
+                <div className={`flex p-0.5 rounded-full relative ${isAppleDevice ? (D ? "bg-[#3a3a3c]/70 backdrop-blur-xl" : "bg-[#e5e5ea]/80 backdrop-blur-xl shadow-inner") : (D ? "border border-[#ffffff10] bg-black/30" : "border border-gray-200 bg-gray-100")}`}>
 
                   {/* Animasi Gelembung Sliding (Bentuk Kotak Melengkung dan Full) */}
                   <div
-                    className={`absolute inset-y-0.5 w-[calc(50%-0.25rem)] rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.06)] border-[0.5px] transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? (D ? "bg-white/10 backdrop-blur-3xl border-white/10" : "liquid-glass-light border-white/60") : (D ? "bg-[#2c2c35] border-[#ffffff10]" : "bg-white border-gray-300")}`}
+                    className={`absolute inset-y-0.5 w-[calc(50%-0.25rem)] rounded-full shadow-md transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? (D ? "bg-[#636366]" : "bg-white") : (D ? "bg-[#2c2c35] border border-[#ffffff10]" : "bg-white border border-gray-300")}`}
                     style={{ left: (activeTab === "result" ? "calc(50% + 0.125rem)" : "0.125rem") }}
                   />
 
@@ -4183,7 +4184,7 @@ export default function Home() {
                 const activePages = generatedPages.length > 0 ? generatedPages : streamedPages;
 
                 return (
-                  <div className={`flex-1 overflow-y-auto pb-24 scrollbar-thin ${D ? "bg-black" : "bg-gray-100"}`}>
+                  <div className={`flex-1 overflow-y-auto pb-24 scrollbar-thin ${isAppleDevice ? "bg-transparent" : (D ? "bg-black" : "bg-gray-100")}`}>
                     {activePages.length > 0 ? (
                       <div className="p-4 flex flex-col items-center">
 
