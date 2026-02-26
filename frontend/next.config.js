@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const isDev = process.env.NODE_ENV === 'development';
 const nextConfig = {
+    experimental: {
+        optimizePackageImports: ['lucide-react', 'framer-motion'],
+    },
     async headers() {
         return [
             {

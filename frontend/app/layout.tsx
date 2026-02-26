@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { DM_Sans } from "next/font/google";
 import "./globals.css";
+
+const dmSans = DM_Sans({ subsets: ["latin"], weight: ["300", "400", "500", "600"], display: "swap" });
 
 export const metadata: Metadata = {
     title: "HandWrite AI – Text to Handwriting | By Adam",
@@ -23,14 +26,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
     return (
-        <html lang="id" suppressHydrationWarning>
+        <html lang="id" suppressHydrationWarning className={dmSans.className}>
             <head>
-                <link rel="preconnect" href="https://fonts.googleapis.com" />
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-                <link
-                    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Caveat:wght@400;600&family=Dancing+Script:wght@400;600&family=Indie+Flower&family=Patrick+Hand&family=Kalam:wght@300;400&family=Reenie+Beanie&family=Dekko&family=Nanum+Pen+Script&family=Sriracha&display=swap"
-                    rel="stylesheet"
-                />
                 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
             </head>
             <body className="antialiased">{children}</body>

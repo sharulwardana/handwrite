@@ -13,16 +13,14 @@ import toast, { Toaster } from "react-hot-toast";
 import { saveAs } from "file-saver";
 import { useDropzone } from "react-dropzone";
 import { motion, AnimatePresence } from "framer-motion";
-import { jsPDF } from "jspdf";
-import { Document, Packer, Paragraph, ImageRun } from "docx";
-import ReactCrop, { type Crop, type PixelCrop } from "react-image-crop";
+import dynamic from "next/dynamic";
 import "react-image-crop/dist/ReactCrop.css";
+import type { Crop, PixelCrop } from "react-image-crop";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
-import * as mammoth from "mammoth";
-import HTMLFlipBook from "react-pageflip";
 import { QRCodeSVG } from "qrcode.react";
 // Kita manipulasi tipenya menjadi "any" agar TypeScript React 18 tidak protes
-const FlipBook = HTMLFlipBook as any;
+const FlipBook = dynamic(() => import("react-pageflip"), { ssr: false }) as any;
+const ReactCrop = dynamic(() => import("react-image-crop"), { ssr: false });
 
 /* ─── TYPES ─────────────────────────────────────────── */
 interface Font { name: string; file: string; style: string }
@@ -218,6 +216,46 @@ const getApiUrl = () => {
 
 const API_URL = getApiUrl();
 
+// === KOMPONEN OPTIMASI INP (Mencegah Lag saat Ngetik di React 18) ===
+const OptimizedTextarea = React.forwardRef(({ value, onChange, debounce = 300, ...props }: any, ref: any) => {
+  const [localValue, setLocalValue] = useState(value);
+  useEffect(() => { setLocalValue(value); }, [value]);
+  return (
+    <textarea
+      {...props}
+      ref={ref}
+      value={localValue}
+      onChange={(e) => {
+        const val = e.target.value;
+        setLocalValue(val);
+        clearTimeout((window as any)._ta_timer);
+        (window as any)._ta_timer = setTimeout(() => {
+          React.startTransition(() => onChange(val));
+        }, debounce);
+      }}
+    />
+  );
+});
+OptimizedTextarea.displayName = "OptimizedTextarea";
+
+const OptimizedInput = React.forwardRef(({ value, onChange, ...props }: any, ref: any) => {
+  const [localValue, setLocalValue] = useState(value);
+  useEffect(() => { setLocalValue(value); }, [value]);
+  return (
+    <input
+      {...props}
+      ref={ref}
+      value={localValue}
+      onChange={(e) => {
+        const val = e.target.value;
+        setLocalValue(val);
+        React.startTransition(() => onChange(val));
+      }}
+    />
+  );
+});
+OptimizedInput.displayName = "OptimizedInput";
+
 // === KOMPONEN BEFORE/AFTER SLIDER ===
 function BeforeAfterSlider() {
   const [sliderPosition, setSliderPosition] = useState(50);
@@ -321,19 +359,22 @@ export default function Home() {
   // ── State ──────────────────────────────────────────────────────────────────
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [showEditor, setShowEditor] = useState(false);
+  const [isAuthChecking, setIsAuthChecking] = useState(true); // Mencegah CLS saat ngecek login
 
   // Cek apakah user sudah login saat web dibuka
   useEffect(() => {
     supabase.auth.getUser().then(({ data, error }: { data: any; error: any }) => {
       if (!error && data?.user) {
         setUser(data.user);
-        setShowEditor(true); // Langsung ke editor kalau sudah login
+        setShowEditor(true);
       }
+      setIsAuthChecking(false);
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event: any, session: any) => {
       setUser(session?.user ?? null);
-      if (session?.user) setShowEditor(true); // <--- Tambahkan ini juga
+      if (session?.user) setShowEditor(true);
+      setIsAuthChecking(false);
     });
 
     return () => { authListener.subscription.unsubscribe(); };
@@ -418,17 +459,6 @@ export default function Home() {
   const [energy, setEnergy] = useState<number>(5); // Modal awal 5 Energi untuk user gratis
   const [showQrisModal, setShowQrisModal] = useState(false);
   const [selectedFont, setSelectedFont] = useState("indie_flower");
-
-  // ── Mencegah Lag saat mengetik (Debounce) ──
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      // Hanya perbarui jika teks benar-benar berubah untuk mencegah render ulang grafis 3D
-      if (text !== inputText) {
-        setText(inputText);
-      }
-    }, 500); // Naikkan delay sedikit menjadi 500ms agar UI tidak patah-patah saat user mengetik cepat
-    return () => clearTimeout(timer);
-  }, [inputText]);
   const [selectedFolio, setSelectedFolio] = useState("");
   const [selectedFolioEven, setSelectedFolioEven] = useState("");
   const [useDoubleFolio, setUseDoubleFolio] = useState(false);
@@ -1337,6 +1367,7 @@ export default function Home() {
     const tid = toast.loading(quality === "low" ? "Merakit PDF (Hemat Kuota)..." : "Merakit PDF (Resolusi Tinggi)...");
 
     try {
+      const { jsPDF } = await import("jspdf");
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -1380,6 +1411,7 @@ export default function Home() {
     setIsExportingDocx(true);
     const tid = toast.loading("Membuat Word document...");
     try {
+      const { Document, Packer, Paragraph, ImageRun } = await import("docx");
       const children = [];
       for (const page of generatedPages) {
         const base64 = page.image.split(",")[1];
@@ -1907,11 +1939,11 @@ export default function Home() {
           Teks watermark diagonal tipis di setiap halaman. Berguna untuk nama atau kelas.
         </p>
         <div className="relative">
-          <input
+          <OptimizedInput
             type="text"
             placeholder="Contoh: Nama Siswa · Kelas X"
             value={watermarkText}
-            onChange={(e) => setWatermarkText(e.target.value)}
+            onChange={(val: string) => setWatermarkText(val)}
             maxLength={40}
             className={`w-full px-3 py-2.5 text-xs border rounded-xl transition-colors pr-10 ${c.input}`}
           />
@@ -2139,6 +2171,51 @@ export default function Home() {
   // ──────────────────────────────────────────────────────────────────────────────
   // RENDER
   // ──────────────────────────────────────────────────────────────────────────────
+  // Memoize FlipBook ditaruh di level paling atas agar tidak melanggar Rules of Hooks
+
+  const activePagesMemo = generatedPages.length > 0 ? generatedPages : streamedPages;
+  const memoizedFlipBook = React.useMemo(() => {
+    if (activePagesMemo.length === 0) return null;
+    return (
+      <FlipBook
+        ref={bookRef}
+        width={420}
+        height={594}
+        size="stretch"
+        minWidth={280}
+        maxWidth={800}
+        minHeight={400}
+        maxHeight={1131}
+        maxShadowOpacity={0.3}
+        showCover={false}
+        mobileScrollSupport={true}
+        className="shadow-2xl rounded-sm"
+        onFlip={(e: any) => setActivePageIndex(e.data)}
+      >
+        {activePagesMemo.map((p) => (
+          <div key={p.page} className="bg-white overflow-hidden" style={{ boxShadow: "inset 0 0 20px rgba(0,0,0,0.05)" }}>
+            <img
+              src={p.image}
+              alt={`Hal ${p.page}`}
+              className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
+              onDoubleClick={() => generatedPages.length > 0 && setFullscreenPage(p)}
+            />
+          </div>
+        ))}
+      </FlipBook>
+    );
+  }, [activePagesMemo, generatedPages.length]);
+
+  // Tampilkan loading elegan selama 0.sekian detik agar tidak terjadi Layout Shift (CLS 0)
+  // WAJIB ditaruh DI BAWAH semua tipe Hooks (termasuk useMemo di atas)
+  if (isAuthChecking) {
+    return (
+      <div className={`min-h-[100dvh] flex items-center justify-center ${isDark ? "bg-[#0A0A0C]" : "bg-[#f8f7ff]"}`}>
+        <Loader2 className={`w-8 h-8 animate-spin ${isDark ? "text-violet-500" : "text-violet-600"}`} />
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen ${c.page} transition-colors duration-300`} style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}>
 
@@ -2204,15 +2281,15 @@ export default function Home() {
               </div>
             </motion.div>
 
-            {/* 2. Headline */}
-            <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } }}>
+            {/* 2. Headline (Tanpa animasi JS agar LCP instan / sangat cepat) */}
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000">
               <h1 className={`text-5xl sm:text-6xl md:text-8xl font-black mb-6 tracking-tight leading-[1.1] ${c.tp}`}>
                 Tugas Tulis Tangan <br />
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-400 via-indigo-400 to-cyan-400">
                   Selesai dalam 5 Detik.
                 </span>
               </h1>
-            </motion.div>
+            </div>
 
             {/* 3. Deskripsi */}
             <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } }}>
@@ -2420,9 +2497,10 @@ export default function Home() {
                     </div>
                     <button onClick={() => { setShowAiModal(false); setAiDraftResult(""); }} className={c.ts}><X className="w-4 h-4" /></button>
                   </div>
-                  <textarea
+                  <OptimizedTextarea
+                    debounce={0}
                     value={aiPrompt}
-                    onChange={(e) => setAiPrompt(e.target.value)}
+                    onChange={(val: string) => setAiPrompt(val)}
                     placeholder="Contoh: Buatkan esai 3 paragraf tentang sejarah kemerdekaan Indonesia..."
                     className={`w-full h-28 p-3 rounded-xl text-sm border focus:ring-2 focus:ring-indigo-500/50 resize-none ${c.input}`}
                   />
@@ -3198,12 +3276,15 @@ export default function Home() {
                     </div>
 
                     {/* Textarea */}
-                    <textarea
+                    <OptimizedTextarea
                       ref={textareaRef}
                       value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={async (e) => {
+                      onChange={(val: string) => {
+                        setInputText(val);
+                        setText(val);
+                      }}
+                      onDragOver={(e: any) => e.preventDefault()}
+                      onDrop={async (e: any) => {
                         e.preventDefault();
                         const file = e.dataTransfer.files[0];
                         if (!file) return;
@@ -3222,6 +3303,7 @@ export default function Home() {
                         else if (file.name.toLowerCase().endsWith(".docx")) {
                           const tid = toast.loading("Mengekstrak teks dari Word... ⏳");
                           try {
+                            const mammoth = await import("mammoth");
                             const arrayBuffer = await file.arrayBuffer();
                             const result = await mammoth.extractRawText({ arrayBuffer });
                             const extractedText = result.value.trim();
@@ -3665,33 +3747,8 @@ export default function Home() {
                               className="p-4 lg:p-8 flex items-center justify-center min-h-full w-full"
                             >
                               <div className="relative" style={{ width: `${zoomLevel}%`, maxWidth: "100%", display: "flex", justifyContent: "center" }}>
-                                {/* Render Buku 3D - Mode Kertas Tipis Melengkung */}
-                                <FlipBook
-                                  ref={bookRef}
-                                  width={420}
-                                  height={594}
-                                  size="stretch"
-                                  minWidth={280}
-                                  maxWidth={800}
-                                  minHeight={400}
-                                  maxHeight={1131}
-                                  maxShadowOpacity={0.3}
-                                  showCover={false}
-                                  mobileScrollSupport={true}
-                                  className="shadow-2xl rounded-sm"
-                                  onFlip={(e: any) => setActivePageIndex(e.data)}
-                                >
-                                  {pages.map((p) => (
-                                    <div key={p.page} className="bg-white overflow-hidden" style={{ boxShadow: "inset 0 0 20px rgba(0,0,0,0.05)" }}>
-                                      <img
-                                        src={p.image}
-                                        alt={`Hal ${p.page}`}
-                                        className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
-                                        onDoubleClick={() => generatedPages.length > 0 && setFullscreenPage(p)}
-                                      />
-                                    </div>
-                                  ))}
-                                </FlipBook>
+                                {/* Render Buku 3D dari hasil Memo yang legal di atas */}
+                                {memoizedFlipBook}
                               </div>
                             </motion.div>
                           );
@@ -3862,9 +3919,9 @@ export default function Home() {
                           <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin">
                             {/* Save preset */}
                             <div className={`flex gap-2 p-3 rounded-xl border ${c.pillBorder} ${c.pill}`}>
-                              <input type="text" placeholder="Nama preset..." value={presetName}
-                                onChange={(e) => setPresetName(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && savePreset()}
+                              <OptimizedInput type="text" placeholder="Nama preset..." value={presetName}
+                                onChange={(val: string) => setPresetName(val)}
+                                onKeyDown={(e: any) => e.key === "Enter" && savePreset()}
                                 className={`flex-1 px-3 py-1.5 text-xs border rounded-lg transition-colors ${c.input}`} />
                               <button onClick={savePreset}
                                 className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r ${c.accent} text-white hover:opacity-90`}>
@@ -3996,7 +4053,13 @@ export default function Home() {
                     </div>
 
                     {/* Textarea — Ditambahkan flex-1 agar memenuhi sisa ruang layar dan UI lebih modern ala Notion */}
-                    <textarea ref={textareaRef} value={inputText} onChange={(e) => setInputText(e.target.value)}
+                    <OptimizedTextarea
+                      ref={textareaRef}
+                      value={inputText}
+                      onChange={(val: string) => {
+                        setInputText(val);
+                        setText(val);
+                      }}
                       placeholder="Ketik atau paste teks di sini..."
                       className={`flex-1 w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-all duration-300 outline-none border ${D
                         ? "bg-[#0a0a0c] border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50 focus:bg-[#0f0f12] shadow-inner"

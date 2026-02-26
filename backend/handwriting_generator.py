@@ -80,13 +80,13 @@ class HandwritingGenerator:
 
             # Resize gambar dengan kualitas tinggi (LANCZOS)
             self.folio_odd = self.folio_odd.resize(
-                (MAX_WIDTH, new_height), Image.Resampling.LANCZOS
+                (MAX_WIDTH, new_height), Image.Resampling.BICUBIC
             )
 
             if folio_even_path and hasattr(self, "folio_even"):
                 new_even_height = int(self.folio_even.height * scale_ratio)
                 self.folio_even = self.folio_even.resize(
-                    (MAX_WIDTH, new_even_height), Image.Resampling.LANCZOS
+                    (MAX_WIDTH, new_even_height), Image.Resampling.BICUBIC
                 )
             else:
                 self.folio_even = self.folio_odd
