@@ -94,7 +94,7 @@ class HandwritingGenerator:
             # === SANGAT PENTING: Sesuaikan koordinat Config agar teks tidak meleset ===
             self.config["startX"] = int(self.config.get("startX", 0) * scale_ratio)
             self.config["startY"] = int(self.config.get("startY", 0) * scale_ratio)
-            self.config["lineHeight"] = int(
+            self.config["lineHeight"] = float(
                 self.config.get("lineHeight", 0) * scale_ratio
             )
             self.config["maxWidth"] = int(self.config.get("maxWidth", 0) * scale_ratio)
@@ -328,12 +328,11 @@ class HandwritingGenerator:
             progress = max(0.0, (cursor_x - x) / max(1, available_width))
             pen_pressure = 0  # default; dioverride di dalam if char.strip()
 
-            # FITUR BARU: Drift Kumulatif (Cenderung naik/turun searah per kalimat)
-            line_drift_y += random.uniform(-0.05, 0.05)
+            # FITUR BARU: Drift Kumulatif ditiadakan agar baris tidak menjadi miring ke bawah
+            line_drift_y = 0.0
             jitter_y = (
                 random.uniform(-0.5 * (1 + speed), 0.5 * (1 + speed))
                 + (baseline_wobble * progress * 1.5)
-                + line_drift_y
             )
 
             is_upper = char.isupper() and char.isalpha()
@@ -408,21 +407,14 @@ class HandwritingGenerator:
                 elif is_paragraph_start and word_count_seen < 3:
                     pen_pressure -= 10
 
-                if ink_level < 0.25 and random.random() > 0.45:
-                    alpha = random.randint(230, 255)
-                    char_color = self.ink_vary(pressure_delta=random.uniform(2, 5))
-                elif ink_level < 0.5 and random.random() > 0.55:
-                    alpha = random.randint(240, 255)
-                    char_color = self.ink_vary(pressure_delta=random.uniform(1, 3))
-                else:
-                    base_jitter = random.gauss(0, 5)
-                    shift = int(pen_pressure + base_jitter)
-                    r, g, b = self.base_color_rgb
-                    char_color = (
-                        max(0, min(255, r + shift)),
-                        max(0, min(255, g + shift)),
-                        max(0, min(255, b + shift)),
-                    )
+                base_jitter = random.gauss(0, 5)
+                shift = int(pen_pressure + base_jitter)
+                r, g, b = self.base_color_rgb
+                char_color = (
+                    max(0, min(255, r + shift)),
+                    max(0, min(255, g + shift)),
+                    max(0, min(255, b + shift)),
+                )
             else:
                 char_color = self.base_color_rgb
 
@@ -438,19 +430,15 @@ class HandwritingGenerator:
                 if len(fill_color) > 3
                 else (fill_color[0], fill_color[1], fill_color[2])
             )
-            dynamic_alpha = random.randint(240, 255)
+            dynamic_alpha = random.randint(245, 255)
             dynamic_fill = fill_color  # default fallback
 
             if char.strip():
                 # Variasi Ketebalan & Tinta Macet (Opacity Fluctuation)
                 r_c, g_c, b_c = fill_color[:3] if len(fill_color) > 3 else fill_color
 
-                if random.random() < 0.02:
-                    # Sesekali pudar sedikit tapi tidak telalu nampak
-                    dynamic_alpha = random.randint(230, 255)
-                else:
-                    # Tinta normal pekat konsisten
-                    dynamic_alpha = random.randint(240, 255)
+                # Tinta normal pekat konsisten, tanpa ada kepudaran / kehabisan tinta
+                dynamic_alpha = random.randint(245, 255)
 
                 dynamic_fill = (r_c, g_c, b_c, dynamic_alpha)
 
@@ -636,11 +624,6 @@ class HandwritingGenerator:
                         width=1,
                     )
                 # ─────────────────────────────────────────────────────────────
-
-            ink_level -= random.uniform(0, 0.005 + self.write_speed * 0.01)
-            if random.random() > 0.97:
-                ink_level = min(1.0, ink_level + random.uniform(0.3, 0.6))
-            ink_level = max(0.08, ink_level)
 
         return cursor_x
 
