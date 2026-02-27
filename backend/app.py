@@ -138,44 +138,33 @@ load_folio_templates()
 load_folio_cache()
 
 AVAILABLE_FONTS = {
-    "indie_flower": {
-        "name": "Indie Flower",
-        "file": "IndieFlower-Regular.ttf",
-        "style": "casual",
-    },
-    "dancing_script": {
-        "name": "Dancing Script",
-        "file": "DancingScript-Regular.ttf",
-        "style": "elegant",
-    },
-    "caveat": {"name": "Caveat", "file": "Caveat-Regular.ttf", "style": "playful"},
-    "patrick_hand": {
-        "name": "Patrick Hand",
-        "file": "PatrickHand-Regular.ttf",
-        "style": "neat",
-    },
-    "kalam": {"name": "Kalam", "file": "Kalam-Regular.ttf", "style": "natural"},
-    "reenie_beanie": {
-        "name": "Reenie Beanie",
-        "file": "ReenieBeanie-Regular.ttf",
-        "style": "messy",
-    },
-    "dekko": {"name": "Dekko", "file": "Dekko-Regular.ttf", "style": "ballpoint"},
-    "nanum_pen": {
-        "name": "Nanum Pen Script",
-        "file": "NanumPenScript-Regular.ttf",
-        "style": "natural",
-    },
-    "sriracha": {"name": "Sriracha", "file": "Sriracha-Regular.ttf", "style": "quick"},
     "architects_daughter": {
         "name": "Architects Daughter",
         "file": "ArchitectsDaughter-Regular.ttf",
         "style": "casual",
     },
+    "caveat": {"name": "Caveat", "file": "Caveat-Regular.ttf", "style": "playful"},
+    "dekko": {"name": "Dekko", "file": "Dekko-Regular.ttf", "style": "ballpoint"},
     "gochi_hand": {
         "name": "Gochi Hand",
         "file": "GochiHand-Regular.ttf",
         "style": "bold",
+    },
+    "indie_flower": {
+        "name": "Indie Flower",
+        "file": "IndieFlower-Regular.ttf",
+        "style": "casual",
+    },
+    "kalam": {"name": "Kalam", "file": "Kalam-Regular.ttf", "style": "natural"},
+    "nanum_pen": {
+        "name": "Nanum Pen Script",
+        "file": "NanumPenScript-Regular.ttf",
+        "style": "natural",
+    },
+    "patrick_hand": {
+        "name": "Patrick Hand",
+        "file": "PatrickHand-Regular.ttf",
+        "style": "neat",
     },
     "virgil": {"name": "Virgil", "file": "Virgil.ttf", "style": "sketch"},
 }
@@ -926,10 +915,12 @@ def cache_load(session_id):
 @app.route("/api/health", methods=["GET"])
 def health_check():
     import gc
+
     # Memory monitoring
     mem_info = {}
     try:
         import psutil
+
         process = psutil.Process(os.getpid())
         mem = process.memory_info()
         mem_info = {
