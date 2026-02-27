@@ -135,13 +135,11 @@ class HandwritingGenerator:
 
     def get_baseline_wobble(self, line_index):
         # Gelombang lambat antar baris
-        wave = math.sin(line_index * 0.9 + self.session_seed * 20) * 0.35
+        wave = math.sin(line_index * 0.9 + self.session_seed * 20) * 0.15
         # Random kecil per baris
-        wobble = wave + random.uniform(-0.3, 0.3)
-        # Fatigue: setiap 3-4 baris, baseline sedikit turun (gravitasi tangan)
-        fatigue_drift = min(
-            2.0, (line_index % random.randint(3, 5)) * random.uniform(0.08, 0.25)
-        )
+        wobble = wave + random.uniform(-0.1, 0.1)
+        # Fatigue: ditiadakan agar baris bawah tidak selalu turun keluar garis
+        fatigue_drift = 0.0
         return (wobble + fatigue_drift) * (-1.4 if self.left_handed else 1.0)
 
     def make_typo_version(self, word):
@@ -331,10 +329,10 @@ class HandwritingGenerator:
             pen_pressure = 0  # default; dioverride di dalam if char.strip()
 
             # FITUR BARU: Drift Kumulatif (Cenderung naik/turun searah per kalimat)
-            line_drift_y += random.uniform(-0.15, 0.2)
+            line_drift_y += random.uniform(-0.05, 0.05)
             jitter_y = (
-                random.uniform(-1.0 * (1 + speed), 1.0 * (1 + speed))
-                + (baseline_wobble * progress * 4)
+                random.uniform(-0.5 * (1 + speed), 0.5 * (1 + speed))
+                + (baseline_wobble * progress * 1.5)
                 + line_drift_y
             )
 
@@ -411,11 +409,11 @@ class HandwritingGenerator:
                     pen_pressure -= 10
 
                 if ink_level < 0.25 and random.random() > 0.45:
-                    alpha = random.randint(100, 150)
-                    char_color = self.ink_vary(pressure_delta=random.uniform(8, 18))
+                    alpha = random.randint(230, 255)
+                    char_color = self.ink_vary(pressure_delta=random.uniform(2, 5))
                 elif ink_level < 0.5 and random.random() > 0.55:
-                    alpha = random.randint(160, 200)
-                    char_color = self.ink_vary(pressure_delta=random.uniform(5, 12))
+                    alpha = random.randint(240, 255)
+                    char_color = self.ink_vary(pressure_delta=random.uniform(1, 3))
                 else:
                     base_jitter = random.gauss(0, 5)
                     shift = int(pen_pressure + base_jitter)
@@ -448,8 +446,8 @@ class HandwritingGenerator:
                 r_c, g_c, b_c = fill_color[:3] if len(fill_color) > 3 else fill_color
 
                 if random.random() < 0.02:
-                    # Sesekali pudar sedikit
-                    dynamic_alpha = random.randint(180, 215)
+                    # Sesekali pudar sedikit tapi tidak telalu nampak
+                    dynamic_alpha = random.randint(230, 255)
                 else:
                     # Tinta normal pekat konsisten
                     dynamic_alpha = random.randint(240, 255)
