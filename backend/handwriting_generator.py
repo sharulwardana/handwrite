@@ -331,8 +331,8 @@ class HandwritingGenerator:
             # FITUR BARU: Drift Kumulatif ditiadakan agar baris tidak menjadi miring ke bawah
             line_drift_y = 0.0
             jitter_y = (
-                random.uniform(-0.5 * (1 + speed), 0.5 * (1 + speed))
-                + (baseline_wobble * progress * 1.5)
+                random.uniform(-0.1 * (1 + speed), 0.1 * (1 + speed))
+                + (baseline_wobble * progress * 0.5)
             )
 
             is_upper = char.isupper() and char.isalpha()
@@ -407,8 +407,12 @@ class HandwritingGenerator:
                 elif is_paragraph_start and word_count_seen < 3:
                     pen_pressure -= 10
 
-                base_jitter = random.gauss(0, 5)
+                base_jitter = random.gauss(0, 2)
                 shift = int(pen_pressure + base_jitter)
+                
+                # Jaga agar nilai RGB tetap gelap dengan membatasi nilai shift maksimum
+                shift = min(15, shift) 
+
                 r, g, b = self.base_color_rgb
                 char_color = (
                     max(0, min(255, r + shift)),
@@ -438,7 +442,7 @@ class HandwritingGenerator:
                 r_c, g_c, b_c = fill_color[:3] if len(fill_color) > 3 else fill_color
 
                 # Tinta normal pekat konsisten, tanpa ada kepudaran / kehabisan tinta
-                dynamic_alpha = random.randint(245, 255)
+                dynamic_alpha = 255
 
                 dynamic_fill = (r_c, g_c, b_c, dynamic_alpha)
 
@@ -584,9 +588,9 @@ class HandwritingGenerator:
                 # ── RAPAT DI AKHIR BARIS + End-of-line Lifting ────────────
                 line_fill_ratio = (cursor_x - x) / max(1, available_width)
                 end_squeeze = 0.0
-                if line_fill_ratio > 0.78:
-                    squeeze_strength = (line_fill_ratio - 0.78) / 0.22
-                    end_squeeze = -random.uniform(0.3, 1.5) * squeeze_strength
+                if line_fill_ratio > 0.85:
+                    squeeze_strength = (line_fill_ratio - 0.85) / 0.15
+                    end_squeeze = -random.uniform(0.1, 0.5) * squeeze_strength
 
                 # Dibuang: End-of-line lifting agar tinta tetap tebal di ujung
                 # ────────────────────────────────────────────────────────────
