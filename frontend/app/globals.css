@@ -621,8 +621,8 @@ input[type="color"]::-webkit-color-swatch {
   box-shadow:
     0 2px 6px rgba(0, 0, 0, 0.15),
     0 1px 3px rgba(0, 0, 0, 0.10);
-  /* The inline track is 5px height. Margin-top = (5/2) - (16/2) = 2.5 - 8 = -5.5px */
-  margin-top: -5.5px;
+  /* Adjusted margin-top: visually centered rather than mathematically centered */
+  margin-top: -4.5px;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -656,7 +656,7 @@ input[type="color"]::-webkit-color-swatch {
   );
   border: 1px solid rgba(255,255,255,0.5);
   box-shadow: 0 2px 6px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.10);
-  margin-top: -5.5px;
+  margin-top: -4.5px;
   cursor: pointer;
 }
 

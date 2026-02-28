@@ -203,9 +203,9 @@ function ToggleSwitch({
     return (
       <button
         onClick={() => onChange(!value)}
-        className={`relative flex-shrink-0 w-[50px] h-[30px] rounded-full liquid-glass-toggle ${value ? 'active' : ''}`}
+        className={`relative flex-shrink-0 w-[51px] h-[31px] rounded-[100px] liquid-glass-toggle ${value ? 'active' : ''}`}
       >
-        <span className={`absolute top-[3px] w-[24px] h-[24px] rounded-full liquid-glass-toggle-thumb ${value ? 'left-[23px]' : 'left-[3px]'}`} />
+        <span className={`absolute top-[2px] w-[27px] h-[27px] rounded-full liquid-glass-toggle-thumb ${value ? 'left-[22px]' : 'left-[2px]'}`} />
       </button>
     );
   }
