@@ -12,7 +12,7 @@ import { supabase, supabaseConfigured } from "./lib/supabase";
 import toast, { Toaster } from "react-hot-toast";
 // PERF: file-saver di-import dinamis di handleDownloadZip & handleExportDocx
 import { useDropzone } from "react-dropzone";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 import dynamic from "next/dynamic";
 import { Caveat } from "next/font/google";
 import "react-image-crop/dist/ReactCrop.css";
@@ -467,6 +467,119 @@ function LiquidGlassToggleMorph({ value, onChange, colorClass = "bg-[#34c759]", 
           }`}
       />
     </button>
+  );
+}
+
+/* ── DRAGGABLE LIQUID GLASS TABS (iOS SLIDE GESTURE) ── */
+function DraggableLiquidTabs({ options, value, onChange, isDark, isApple }: any) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [contentWidth, setContentWidth] = useState(0);
+
+  // Mesin Fisika Apple (Spring) untuk pergerakan mengikuti jari
+  const x = useMotionValue(0);
+  const animatedX = useSpring(x, { stiffness: 450, damping: 35, mass: 0.8 });
+  const scale = useSpring(1, { stiffness: 400, damping: 25 });
+
+  // Mengukur lebar container agar kacanya responsif
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      // contentRect.width secara otomatis mengabaikan padding
+      setContentWidth(entries[0].contentRect.width);
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const pillWidth = contentWidth > 0 ? contentWidth / options.length : 0;
+
+  // Update posisi kaca jika dipilih lewat klik biasa (tanpa drag)
+  useEffect(() => {
+    if (!isDragging && pillWidth > 0) {
+      const index = options.findIndex((o: any) => o.value === value);
+      x.set(index * pillWidth);
+    }
+  }, [value, isDragging, pillWidth, x, options]);
+
+  // Event Handlers untuk melacak Jari/Kursor
+  const handlePointerDown = (e: React.PointerEvent) => {
+    setIsDragging(true);
+    scale.set(0.96); // Kaca sedikit mengecil saat ditekan ke dalam ala iOS
+    updatePointer(e);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (isDragging) updatePointer(e);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    scale.set(1); // Kaca membal kembali ke ukuran normal
+
+    if (!containerRef.current || pillWidth === 0) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const pointerX = e.clientX - rect.left - 4; // -4 karena padding p-1
+
+    // Cari tab mana yang paling dekat dengan lokasi jari dilepas
+    let closestIndex = Math.round((pointerX - pillWidth / 2) / pillWidth);
+    closestIndex = Math.max(0, Math.min(options.length - 1, closestIndex));
+
+    onChange(options[closestIndex].value);
+  };
+
+  const updatePointer = (e: React.PointerEvent) => {
+    if (!containerRef.current || pillWidth === 0) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const pointerX = e.clientX - rect.left - 4; // -4 karena padding p-1
+
+    // Hitung posisi agar tengah kaca tepat berada di bawah jari
+    let newX = pointerX - (pillWidth / 2);
+
+    // Batasi agar kaca tidak tembus melewati batas kiri dan kanan
+    const maxX = contentWidth - pillWidth;
+    newX = Math.max(0, Math.min(maxX, newX));
+
+    x.set(newX);
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className={`relative flex rounded-full p-1 overflow-hidden border touch-none cursor-pointer select-none
+        ${isApple ? "border-white/20 bg-black/10 backdrop-blur-md shadow-inner" : (isDark ? "border-[#ffffff10] bg-black/30" : "border-gray-200 bg-gray-100")}`}
+      // Melacak semua event sentuhan
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+    >
+      {/* Gelembung Kaca yang Bergeser Mengikuti Jari */}
+      <motion.div
+        style={{ x: animatedX, width: pillWidth, scale: scale }}
+        className={`absolute top-1 bottom-1 left-1 rounded-full z-0 flex items-center justify-center
+          ${isApple ? "bg-white/30 backdrop-blur-2xl border border-white/40 shadow-[0_2px_10px_rgba(0,0,0,0.2)]" : (isDark ? "bg-[#3a3a40]" : "bg-white shadow-md")}`}
+      >
+        {/* Efek specular light tambahan jika di iOS */}
+        {isApple && <div className="absolute top-0 w-1/2 h-[2px] bg-gradient-to-r from-transparent via-white/80 to-transparent rounded-full opacity-60" />}
+      </motion.div>
+
+      {/* Label Teks di Atas Kaca */}
+      {options.map((opt: any) => {
+        const isActive = value === opt.value;
+        return (
+          <div
+            key={opt.value}
+            className={`relative z-10 flex-1 py-1.5 text-[11.5px] text-center font-bold tracking-wide transition-colors duration-200 pointer-events-none
+            ${isActive || isDragging ? (isDark ? "text-white" : "text-gray-900") : (isDark ? "text-white/40" : "text-gray-500")}`}
+          >
+            {opt.label}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -2126,30 +2239,18 @@ export default function Home() {
           />
 
           {/* Animasi Tab Liquid Glass Stretchy (Framer Motion) */}
-          <div className={`relative flex rounded-full p-1 mt-4 overflow-hidden border ${isAppleDevice ? "border-white/20 bg-black/10 backdrop-blur-md" : (D ? "border-[#ffffff10] bg-black/30" : "border-gray-200 bg-gray-100")}`}>
-            {[{ l: "Rapat", v: -5 }, { l: "Normal", v: 8 }, { l: "Lebar", v: 25 }].map((p) => {
-              const isActive = config.wordSpacing === p.v;
-              return (
-                <button key={p.v} onClick={() => updateConfig({ ...config, wordSpacing: p.v })}
-                  className={`relative z-10 flex-1 py-1.5 text-[11px] font-bold rounded-full transition-colors duration-300 ${isActive ? (D ? "text-white" : "text-gray-900") : (D ? "text-white/40 hover:text-white/70" : "text-gray-500 hover:text-gray-700")}`}>
-
-                  {/* Ini elemen yang mereplika video tab iOS: Melar saat berpindah */}
-                  {isActive && isAppleDevice && (
-                    <motion.div
-                      layoutId="spasi-kata-active"
-                      className="absolute inset-0 bg-white/20 backdrop-blur-xl border border-white/30 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.1)] z-[-1]"
-                      transition={{
-                        type: "spring",
-                        stiffness: 400,
-                        damping: 28,
-                        mass: 0.8 // Mass < 1 membuat efek "cairan/melar" di tengah pergerakan
-                      }}
-                    />
-                  )}
-                  {p.l}
-                </button>
-              )
-            })}
+          <div className="mt-4">
+            <DraggableLiquidTabs
+              options={[
+                { label: "Rapat", value: -5 },
+                { label: "Normal", value: 8 },
+                { label: "Lebar", value: 25 }
+              ]}
+              value={config.wordSpacing === -5 ? -5 : config.wordSpacing === 25 ? 25 : 8}
+              onChange={(val: number) => updateConfig({ ...config, wordSpacing: val })}
+              isDark={D}
+              isApple={isAppleDevice}
+            />
           </div>
         </div>
 
@@ -4173,39 +4274,16 @@ export default function Home() {
               {/* Mobile tab switcher (Modern iOS Style - Liquid Glass Active Tab) */}
               {/* Bagian Tab Switcher Mobile (Editor vs Hasil) */}
               <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} bg-transparent`}>
-                <div className={`flex p-1 rounded-full relative overflow-hidden border ${isAppleDevice ? "border-white/20 bg-black/10" : (D ? "border-[#ffffff10] bg-black/30" : "border-gray-200 bg-gray-100")}`}>
-
-                  {/* Tombol Teks Tab */}
-                  {[
-                    { id: "editor", label: "✏️ Editor" },
-                    { id: "result", label: "✨ Hasil" },
-                  ].map((tab) => {
-                    const isActive = activeTab === tab.id || (tab.id === "editor" && activeTab === "presets");
-
-                    return (
-                      <button key={tab.id}
-                        onClick={() => setActiveTab(tab.id as any)}
-                        className={`flex-1 py-2 text-xs font-bold rounded-full relative z-10 transition-colors duration-300 ${isActive ? (D ? "text-white" : "text-gray-900") : (D ? "text-white/40 hover:text-white/70" : "text-gray-500 hover:text-gray-700")}`}
-                      >
-                        {isActive && (
-                          // INI RAHASIANYA: Framer motion layoutId akan membuat efek "melar" (stretchy)
-                          // saat berpindah dari satu tab ke tab lain persis seperti animasi Apple.
-                          <motion.div
-                            layoutId="liquid-glass-active-tab"
-                            className="absolute inset-0 rounded-full bg-liquid-glass backdrop-blur-xl shadow-md border border-white/30"
-                            transition={{
-                              type: "spring",
-                              stiffness: 400,
-                              damping: 25,
-                              mass: 0.8 // Mass di bawah 1 membuat efek tarikan cair
-                            }}
-                          />
-                        )}
-                        <span className="relative z-20">{tab.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                <DraggableLiquidTabs
+                  options={[
+                    { label: "✏️ Editor", value: "editor" },
+                    { label: "✨ Hasil", value: "result" }
+                  ]}
+                  value={activeTab === "result" ? "result" : "editor"}
+                  onChange={(val: string) => setActiveTab(val as any)}
+                  isDark={D}
+                  isApple={isAppleDevice}
+                />
               </div>
 
               {/* Mobile editor panel */}
