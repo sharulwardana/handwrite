@@ -601,3 +601,167 @@ textarea, input {
   line-gap-override: 0%;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   CUSTOM SCROLLBAR — Premium thin, rounded, semi-transparent
+   ═══════════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.15);
+  border-radius: 99px;
+  transition: background 0.2s;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.35);
+}
+.dark ::-webkit-scrollbar-thumb,
+.dark::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+}
+.dark ::-webkit-scrollbar-thumb:hover,
+.dark::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.15) transparent;
+}
+.dark * {
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ANIMATED AURORA / MESH GRADIENT BACKGROUND
+   Slow-moving gradient that makes the page feel alive
+   ═══════════════════════════════════════════════════════════════════ */
+@keyframes aurora {
+  0%, 100% { background-position: 0% 50%; }
+  25% { background-position: 50% 100%; }
+  50% { background-position: 100% 50%; }
+  75% { background-position: 50% 0%; }
+}
+
+.aurora-bg {
+  background-size: 300% 300%;
+  animation: aurora 15s ease-in-out infinite;
+}
+
+.aurora-bg-light {
+  background: linear-gradient(
+    -45deg,
+    #f8f7ff 0%,
+    #ede9fe 20%,
+    #e0e7ff 40%,
+    #dbeafe 55%,
+    #e0e7ff 70%,
+    #ede9fe 85%,
+    #f8f7ff 100%
+  );
+  background-size: 300% 300%;
+  animation: aurora 15s ease-in-out infinite;
+}
+
+.aurora-bg-dark {
+  background: linear-gradient(
+    -45deg,
+    #000000 0%,
+    #0a0014 15%,
+    #0d0020 30%,
+    #030014 50%,
+    #0a000a 65%,
+    #05000f 80%,
+    #000000 100%
+  );
+  background-size: 300% 300%;
+  animation: aurora 15s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ANIMATED FOCUS RING — Gradient-animated border on focus
+   ═══════════════════════════════════════════════════════════════════ */
+@keyframes focusShift {
+  0% { --focus-angle: 0deg; }
+  100% { --focus-angle: 360deg; }
+}
+
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgba(139, 92, 246, 0.5),
+    0 0 12px rgba(139, 92, 246, 0.2);
+}
+.dark .focus-ring:focus-visible {
+  box-shadow:
+    0 0 0 2px rgba(168, 140, 255, 0.4),
+    0 0 16px rgba(168, 140, 255, 0.15);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ANIMATED GRADIENT BORDER — Rotating prismatic edge for cards
+   ═══════════════════════════════════════════════════════════════════ */
+@keyframes borderSpin {
+  0% { --border-angle: 0deg; }
+  100% { --border-angle: 360deg; }
+}
+
+.gradient-border-animated {
+  position: relative;
+}
+.gradient-border-animated::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--border-angle, 0deg),
+    rgba(139, 92, 246, 0.4),
+    rgba(99, 102, 241, 0.2),
+    rgba(6, 182, 212, 0.3),
+    rgba(168, 85, 247, 0.2),
+    rgba(139, 92, 246, 0.4)
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: borderSpin 3s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   STAGGERED FADE-IN — For step hints and list items
+   ═══════════════════════════════════════════════════════════════════ */
+@keyframes staggerFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.stagger-item {
+  animation: staggerFadeIn 0.4s ease-out both;
+}
+.stagger-item:nth-child(1) { animation-delay: 0.1s; }
+.stagger-item:nth-child(2) { animation-delay: 0.25s; }
+.stagger-item:nth-child(3) { animation-delay: 0.4s; }
+.stagger-item:nth-child(4) { animation-delay: 0.55s; }
+.stagger-item:nth-child(5) { animation-delay: 0.7s; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   SIDEBAR SECTION HOVER GLOW
+   ═══════════════════════════════════════════════════════════════════ */
+.sidebar-section-glow {
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.sidebar-section-glow:hover {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.08), 0 4px 16px rgba(139, 92, 246, 0.06);
+  border-color: rgba(139, 92, 246, 0.2);
+}
+.dark .sidebar-section-glow:hover {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.06), 0 4px 16px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.08);
+}

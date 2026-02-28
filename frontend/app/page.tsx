@@ -151,7 +151,7 @@ function SidebarSection({
   const isOverflowVisible = className.includes("!overflow-visible");
 
   return (
-    <div className={`rounded-xl border backdrop-blur-sm shadow-sm ${bg} ${border} ${className} ${isOverflowVisible ? "" : "overflow-hidden"}`}>
+    <div className={`rounded-xl border backdrop-blur-sm shadow-sm sidebar-section-glow ${bg} ${border} ${className} ${isOverflowVisible ? "" : "overflow-hidden"}`}>
       <button
         onClick={() => setOpen(!open)}
         className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-t-xl transition-colors duration-200 ${open ? `border-b ${divider}` : "rounded-b-xl"} ${headerHover} hover:ring-1 ${isDark ? "hover:ring-white/5" : "hover:ring-violet-200"}`}
@@ -1807,8 +1807,8 @@ export default function Home() {
           </button>
 
           {fontDropdownOpen && Object.keys(fonts).length > 0 && (
-            <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border z-50 overflow-hidden ${c.dropdown}`}>
-              <div className="max-h-52 overflow-y-auto py-1">
+            <div className={`absolute top-full left-0 right-0 mt-1.5 z-50 overflow-hidden ${isAppleDevice ? "rounded-2xl border border-white/25 shadow-2xl liquid-glass-modal" : `rounded-xl border ${c.dropdown}`}`}>
+              <div className={`max-h-52 overflow-y-auto py-1 ${isAppleDevice ? 'scrollbar-thin' : ''}`}>
                 {Object.entries(fonts).map(([key, font]) => (
                   <button key={key}
                     onClick={() => { setSelectedFont(key); setFontDropdownOpen(false); }}
@@ -2307,7 +2307,7 @@ export default function Home() {
       {/* --- TAMBAHKAN KODE INI MULAI DARI SINI --- */}
       {!showEditor && !user ? (
         /* ══ LANDING PAGE SECTION ══ */
-        <div className={`relative min-h-[100dvh] w-full flex flex-col items-center p-4 sm:p-6 text-center overflow-clip ${isDark ? "bg-[#000000]" : "bg-[#f8f7ff]"}`}>
+        <div className={`relative min-h-[100dvh] w-full flex flex-col items-center p-4 sm:p-6 text-center overflow-clip ${isDark ? "aurora-bg-dark" : "aurora-bg-light"}`}>
           {/* Background Ambient Glow */}
           <div className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none">
             <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/20 blur-[150px] animate-pulse" />
@@ -2333,7 +2333,7 @@ export default function Home() {
             </motion.div>
 
             {/* 2. Headline — DILUAR motion.div agar render langsung tanpa animasi = LCP optimal */}
-            <h1 className={`text-3xl xs:text-4xl sm:text-6xl md:text-8xl font-black mb-6 tracking-tight leading-[1.1] ${c.tp} ${caveat.variable}`} style={{ fontFamily: "var(--font-caveat), 'Caveat Fallback', cursive" }}>
+            <h1 className={`text-3xl xs:text-4xl sm:text-6xl md:text-8xl 2xl:text-[7rem] 3xl:text-[8rem] font-black mb-6 tracking-tight leading-[1.1] ${c.tp} ${caveat.variable}`} style={{ fontFamily: "var(--font-caveat), 'Caveat Fallback', cursive" }}>
               Tugas Tulis Tangan <br />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-400 via-indigo-400 to-cyan-400">
                 Selesai dalam 5 Detik.
@@ -2342,7 +2342,7 @@ export default function Home() {
 
             {/* 3. Deskripsi */}
             <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } }}>
-              <p className={`text-base sm:text-xl mb-12 max-w-2xl mx-auto leading-relaxed ${isDark ? "text-gray-400" : "text-gray-600 font-medium"}`}>
+              <p className={`text-base sm:text-xl lg:text-2xl 2xl:text-[1.6rem] mb-12 max-w-2xl 3xl:max-w-3xl mx-auto leading-relaxed ${isDark ? "text-gray-400" : "text-gray-600 font-medium"}`}>
                 Gak perlu lagi pegal atau begadang menyalin teks. Ubah ketikan panjangmu menjadi tulisan tangan bolpoin super realistis di atas kertas folio, langsung dari browser.
               </p>
             </motion.div>
@@ -2830,10 +2830,10 @@ export default function Home() {
 
                 {/* PERBAIKAN: Tambah max-h-[90dvh], overflow-y-auto, dan penyesuaian ukuran responsif */}
                 <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                  className={`relative w-full max-w-sm sm:max-w-md max-h-[92dvh] overflow-y-auto scrollbar-hide rounded-[2rem] p-6 sm:p-8 border shadow-2xl flex flex-col items-center text-center ${isAppleDevice ? "bg-black/40 backdrop-blur-3xl border-white/20" : (D ? "bg-[#13131f] border-[#ffffff14]" : "bg-white border-gray-200")}`}>
+                  className={`relative w-full max-w-sm sm:max-w-md max-h-[92dvh] overflow-y-auto scrollbar-hide rounded-[2rem] p-6 sm:p-8 border shadow-2xl flex flex-col items-center text-center ${isAppleDevice ? "liquid-glass-modal liquid-glass-edge" : (D ? "bg-[#13131f] border-[#ffffff14]" : "bg-white border-gray-200")}`}>
 
-                  {/* Kilauan Liquid Glass */}
-                  {isAppleDevice && <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-white/10 via-transparent to-black/20 pointer-events-none" />}
+                  {/* Kilauan Liquid Glass — spectral glow overlay */}
+                  {isAppleDevice && <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-white/15 via-transparent to-violet-500/5 pointer-events-none" />}
 
                   <div className="relative z-10 flex flex-col items-center justify-center w-full">
                     <div className="w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0 rounded-full bg-amber-500/20 flex items-center justify-center mb-4 sm:mb-5 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
@@ -3080,7 +3080,7 @@ export default function Home() {
                   </button>
                 )}
                 <div title={backendOnline === null ? "Memeriksa..." : backendOnline ? "Backend terhubung" : "Backend offline"}
-                  className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-medium transition-colors ${backendOnline === null
+                  className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] lg:text-[11px] 2xl:text-xs font-medium transition-colors ${backendOnline === null
                     ? D ? "border-[#ffffff10] text-white/30" : "border-gray-200 text-gray-400"
                     : backendOnline
                       ? D ? "border-emerald-500/20 bg-emerald-500/8 text-emerald-400" : "border-emerald-300 bg-emerald-50 text-emerald-700"
@@ -3135,14 +3135,14 @@ export default function Home() {
             <motion.aside
               id="sidebar-settings"
               className={`hidden lg:flex flex-col flex-shrink-0 border-r overflow-hidden ${c.sidebar}`}
-              animate={{ width: sidebarOpen ? 288 : 0 }}
+              animate={{ width: sidebarOpen ? "auto" : 0 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
               style={{ height: "calc(100dvh - 56px)" }}
             >
               <motion.div
                 animate={{ opacity: sidebarOpen ? 1 : 0 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="flex-1 overflow-y-auto pb-8 scrollbar-thin w-[288px]"
+                className="flex-1 overflow-y-auto pb-8 scrollbar-thin w-[288px] 2xl:w-[320px] 3xl:w-[360px]"
               >
                 {renderSidebarContent()}
               </motion.div>
@@ -3155,7 +3155,7 @@ export default function Home() {
               <div id="editor-panel"
                 className={`flex flex-col border-r flex-shrink-0 ${c.sidebar} ${sidebarOpen
                   ? "lg:w-[340px] xl:w-[400px] 2xl:w-[440px] 3xl:w-[600px] 4xl:w-[700px]"
-                  : "lg:w-[380px] xl:w-[440px] 2xl:w-[500px] 3xl:w-[700px] 4xl:w-[800px]"
+                  : "lg:w-[380px] xl:w-[440px] 2xl:w-[520px] 3xl:w-[720px] 4xl:w-[850px]"
                   } transition-[width] duration-300`}>
 
                 {/* Editor header */}
@@ -3544,6 +3544,13 @@ export default function Home() {
                     <span className={`text-[10px] ${c.ts} ml-auto`}>{wordCount.toLocaleString()} kata</span>
                   </div>
                 </div>
+                {/* ── EDITOR PROGRESS BAR — visual page estimation ── */}
+                <div className={`mx-3 mb-2 h-1 rounded-full overflow-hidden ${D ? "bg-[#ffffff06]" : "bg-violet-100/50"}`}>
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-violet-500 via-indigo-500 to-cyan-500 transition-[width] duration-500 ease-out"
+                    style={{ width: `${Math.min(100, (estimatedPages / 10) * 100)}%` }}
+                  />
+                </div>
                 {/* Live Preview Strip */}
                 {livePreviewUrl && (
                   <div className={`relative rounded-xl overflow-hidden border mx-3 mb-3 ${c.pillBorder} ${isLoadingPreview ? "opacity-50" : "opacity-100"} transition-opacity duration-300`}>
@@ -3724,7 +3731,7 @@ export default function Home() {
 
                   {/* Thumbnail Strip Vertikal */}
                   {(generatedPages.length > 1 || isGenerating) && activeTab === "result" && (
-                    <div className={`hidden lg:flex flex-col gap-2 p-2 w-[72px] flex-shrink-0 overflow-y-auto border-r scrollbar-thin ${c.divider} ${D ? "bg-[#09090b]" : "bg-violet-50/80"}`}>
+                    <div className={`hidden lg:flex flex-col gap-2 p-2 w-[72px] 2xl:w-[88px] 3xl:w-[100px] flex-shrink-0 overflow-y-auto border-r scrollbar-thin ${c.divider} ${D ? "bg-[#09090b]" : "bg-violet-50/80"}`}>
                       {generatedPages.map((p, idx) => (
                         <button
                           key={p.page}
@@ -3864,7 +3871,7 @@ export default function Home() {
                             <div className="text-center max-w-sm m-auto">
                               {/* Animated Icon */}
                               <div className="relative w-24 h-24 mx-auto mb-8 mt-6">
-                                <div className={`absolute inset-0 rounded-3xl ${D ? "bg-gradient-to-br from-violet-900/40 to-indigo-900/40 border border-violet-700/20" : "bg-gradient-to-br from-violet-100 to-indigo-100 border border-violet-200"}`} />
+                                <div className={`absolute inset-0 rounded-3xl gradient-border-animated ${D ? "bg-gradient-to-br from-violet-900/40 to-indigo-900/40 border border-violet-700/20" : "bg-gradient-to-br from-violet-100 to-indigo-100 border border-violet-200"}`} />
                                 <div className="absolute inset-0 flex items-center justify-center">
                                   <PenTool className={`w-10 h-10 ${D ? "text-violet-400/60" : "text-violet-400"}`}
                                     style={{ animation: "bounce 2s ease-in-out infinite" }} />
@@ -3889,7 +3896,7 @@ export default function Home() {
                                   { icon: "🎨", label: "Pilih font & folio di sidebar", color: D ? "bg-violet-900/30 border-violet-700/30" : "bg-violet-50 border-violet-100" },
                                   { icon: "✨", label: "Klik Generate atau Ctrl+Enter", color: D ? "bg-purple-900/30 border-purple-700/30" : "bg-purple-50 border-purple-100" },
                                 ].map((step, i) => (
-                                  <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-xl border text-xs ${step.color}`}>
+                                  <div key={i} className={`stagger-item flex items-center gap-3 px-3 py-2 rounded-xl border text-xs ${step.color}`}>
                                     <span className="text-base">{step.icon}</span>
                                     <span className={D ? "text-white/50" : "text-gray-600"}>{step.label}</span>
                                   </div>
@@ -4069,9 +4076,9 @@ export default function Home() {
             <div className="flex lg:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
               {/* Mobile tab switcher (Modern iOS Style - Liquid Glass Active Tab) */}
               <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} bg-transparent`}>
-                <div className={`flex p-0.5 rounded-full relative ${isAppleDevice ? "bg-transparent border-[0.5px] border-white/20 shadow-inner backdrop-blur-3xl" : (D ? "border border-[#ffffff10] bg-black/30" : "border border-gray-200 bg-gray-100")}`}>
+                <div className={`flex p-0.5 rounded-full relative overflow-hidden ${isAppleDevice ? "bg-transparent border-[0.5px] border-white/20 shadow-inner backdrop-blur-3xl" : (D ? "border border-[#ffffff10] bg-black/30" : "border border-gray-200 bg-gray-100")}`}>
 
-                  {/* Animasi Gelembung Sliding (Bentuk Kotak Melengkung dan Full) */}
+                  {/* Animasi Gelembung Sliding (Bentuk Kotak Melengkung dan Full) — overflow-hidden di parent mencegah pill meluap di Android */}
                   <div
                     className={`absolute inset-y-0.5 w-[calc(50%-0.25rem)] rounded-full shadow-md backdrop-blur-md transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? (D ? "bg-white/10 border border-white/5" : "bg-white/60 border border-black/5") : (D ? "bg-[#2c2c35] border border-[#ffffff10]" : "bg-white border border-gray-300")}`}
                     style={{ left: (activeTab === "result" ? "calc(50% + 0.125rem)" : "0.125rem") }}
@@ -4440,10 +4447,10 @@ export default function Home() {
           </AnimatePresence>
 
           {/* ── MOBILE BOTTOM BAR (Modern Floating Dock) ── */}
-          <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden pointer-events-none px-4 safe-area-pb flex justify-center">
+          <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden pointer-events-none px-3 sm:px-4 safe-area-pb flex justify-center">
 
             {/* Dock Kaca (Glassmorphism) */}
-            <div className={`w-full max-w-sm flex items-center gap-3 px-3 py-2.5 rounded-2xl pointer-events-auto transition-[transform,opacity] duration-500 ease-in-out ${activeTab === "result" || hideMobileDock ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"} ${isAppleDevice ? (D ? "liquid-glass shadow-2xl" : "glass-panel") : (D ? "bg-[#2c2c35] border border-[#ffffff10] shadow-2xl" : "bg-white border border-gray-200 shadow-xl")}`}>
+            <div className={`w-full max-w-sm flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-2xl pointer-events-auto transition-[transform,opacity] duration-500 ease-in-out ${activeTab === "result" || hideMobileDock ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"} ${isAppleDevice ? (D ? "liquid-glass shadow-2xl" : "glass-panel") : (D ? "bg-[#2c2c35] border border-[#ffffff10] shadow-2xl" : "bg-white border border-gray-200 shadow-xl")}`}>
               {/* Ubah md:hidden menjadi lg:hidden di bawah ini */}
               <button onClick={() => setMobileSidebarOpen(true)}
                 className={`flex lg:hidden w-8 h-8 rounded-lg items-center justify-center transition-colors ${c.btn}`}>
