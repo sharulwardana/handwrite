@@ -382,14 +382,18 @@ function BeforeAfterSlider() {
   );
 }
 
-/* ── LIQUID GLASS SLIDER (APPLE STYLE) ── */
-function LiquidGlassSlider({ value, min = 0, max = 1, step = 0.05, onChange, isDark, colorClass = "bg-violet-500" }: any) {
+/* ── LIQUID GLASS SLIDER (APPLE STYLE MAGNIFIER) ── */
+function LiquidGlassSlider({ value, min = 0, max = 1, step = 0.05, onChange, isDark, colorClass = "bg-blue-500" }: any) {
   const [isPressed, setIsPressed] = useState(false);
-  const percentage = ((value - min) / (max - min)) * 100;
+  const percentage = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
+
+  // Ukuran saat dilepas vs ditekan
+  const thumbWidth = isPressed ? 44 : 24;
+  const halfThumb = thumbWidth / 2;
 
   return (
     <div
-      className="relative w-full h-8 flex items-center cursor-pointer touch-none group mt-2"
+      className="relative w-full h-10 flex items-center cursor-pointer touch-none group mt-1"
       onPointerDown={(e) => {
         setIsPressed(true);
         const rect = e.currentTarget.getBoundingClientRect();
@@ -405,21 +409,41 @@ function LiquidGlassSlider({ value, min = 0, max = 1, step = 0.05, onChange, isD
       onPointerUp={() => setIsPressed(false)}
       onPointerLeave={() => setIsPressed(false)}
     >
-      <div className={`absolute w-full rounded-full transition-all duration-300 ease-apple-spring overflow-hidden ${isPressed ? 'h-5' : 'h-1.5'} ${isDark ? 'bg-white/10 shadow-inner' : 'bg-gray-200 shadow-inner'}`}>
-        <div className={`absolute h-full top-0 left-0 transition-all duration-100 ${colorClass}`} style={{ width: `${percentage}%` }} />
-      </div>
+      {/* 1. Track Dasar (Tipis) */}
+      <div className="absolute w-full h-1.5 rounded-full bg-gray-300 dark:bg-white/20 transition-all duration-300" />
+      <div className={`absolute h-1.5 rounded-full ${colorClass} transition-all duration-100`} style={{ width: `${percentage}%` }} />
+
+      {/* 2. Track Kaca Pembesar (Tebal) - Ini Kunci Efek Apple Video 1 */}
+      {/* Kita menggunakan clipPath agar track tebal ini HANYA terlihat di dalam area thumb kaca */}
       <div
-        className={`absolute rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.15)] flex items-center justify-center transition-all duration-300 ease-apple-spring border border-white/80 pointer-events-none ${isPressed ? 'w-8 h-8 opacity-60 backdrop-blur-md scale-125' : 'w-4 h-4 opacity-100 scale-100'}`}
-        style={{ left: `calc(${percentage}% - ${isPressed ? '16px' : '8px'})` }}
+        className="absolute w-full h-3 rounded-full pointer-events-none transition-all duration-100"
+        style={{
+          clipPath: `inset(-10px calc(100% - ${percentage}% - ${halfThumb}px) -10px calc(${percentage}% - ${halfThumb}px))`
+        }}
       >
-        {isPressed && <div className="w-4 h-4 rounded-full bg-white/50 blur-[2px]" />}
+        <div className="absolute w-full h-full bg-gray-400 dark:bg-white/40 rounded-full" />
+        <div className={`absolute h-full ${colorClass} rounded-full`} style={{ width: `${percentage}%` }} />
+      </div>
+
+      {/* 3. Outer Glass Thumb (Membesar jadi pil saat ditekan) */}
+      <div
+        className={`absolute top-1/2 -translate-y-1/2 rounded-[16px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] backdrop-blur-xl border transition-all ease-apple-spring pointer-events-none flex items-center justify-center
+        ${isDark ? 'bg-white/20 border-white/40' : 'bg-white/60 border-white/80'}
+        ${isPressed ? 'h-[36px] duration-300' : 'h-[24px] duration-500'}`}
+        style={{
+          left: `calc(${percentage}% - ${halfThumb}px)`,
+          width: `${thumbWidth}px`,
+        }}
+      >
+        {/* Highlight Pantulan Cahaya khas pinggiran kaca Liquid Glass */}
+        <div className="absolute inset-0 rounded-[16px] border border-white/30 pointer-events-none" style={{ mixBlendMode: 'overlay' }} />
       </div>
     </div>
   );
 }
 
-/* ── LIQUID GLASS TOGGLE (MORPHING APPLE STYLE) ── */
-function LiquidGlassToggleMorph({ value, onChange, colorClass = "bg-emerald-500", isDark }: any) {
+/* ── LIQUID GLASS TOGGLE (iOS 18 STYLE) ── */
+function LiquidGlassToggleMorph({ value, onChange, colorClass = "bg-[#34c759]", isDark }: any) {
   const [isPressed, setIsPressed] = useState(false);
 
   return (
@@ -428,11 +452,20 @@ function LiquidGlassToggleMorph({ value, onChange, colorClass = "bg-emerald-500"
       onPointerUp={() => setIsPressed(false)}
       onPointerLeave={() => setIsPressed(false)}
       onClick={() => onChange(!value)}
-      className={`relative flex-shrink-0 w-[50px] h-[30px] rounded-full transition-all duration-300 ease-apple-ease border ${value ? `${colorClass} border-transparent shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]` : isDark ? 'bg-black/40 border-white/10 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)]' : 'bg-gray-200 border-gray-300 shadow-[inset_0_1px_3px_rgba(0,0,0,0.1)]'}`}
+      // Ukuran proporsional persis gambar referensi (lebar 51px, tinggi 31px)
+      className={`relative flex-shrink-0 w-[51px] h-[31px] rounded-full transition-colors duration-300 ease-in-out border outline-none
+      ${value
+          ? `${colorClass} border-transparent shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]`
+          : isDark ? 'bg-[#39393d] border-[#ffffff10]' : 'bg-[#e9e9ea] border-black/5'}`}
     >
-      <div className={`absolute top-[2px] h-[24px] bg-white rounded-full shadow-[0_3px_8px_rgba(0,0,0,0.15),_0_1px_1px_rgba(0,0,0,0.1)] transition-all duration-300 ease-apple-spring ${isPressed ? 'w-[32px]' : 'w-[24px]'} ${value ? (isPressed ? 'left-[14px]' : 'left-[22px]') : 'left-[2px]'}`}>
-        <div className="absolute top-[1px] left-[10%] w-[80%] h-[10px] bg-gradient-to-b from-white to-transparent rounded-full opacity-60 pointer-events-none" />
-      </div>
+      {/* White Pill Thumb (Lebih lebar ala iOS 18) */}
+      <div
+        className={`absolute top-[2px] h-[27px] bg-white rounded-full shadow-[0_3px_8px_rgba(0,0,0,0.15),_0_1px_1px_rgba(0,0,0,0.1)] transition-all duration-300 ease-apple-spring
+        ${value
+            ? (isPressed ? 'w-[33px] left-[16px]' : 'w-[27px] left-[22px]') // Saat ON
+            : (isPressed ? 'w-[33px] left-[2px]' : 'w-[27px] left-[2px]')   // Saat OFF
+          }`}
+      />
     </button>
   );
 }
@@ -1924,7 +1957,7 @@ export default function Home() {
             value={writeSpeed}
             onChange={setWriteSpeed}
             isDark={D}
-            colorClass={D ? "bg-orange-500" : "bg-orange-600"}
+            colorClass="bg-[#ff9f0a]" // Orange iOS
           />
           <div className={`flex justify-between text-[10px] mt-1.5 ${c.ts}`}>
             <span>🐢 Rapi</span><span>⚡ Cepat</span>
@@ -1943,7 +1976,7 @@ export default function Home() {
             value={slantAngle}
             onChange={setSlantAngle}
             isDark={D}
-            colorClass={D ? "bg-indigo-500" : "bg-indigo-600"}
+            colorClass="bg-[#5e5ce6]" // Indigo iOS
           />
           <div className={`flex justify-between text-[10px] mt-1.5 ${c.ts}`}>
             <span>← Kiri</span>
@@ -1987,7 +2020,7 @@ export default function Home() {
             value={config.marginJitter ?? 6}
             onChange={(v: number) => updateConfig({ ...config, marginJitter: v })}
             isDark={D}
-            colorClass={D ? "bg-emerald-500" : "bg-emerald-600"}
+            colorClass="bg-[#30d158]" // Green iOS
           />
           <div className={`flex justify-between text-[10px] mt-1.5 ${c.ts}`}>
             <span>Rata kiri</span><span>Bergelombang</span>
@@ -2082,34 +2115,41 @@ export default function Home() {
               {config.wordSpacing >= 0 ? `+${config.wordSpacing}` : config.wordSpacing}px
             </span>
           </div>
+
+          {/* Slider Kaca Pembesar untuk Spasi */}
           <LiquidGlassSlider
             min={-10} max={40} step={1}
             value={config.wordSpacing}
             onChange={(v: number) => updateConfig({ ...config, wordSpacing: v })}
             isDark={D}
-            colorClass={D ? "bg-sky-500" : "bg-sky-600"}
+            colorClass="bg-[#0a84ff]" // Warna biru iOS
           />
-          {/* Animasi Gelembung Liquid iOS */}
-          <div className={`relative flex rounded-full p-0.5 mt-3 overflow-hidden border ${isAppleDevice ? "liquid-glass-tabs border-white/20" : (D ? "border-[#ffffff10] bg-black/30" : "border-gray-200 bg-gray-100")}`}>
 
-            {/* Ini Gelembung yang meluncur (Sliding Pill) — glass bubble on iOS */}
-            <div
-              className={`absolute top-[2px] bottom-[2px] rounded-full transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? "liquid-glass-bubble w-[calc(33.33%-4px)]" : "w-[calc(33.33%-4px)] shadow-md backdrop-blur-md"} ${!isAppleDevice ? (D ? "bg-[#2c2c35] border border-[#ffffff10]" : "bg-white border border-gray-300") : ""}`}
-              style={{
-                left: config.wordSpacing === -5 ? '2px' : config.wordSpacing === 8 ? 'calc(33.33% + 2px)' : 'calc(66.66% + 2px)'
-              }}
-            />
+          {/* Animasi Tab Liquid Glass Stretchy (Framer Motion) */}
+          <div className={`relative flex rounded-full p-1 mt-4 overflow-hidden border ${isAppleDevice ? "border-white/20 bg-black/10 backdrop-blur-md" : (D ? "border-[#ffffff10] bg-black/30" : "border-gray-200 bg-gray-100")}`}>
+            {[{ l: "Rapat", v: -5 }, { l: "Normal", v: 8 }, { l: "Lebar", v: 25 }].map((p) => {
+              const isActive = config.wordSpacing === p.v;
+              return (
+                <button key={p.v} onClick={() => updateConfig({ ...config, wordSpacing: p.v })}
+                  className={`relative z-10 flex-1 py-1.5 text-[11px] font-bold rounded-full transition-colors duration-300 ${isActive ? (D ? "text-white" : "text-gray-900") : (D ? "text-white/40 hover:text-white/70" : "text-gray-500 hover:text-gray-700")}`}>
 
-            {/* Tombol Teksnya (Di atas gelembung) */}
-            {[{ l: "Rapat", v: -5 }, { l: "Normal", v: 8 }, { l: "Lebar", v: 25 }].map((p) => (
-              <button key={p.v} onClick={() => updateConfig({ ...config, wordSpacing: p.v })}
-                className={`relative z-10 flex-1 py-1.5 text-[11px] font-semibold transition-colors duration-300 ${config.wordSpacing === p.v
-                  ? (D ? "text-white" : "text-gray-900")
-                  : (D ? "text-white/40 hover:text-white/70" : "text-gray-500 hover:text-gray-700")
-                  }`}>
-                {p.l}
-              </button>
-            ))}
+                  {/* Ini elemen yang mereplika video tab iOS: Melar saat berpindah */}
+                  {isActive && isAppleDevice && (
+                    <motion.div
+                      layoutId="spasi-kata-active"
+                      className="absolute inset-0 bg-white/20 backdrop-blur-xl border border-white/30 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.1)] z-[-1]"
+                      transition={{
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 28,
+                        mass: 0.8 // Mass < 1 membuat efek "cairan/melar" di tengah pergerakan
+                      }}
+                    />
+                  )}
+                  {p.l}
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -4131,14 +4171,9 @@ export default function Home() {
             {/* ══ MOBILE & TABLET: Editor + Output tabs (< lg) ══ */}
             <div className="flex lg:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
               {/* Mobile tab switcher (Modern iOS Style - Liquid Glass Active Tab) */}
+              {/* Bagian Tab Switcher Mobile (Editor vs Hasil) */}
               <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} bg-transparent`}>
-                <div className={`flex p-0.5 rounded-full relative overflow-hidden border ${isAppleDevice ? "liquid-glass-tabs border-white/20" : (D ? "border-[#ffffff10] bg-black/30" : "border-gray-200 bg-gray-100")}`}>
-
-                  {/* Animasi Gelembung Sliding — glass bubble on iOS */}
-                  <div
-                    className={`absolute top-[2px] bottom-[2px] rounded-full transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? "liquid-glass-bubble w-[calc(50%-4px)]" : "w-[calc(50%-4px)] shadow-md backdrop-blur-md"} ${!isAppleDevice ? (D ? "bg-[#2c2c35] border border-[#ffffff10]" : "bg-white border border-gray-300") : ""}`}
-                    style={{ left: activeTab === "result" ? "calc(50% + 2px)" : "2px" }}
-                  />
+                <div className={`flex p-1 rounded-full relative overflow-hidden border ${isAppleDevice ? "border-white/20 bg-black/10" : (D ? "border-[#ffffff10] bg-black/30" : "border-gray-200 bg-gray-100")}`}>
 
                   {/* Tombol Teks Tab */}
                   {[
@@ -4146,12 +4181,27 @@ export default function Home() {
                     { id: "result", label: "✨ Hasil" },
                   ].map((tab) => {
                     const isActive = activeTab === tab.id || (tab.id === "editor" && activeTab === "presets");
+
                     return (
                       <button key={tab.id}
                         onClick={() => setActiveTab(tab.id as any)}
-                        className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors duration-300 relative z-10 ${isActive ? (D ? "text-white" : "text-gray-900") : (D ? "text-white/40" : "text-gray-500")
-                          }`}>
-                        {tab.label}
+                        className={`flex-1 py-2 text-xs font-bold rounded-full relative z-10 transition-colors duration-300 ${isActive ? (D ? "text-white" : "text-gray-900") : (D ? "text-white/40 hover:text-white/70" : "text-gray-500 hover:text-gray-700")}`}
+                      >
+                        {isActive && (
+                          // INI RAHASIANYA: Framer motion layoutId akan membuat efek "melar" (stretchy)
+                          // saat berpindah dari satu tab ke tab lain persis seperti animasi Apple.
+                          <motion.div
+                            layoutId="liquid-glass-active-tab"
+                            className="absolute inset-0 rounded-full bg-liquid-glass backdrop-blur-xl shadow-md border border-white/30"
+                            transition={{
+                              type: "spring",
+                              stiffness: 400,
+                              damping: 25,
+                              mass: 0.8 // Mass di bawah 1 membuat efek tarikan cair
+                            }}
+                          />
+                        )}
+                        <span className="relative z-20">{tab.label}</span>
                       </button>
                     );
                   })}
