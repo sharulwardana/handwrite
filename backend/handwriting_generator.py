@@ -390,17 +390,8 @@ class HandwritingGenerator:
             if char.strip():
                 word_progress = min(1.0, word_char_idx / max(1, current_word_len))
 
-                # FITUR BARU (Claude Poin 1): Pen Pressure Kurva Sinus
-                # Tinta ditekan kuat (gelap) di tengah kata, dan diangkat ringan di awal/akhir
-                pressure_curve = math.sin(word_progress * math.pi)
-                
-                # UBAH DI SINI: Angka +10 diganti jadi 0 agar ujung kata tidak pudar/transparan
-                pen_pressure = -20 * pressure_curve + 0 * (1 - pressure_curve)
-
-                if is_paragraph_start and word_count_seen == 0 and word_char_idx == 1:
-                    pen_pressure -= 22  # Huruf pertama paragraf: sangat ditekan
-                elif is_paragraph_start and word_count_seen < 3:
-                    pen_pressure -= 10
+                # EFEK TINTA HABIS DIHAPUS: Tekanan diatur stabil agar tinta selalu hitam/pekat
+                pen_pressure = -10
 
                 base_jitter = random.gauss(0, 2)
                 shift = int(pen_pressure + base_jitter)
@@ -681,7 +672,7 @@ class HandwritingGenerator:
                             current_lines.append(
                                 {
                                     "text": current_line.strip(),
-                                    "y": y + int(random.gauss(0, 1.8)),
+                                    "y": float(y),
                                     "line_index": line_index,
                                     "margin_jitter": margin_jitter,
                                 }
@@ -695,7 +686,7 @@ class HandwritingGenerator:
                     current_lines.append(
                         {
                             "text": current_line.strip(),
-                            "y": y + int(random.gauss(0, 1.8)),
+                            "y": float(y),
                             "line_index": line_index,
                             "margin_jitter": margin_jitter,
                         }
@@ -716,7 +707,7 @@ class HandwritingGenerator:
                 current_lines.append(
                     {
                         "text": current_line.strip(),
-                        "y": y + int(random.gauss(0, 1.8)),
+                        "y": float(y),
                         "line_index": line_index,
                         "margin_jitter": margin_jitter,
                     }
