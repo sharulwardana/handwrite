@@ -203,7 +203,7 @@ function ToggleSwitch({
     return (
       <button
         onClick={() => onChange(!value)}
-        className={`relative flex-shrink-0 w-[51px] h-[31px] rounded-[100px] liquid-glass-toggle ${value ? 'active' : ''}`}
+        className={`relative flex-shrink-0 w-[51px] h-[31px] rounded-[32px] liquid-glass-toggle ${value ? 'active' : ''}`}
       >
         <span className={`absolute top-[2px] w-[27px] h-[27px] rounded-full liquid-glass-toggle-thumb ${value ? 'left-[22px]' : 'left-[2px]'}`} />
       </button>
@@ -2029,7 +2029,7 @@ export default function Home() {
 
       <SidebarSection title="Spasi & Warna" isDark={D}>
         <div>
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-1">
             <p className={`text-[10.5px] font-semibold uppercase tracking-widest ${c.label}`}>Spasi Kata</p>
             <span className={`text-[11px] font-mono font-semibold px-2 py-0.5 rounded-lg border ${D ? "bg-sky-500/15 text-sky-400 border-sky-500/20" : "bg-sky-50 text-sky-700 border-sky-200"}`}>
               {config.wordSpacing >= 0 ? `+${config.wordSpacing}` : config.wordSpacing}px
@@ -2044,7 +2044,7 @@ export default function Home() {
             }}
           />
           {/* Animasi Gelembung Liquid iOS */}
-          <div className={`relative flex rounded-full p-0.5 overflow-hidden border ${isAppleDevice ? "liquid-glass-tabs border-white/20" : (D ? "border-[#ffffff10] bg-black/30" : "border-gray-200 bg-gray-100")}`}>
+          <div className={`relative flex rounded-full p-0.5 mt-3 overflow-hidden border ${isAppleDevice ? "liquid-glass-tabs border-white/20" : (D ? "border-[#ffffff10] bg-black/30" : "border-gray-200 bg-gray-100")}`}>
 
             {/* Ini Gelembung yang meluncur (Sliding Pill) — glass bubble on iOS */}
             <div
