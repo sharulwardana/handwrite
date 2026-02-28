@@ -12,7 +12,7 @@ import { supabase, supabaseConfigured } from "./lib/supabase";
 import toast, { Toaster } from "react-hot-toast";
 // PERF: file-saver di-import dinamis di handleDownloadZip & handleExportDocx
 import { useDropzone } from "react-dropzone";
-import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
 import dynamic from "next/dynamic";
 import { Caveat } from "next/font/google";
 import "react-image-crop/dist/ReactCrop.css";
@@ -382,29 +382,37 @@ function BeforeAfterSlider() {
   );
 }
 
-/* ── LIQUID GLASS SLIDER (BENTUK PIL & TANPA KOTAK BUG) ── */
+/* ── 1. LIQUID GLASS SLIDER (FIX OVERFLOW/ANTI-MEPET BORDER) ── */
 function LiquidGlassSlider({ value, min = 0, max = 1, step = 0.05, onChange, isDark, colorClass = "bg-[#0a84ff]" }: any) {
   const [isPressed, setIsPressed] = useState(false);
   const percentage = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
 
+  const handlePointer = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+
+    // KUNCI PERBAIKAN: Margin 16px. Ini memotong area sentuh agar 
+    // tombol berhenti tepat sebelum menyentuh border paling ujung.
+    const margin = 16;
+    const trackWidth = rect.width - (margin * 2);
+    let pointerX = e.clientX - (rect.left + margin);
+
+    pointerX = Math.max(0, Math.min(trackWidth, pointerX));
+    const newVal = min + (pointerX / trackWidth) * (max - min);
+    onChange(Math.max(min, Math.min(max, Math.round(newVal / step) * step)));
+  };
+
   return (
     <div
       className="relative w-full h-8 flex items-center cursor-pointer touch-none select-none group mt-1 outline-none"
-      // Menghilangkan highlight kotak bawaan browser (bug kotak di belakang)
       style={{ WebkitTapHighlightColor: 'transparent' }}
       onPointerDown={(e) => {
-        // Kunci: Mencegah browser melakukan scroll/highlight lain saat slider ditahan
         e.currentTarget.setPointerCapture(e.pointerId);
         setIsPressed(true);
-        const rect = e.currentTarget.getBoundingClientRect();
-        const newVal = min + ((e.clientX - rect.left) / rect.width) * (max - min);
-        onChange(Math.max(min, Math.min(max, Math.round(newVal / step) * step)));
+        handlePointer(e);
       }}
       onPointerMove={(e) => {
         if (!isPressed) return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        const newVal = min + ((e.clientX - rect.left) / rect.width) * (max - min);
-        onChange(Math.max(min, Math.min(max, Math.round(newVal / step) * step)));
+        handlePointer(e);
       }}
       onPointerUp={(e) => {
         e.currentTarget.releasePointerCapture(e.pointerId);
@@ -412,23 +420,35 @@ function LiquidGlassSlider({ value, min = 0, max = 1, step = 0.05, onChange, isD
       }}
       onPointerCancel={() => setIsPressed(false)}
     >
-      {/* Track Tebal ala iOS 18 (seperti gambar) */}
-      <div className={`absolute w-full h-[6px] rounded-full overflow-hidden transition-colors ${isDark ? 'bg-white/20' : 'bg-gray-200'}`}>
-        <div className={`absolute h-full left-0 top-0 ${colorClass}`} style={{ width: `${percentage}%` }} />
-      </div>
+      {/* LAPISAN BARU: Inner Container dengan mx-[16px] agar tidak menabrak luar */}
+      <div className="relative w-full h-full flex items-center mx-[16px]">
 
-      {/* Thumb Pil Lebar (Mirip gambar referensi Anda) */}
-      <div
-        className={`absolute top-1/2 -translate-y-1/2 bg-white rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] transition-all duration-300 ease-apple-spring pointer-events-none flex items-center justify-center border border-black/5
-        ${isPressed ? 'w-[36px] h-[22px]' : 'w-[28px] h-[18px]'}`}
-        style={{ left: `calc(${percentage}% - ${isPressed ? 18 : 14}px)` }}
-      />
+        {/* Garis Track Latar */}
+        <div className={`absolute w-full h-[6px] rounded-full overflow-hidden ${isDark ? 'bg-white/20' : 'bg-gray-200'}`}>
+          <div className={`absolute h-full left-0 top-0 ${colorClass}`} style={{ width: `${percentage}%` }} />
+        </div>
+
+        {/* Thumb / Tombol Pil */}
+        <div
+          className={`absolute top-1/2 bg-white rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] pointer-events-none flex items-center justify-center border border-black/5
+          ${isPressed ? 'w-[36px] h-[22px]' : 'w-[28px] h-[18px]'}`}
+          style={{
+            // Posisi 0% sampai 100% sekarang dihitung dari Inner Container
+            left: `${percentage}%`,
+            // Transform ini memastikan TENGAH tombol yang menempel pada batas persentase
+            transform: 'translate(-50%, -50%)',
+            transitionProperty: 'width, height, box-shadow',
+            transitionDuration: '300ms',
+            transitionTimingFunction: 'cubic-bezier(0.25, 1.15, 0.4, 1)'
+          }}
+        />
+      </div>
     </div>
   );
 }
 
 
-/* ── LIQUID GLASS TOGGLE (BENTUK PIL/KAPSUL IOS 18 PRESISI) ── */
+/* ── 2. LIQUID GLASS TOGGLE (BENTUK PIL/KAPSUL IOS 18 PRESISI) ── */
 function LiquidGlassToggleMorph({ value, onChange, colorClass = "bg-[#34c759]", isDark }: any) {
   const [isPressed, setIsPressed] = useState(false);
 
@@ -445,7 +465,6 @@ function LiquidGlassToggleMorph({ value, onChange, colorClass = "bg-[#34c759]", 
           ? `${colorClass} border-transparent shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]`
           : isDark ? 'bg-[#39393d] border-[#ffffff10]' : 'bg-[#e9e9ea] border-black/5'}`}
     >
-      {/* Thumb Kapsul (w-27px menjadikannya lonjong sempurna dengan margin atas bawah 2px) */}
       <div
         className={`absolute top-[2px] h-[25px] bg-white rounded-full shadow-[0_3px_8px_rgba(0,0,0,0.15),_0_1px_1px_rgba(0,0,0,0.1)] transition-all duration-300 ease-apple-spring
         ${value
@@ -458,17 +477,17 @@ function LiquidGlassToggleMorph({ value, onChange, colorClass = "bg-[#34c759]", 
 }
 
 
-/* ── DRAGGABLE TABS (TEKS MENYALA SAAT DILEWATI) ── */
+/* ── 3. DRAGGABLE TABS (EFEK APPLE: MASKING TEKS REAL-TIME) ── */
 function DraggableLiquidTabs({ options, value, onChange, isDark, isApple }: any) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [contentWidth, setContentWidth] = useState(0);
 
-  // State ini yang akan melacak index mana yang sedang disentuh SECARA REAL-TIME
-  const [activeHoverIndex, setActiveHoverIndex] = useState(-1);
-
   const x = useMotionValue(0);
   const animatedX = useSpring(x, { stiffness: 450, damping: 35, mass: 0.8 });
+
+  // RAHASIA MASKING APPLE: Teks di dalam kaca bergerak berlawanan arah dengan kaca
+  const invertedX = useTransform(animatedX, (val) => -val);
   const scale = useSpring(1, { stiffness: 400, damping: 25 });
 
   useEffect(() => {
@@ -482,12 +501,10 @@ function DraggableLiquidTabs({ options, value, onChange, isDark, isApple }: any)
 
   const pillWidth = contentWidth > 0 ? contentWidth / options.length : 0;
 
-  // Sinkronkan awal warna teks
   useEffect(() => {
     if (!isDragging && pillWidth > 0) {
       const index = options.findIndex((o: any) => o.value === value);
       x.set(index * pillWidth);
-      setActiveHoverIndex(index);
     }
   }, [value, isDragging, pillWidth, x, options]);
 
@@ -498,23 +515,18 @@ function DraggableLiquidTabs({ options, value, onChange, isDark, isApple }: any)
     updatePointer(e);
   };
 
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (isDragging) updatePointer(e);
-  };
+  const handlePointerMove = (e: React.PointerEvent) => { if (isDragging) updatePointer(e); };
 
   const handlePointerUp = (e: React.PointerEvent) => {
     e.currentTarget.releasePointerCapture(e.pointerId);
     if (!isDragging) return;
     setIsDragging(false);
     scale.set(1);
-
     if (!containerRef.current || pillWidth === 0) return;
     const rect = containerRef.current.getBoundingClientRect();
     const pointerX = e.clientX - rect.left - 4;
-
     let closestIndex = Math.round((pointerX - pillWidth / 2) / pillWidth);
     closestIndex = Math.max(0, Math.min(options.length - 1, closestIndex));
-
     onChange(options[closestIndex].value);
   };
 
@@ -522,17 +534,14 @@ function DraggableLiquidTabs({ options, value, onChange, isDark, isApple }: any)
     if (!containerRef.current || pillWidth === 0) return;
     const rect = containerRef.current.getBoundingClientRect();
     const pointerX = e.clientX - rect.left - 4;
-
     let newX = pointerX - (pillWidth / 2);
     const maxX = contentWidth - pillWidth;
     newX = Math.max(0, Math.min(maxX, newX));
     x.set(newX);
-
-    // KUNCI EFEK TEKS MENYALA: Hitung index terdekat SAT JARI DIGESER
-    let closestIndex = Math.round(newX / pillWidth);
-    closestIndex = Math.max(0, Math.min(options.length - 1, closestIndex));
-    setActiveHoverIndex(closestIndex);
   };
+
+  const inactiveColor = isDark ? "text-white/40" : "text-gray-500";
+  const activeColor = isDark ? "text-white" : "text-gray-900";
 
   return (
     <div
@@ -540,33 +549,44 @@ function DraggableLiquidTabs({ options, value, onChange, isDark, isApple }: any)
       className={`relative flex rounded-full p-1 overflow-hidden border touch-none cursor-pointer select-none outline-none
         ${isApple ? "border-white/20 bg-black/10 backdrop-blur-md shadow-inner" : (isDark ? "border-[#ffffff10] bg-black/30" : "border-gray-200 bg-gray-100")}`}
       style={{ WebkitTapHighlightColor: 'transparent' }}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
+      onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp}
     >
+      {/* LAPISAN 1: Teks Abu-abu di Background */}
+      <div className="absolute inset-0 p-1 flex z-0 pointer-events-none">
+        {options.map((opt: any) => (
+          <div key={`bg-${opt.value}`} className="flex-1 flex items-center justify-center">
+            <span className={`text-[11.5px] font-bold tracking-wide ${inactiveColor}`}>{opt.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* LAPISAN 2: Gelembung Kaca yang Bergerak */}
       <motion.div
         style={{ x: animatedX, width: pillWidth, scale: scale }}
-        className={`absolute top-1 bottom-1 left-1 rounded-full z-0 flex items-center justify-center
+        className={`absolute top-1 bottom-1 left-1 rounded-full z-10 overflow-hidden flex items-center justify-center
           ${isApple ? "bg-white/30 backdrop-blur-2xl border border-white/40 shadow-[0_2px_10px_rgba(0,0,0,0.2)]" : (isDark ? "bg-[#3a3a40]" : "bg-white shadow-md")}`}
       >
-        {isApple && <div className="absolute top-0 w-1/2 h-[2px] bg-gradient-to-r from-transparent via-white/80 to-transparent rounded-full opacity-60" />}
+        {isApple && <div className="absolute top-0 w-1/2 h-[2px] bg-gradient-to-r from-transparent via-white/80 to-transparent rounded-full opacity-60 z-20 pointer-events-none" />}
+
+        {/* LAPISAN 3: KUNCI RAHASIA (Teks Menyala di dalam kaca) */}
+        <motion.div
+          style={{ x: invertedX, width: contentWidth }}
+          className="absolute top-0 bottom-0 left-0 flex pointer-events-none"
+        >
+          {options.map((opt: any) => (
+            <div key={`fg-${opt.value}`} className="h-full flex items-center justify-center" style={{ width: pillWidth }}>
+              <span className={`text-[11.5px] font-bold tracking-wide drop-shadow-sm ${activeColor}`}>{opt.label}</span>
+            </div>
+          ))}
+        </motion.div>
       </motion.div>
 
-      {/* Label Teks di Atas Kaca */}
-      {options.map((opt: any, index: number) => {
-        // Teks akan TERANG jika indexnya sama dengan index kaca saat digeser
-        const isHovered = index === activeHoverIndex;
-        return (
-          <div
-            key={opt.value}
-            className={`relative z-10 flex-1 py-1.5 text-[11.5px] text-center font-bold tracking-wide transition-colors duration-150 pointer-events-none
-            ${isHovered ? (isDark ? "text-white" : "text-gray-900") : (isDark ? "text-white/40" : "text-gray-500")}`}
-          >
-            {opt.label}
-          </div>
-        );
-      })}
+      {/* HITBOX: Area Tembus Pandang untuk mendeteksi ketukan (klik) */}
+      {options.map((opt: any) => (
+        <div key={`hitbox-${opt.value}`} className="relative z-20 flex-1 py-1.5 opacity-0 pointer-events-none">
+          <div className="text-[11.5px] font-bold text-center">{opt.label}</div>
+        </div>
+      ))}
     </div>
   );
 }
