@@ -66,9 +66,15 @@ class HandwritingGenerator:
         self.folio_odd = load_image(folio_path_or_url)
         # Folio genap: pakai folio kedua jika ada, fallback ke folio pertama
         folio_even_path = config.get("folioEvenPath")
-        self.folio_even = (
-            load_image(folio_even_path) if folio_even_path else self.folio_odd
-        )
+        if folio_even_path:
+            self.folio_even = load_image(folio_even_path)
+            # Pastikan dimensi folio genap SAMA PERSIS dengan folio ganjil agar config tidak meleset
+            if self.folio_even.size != self.folio_odd.size:
+                self.folio_even = self.folio_even.resize(
+                    self.folio_odd.size, Image.Resampling.BICUBIC
+                )
+        else:
+            self.folio_even = self.folio_odd
 
         # === AUTO RESIZE HD FOLIO (MENCEGAH HANG/TIMEOUT) ===
         # Standar lebar A4 pada layar adalah sekitar 1240 - 1400 pixel.
@@ -84,9 +90,8 @@ class HandwritingGenerator:
             )
 
             if folio_even_path and hasattr(self, "folio_even"):
-                new_even_height = int(self.folio_even.height * scale_ratio)
                 self.folio_even = self.folio_even.resize(
-                    (MAX_WIDTH, new_even_height), Image.Resampling.BICUBIC
+                    (MAX_WIDTH, new_height), Image.Resampling.BICUBIC
                 )
             else:
                 self.folio_even = self.folio_odd
@@ -641,6 +646,13 @@ class HandwritingGenerator:
                             current_line = part2 + " "
                             y += self.config["lineHeight"]
                             line_index += 1
+
+                            if y > self.config["pageBottom"]:
+                                pages.append(current_lines)
+                                current_lines = []
+                                y = self.config["startY"]
+                                line_index = 0
+                            
                             continue
 
                     # Jika tidak bisa dipotong, turun ke baris baru
