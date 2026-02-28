@@ -1240,7 +1240,7 @@ export default function Home() {
         await navigator.share({
           files: [file],
           title: "Hasil Tulisan Tangan AI",
-          text: "Dibuat dengan HandWrite AI",
+          text: "Dibuat dengan Mager Nulis",
         });
       } else {
         handleDownloadSingle(page);
@@ -2726,9 +2726,9 @@ export default function Home() {
 
               <div className="absolute pointer-events-auto left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
                 style={{ maxWidth: "340px", width: "90vw" }}>
-                <div className={`rounded-2xl border shadow-2xl p-5 ${isDark
-                  ? "bg-[#0d0d14] border-[#ffffff10] shadow-[0_24px_64px_rgba(0,0,0,0.8)]"
-                  : "bg-white border-violet-100 shadow-[0_24px_64px_rgba(139,92,246,0.15)]"}`}>
+                <div className={`rounded-2xl border shadow-2xl p-5 ${isAppleDevice ? 'liquid-glass-modal liquid-glass-edge' : ''} ${isDark
+                  ? (isAppleDevice ? '' : "bg-[#0d0d14] border-[#ffffff10]") + " shadow-[0_24px_64px_rgba(0,0,0,0.8)]"
+                  : (isAppleDevice ? '' : "bg-white border-violet-100") + " shadow-[0_24px_64px_rgba(139,92,246,0.15)]"}`}>
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex gap-1.5">
                       {[0, 1, 2, 3].map(i => (
@@ -2742,7 +2742,7 @@ export default function Home() {
                   </div>
                   <div className="text-3xl mb-2">{[["✍️"], ["🎨"], ["📝"], ["🚀"]][onboardingStep]}</div>
                   <h3 className={`text-sm font-bold mb-1.5 ${isDark ? "text-white" : "text-gray-900"}`}>
-                    {["Selamat datang di HandWrite AI! 🎉", "Pilih & Atur Gaya Tulisan", "Ketik atau Tempel Teks", "Generate & Download"][onboardingStep]}
+                    {["Selamat datang di Mager Nulis! 🎉", "Pilih & Atur Gaya Tulisan", "Ketik atau Tempel Teks", "Generate & Download"][onboardingStep]}
                   </h3>
                   <p className={`text-[12px] leading-relaxed mb-4 ${isDark ? "text-white/60" : "text-gray-500"}`}>
                     {["Ubah teks apapun jadi tulisan tangan realistis di atas folio dalam hitungan detik.", "Di sidebar kiri, pilih font, kemiringan, warna tinta, efek typo, dan banyak lagi untuk tulisan yang benar-benar terasa manusiawi.", "Paste teks tugasmu di area utama. Bisa sampai 50.000 karakter! Gunakan Ctrl+Enter untuk langsung Generate.", "Klik Generate dan halaman muncul satu per satu secara real-time. Download sebagai JPG, ZIP, PDF, atau Word."][onboardingStep]}
@@ -2772,10 +2772,10 @@ export default function Home() {
                   className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                   onClick={() => setShowShortcuts(false)} />
                 <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-                  className={`relative w-full max-w-sm rounded-3xl p-6 border shadow-2xl overflow-hidden ${isAppleDevice ? "bg-white/10 backdrop-blur-2xl border-white/20" : (D ? "bg-[#18181b] border-[#ffffff14]" : "bg-white border-gray-200")}`}>
+                  className={`relative w-full max-w-sm rounded-3xl p-6 border shadow-2xl overflow-hidden ${isAppleDevice ? "liquid-glass-modal liquid-glass-edge" : (D ? "bg-[#18181b] border-[#ffffff14]" : "bg-white border-gray-200")}`}>
 
                   {/* Efek kilauan kaca khusus Apple */}
-                  {isAppleDevice && <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none rounded-3xl" />}
+                  {isAppleDevice && <div className="absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-violet-500/5 pointer-events-none rounded-3xl" />}
 
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-5">
@@ -2993,7 +2993,7 @@ export default function Home() {
           )}
 
           {/* ── HEADER ── */}
-          <header className={`${c.header} border-b sticky top-0 z-50 transition-colors duration-200`}>
+          <header className={`${c.header} border-b sticky top-0 z-50 transition-colors duration-200 ${isAppleDevice ? 'liquid-glass-shimmer' : ''}`}>
             {isGenerating && (
               <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-violet-500/10">
                 <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-[width] duration-500"
@@ -3022,10 +3022,10 @@ export default function Home() {
                     <span className="font-bold text-sm bg-clip-text text-transparent hidden xs:block"
                       style={{
                         backgroundImage: D
-                          ? "linear-gradient(135deg, #a78bfa, #818cf8)"
-                          : "linear-gradient(135deg, #7c3aed, #4f46e5)",
+                          ? "linear-gradient(135deg, #67e8f9, #a78bfa, #818cf8)"
+                          : "linear-gradient(135deg, #0891b2, #7c3aed, #4f46e5)",
                       }}>
-                      HandWrite AI
+                      Mager Nulis
                     </span>
                     <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-mono border ${D ? "border-violet-500/30 bg-violet-500/10 text-violet-400" : "border-violet-300 bg-violet-50 text-violet-600"}`}>v1.2</span>
                   </div>

@@ -27,9 +27,9 @@ const virgil = localFont({
 });
 
 export const metadata: Metadata = {
-    title: "HandWrite AI – Text to Handwriting | By Adam",
-    description: "Converter teks menjadi tulisan tangan realistis di atas folio. Designed & Engineered by Mohammad Adam Mahfud.",
-    keywords: ["handwriting", "tulisan tangan", "folio", "AI", "converter", "Mohammad Adam Mahfud"],
+    title: "Mager Nulis – Text to Handwriting | By Adam",
+    description: "Mager Nulis — Converter teks menjadi tulisan tangan realistis di atas folio. Designed & Engineered by Mohammad Adam Mahfud.",
+    keywords: ["mager nulis", "handwriting", "tulisan tangan", "folio", "AI", "converter", "Mohammad Adam Mahfud"],
     authors: [{ name: "Mohammad Adam Mahfud" }],
 };
 

@@ -234,45 +234,262 @@ input[type="color"]::-webkit-color-swatch {
 
 /* ═══════════════════════════════════════════════════════════════════
    TEMA iOS: LIQUID GLASS (iPhone/iPad — iOS 26 Style)
-   Multi-layer blur, refraksi prismatik, border frosted, cahaya dinamis
+   True transparency, prismatic refraction, spectral edge highlights,
+   animated shimmer, showing background content through glass
    ═══════════════════════════════════════════════════════════════════ */
+
+/* ── KEYFRAMES ── */
+@keyframes liquidShimmer {
+  0% { transform: translateX(-100%) rotate(-15deg); }
+  100% { transform: translateX(200%) rotate(-15deg); }
+}
+
+@keyframes liquidFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes spectralPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+/* ── iOS LIGHT MODE: Liquid Glass Panel ── */
 .theme-ios .glass-panel {
   background: linear-gradient(
     145deg,
-    rgba(255, 255, 255, 0.55) 0%,
-    rgba(245, 245, 255, 0.25) 50%,
-    rgba(255, 255, 255, 0.35) 100%
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(248, 250, 255, 0.18) 40%,
+    rgba(255, 255, 255, 0.25) 70%,
+    rgba(240, 245, 255, 0.30) 100%
   );
-  backdrop-filter: blur(48px) saturate(180%) brightness(1.05);
-  -webkit-backdrop-filter: blur(48px) saturate(180%) brightness(1.05);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-top-color: rgba(255, 255, 255, 0.9);
-  border-left-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(60px) saturate(200%) brightness(1.08) contrast(1.02);
+  -webkit-backdrop-filter: blur(60px) saturate(200%) brightness(1.08) contrast(1.02);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-top-color: rgba(255, 255, 255, 0.85);
+  border-left-color: rgba(255, 255, 255, 0.65);
   box-shadow:
-    0 8px 32px -8px rgba(0, 0, 0, 0.08),
-    0 2px 8px rgba(0, 0, 0, 0.04),
-    inset 0 1px 2px rgba(255, 255, 255, 0.9),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.3);
+    0 8px 40px -8px rgba(0, 0, 0, 0.06),
+    0 2px 12px rgba(139, 92, 246, 0.04),
+    inset 0 1px 2px rgba(255, 255, 255, 0.95),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.25),
+    inset 1px 0 2px rgba(255, 255, 255, 0.3);
   border-radius: 22px;
+  position: relative;
+  overflow: hidden;
 }
+
+/* Spectral prismatic edge highlight — light mode */
+.theme-ios .glass-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.8) 0%,
+    rgba(200, 180, 255, 0.2) 25%,
+    rgba(180, 220, 255, 0.15) 50%,
+    rgba(255, 200, 230, 0.1) 75%,
+    rgba(255, 255, 255, 0.4) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: spectralPulse 4s ease-in-out infinite;
+}
+
+/* ── iOS DARK MODE: Liquid Glass Panel ── */
 .dark.theme-ios .glass-panel {
   background: linear-gradient(
     145deg,
-    rgba(45, 45, 55, 0.65) 0%,
-    rgba(25, 25, 35, 0.45) 50%,
-    rgba(35, 35, 45, 0.55) 100%
+    rgba(30, 25, 45, 0.40) 0%,
+    rgba(15, 12, 25, 0.28) 40%,
+    rgba(25, 20, 40, 0.35) 70%,
+    rgba(20, 15, 35, 0.30) 100%
   );
-  backdrop-filter: blur(48px) saturate(170%) brightness(0.95);
-  -webkit-backdrop-filter: blur(48px) saturate(170%) brightness(0.95);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-top-color: rgba(255, 255, 255, 0.25);
-  border-left-color: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(64px) saturate(180%) brightness(0.92) contrast(1.05);
+  -webkit-backdrop-filter: blur(64px) saturate(180%) brightness(0.92) contrast(1.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top-color: rgba(255, 255, 255, 0.18);
+  border-left-color: rgba(255, 255, 255, 0.12);
   box-shadow:
-    0 12px 48px -8px rgba(0, 0, 0, 0.6),
-    inset 0 1px 2px rgba(255, 255, 255, 0.18);
+    0 16px 56px -8px rgba(0, 0, 0, 0.65),
+    0 2px 8px rgba(139, 92, 246, 0.06),
+    inset 0 1px 2px rgba(255, 255, 255, 0.12),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.04);
 }
-.theme-ios button, .theme-ios input, .theme-ios select { border-radius: 14px !important; }
+
+/* Spectral edge — dark mode (more subtle, purple-tinted) */
+.dark.theme-ios .glass-panel::before {
+  background: linear-gradient(
+    135deg,
+    rgba(168, 140, 255, 0.25) 0%,
+    rgba(100, 140, 255, 0.12) 25%,
+    rgba(180, 120, 255, 0.08) 50%,
+    rgba(120, 180, 255, 0.06) 75%,
+    rgba(168, 140, 255, 0.15) 100%
+  );
+}
+
+/* ── iOS Interactive Elements ── */
+.theme-ios button, .theme-ios input, .theme-ios select {
+  border-radius: 14px !important;
+}
 .theme-ios .rounded-xl { border-radius: 18px !important; }
+
+/* Subtle glass on interactive focus */
+.theme-ios input:focus,
+.theme-ios textarea:focus,
+.theme-ios select:focus {
+  box-shadow:
+    0 0 0 3px rgba(139, 92, 246, 0.15),
+    0 0 20px rgba(139, 92, 246, 0.08),
+    inset 0 1px 2px rgba(255, 255, 255, 0.3) !important;
+}
+
+/* ── iOS Sidebar, Dropdown, Header — Deep Liquid Glass ── */
+.theme-ios .sidebar,
+.theme-ios .dropdown,
+.theme-ios .glass-panel {
+  backdrop-filter: blur(72px) saturate(210%);
+  -webkit-backdrop-filter: blur(72px) saturate(210%);
+}
+
+/* iOS dark glass panel override for maximum depth */
+.theme-ios .dark .glass-panel,
+.dark.theme-ios .glass-panel {
+  background: linear-gradient(
+    145deg,
+    rgba(18, 14, 30, 0.45) 0%,
+    rgba(8, 6, 16, 0.30) 50%,
+    rgba(22, 18, 36, 0.38) 100%
+  ) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.08),
+    inset 0 -1px 1px rgba(139, 92, 246, 0.04),
+    0 20px 60px -10px rgba(0, 0, 0, 0.7);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LIQUID GLASS UTILITY CLASSES
+   Reusable effects for modals, cards, and special surfaces
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Animated shimmer sweep — creates a living glass refraction */
+.liquid-glass-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.liquid-glass-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 30%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.06) 70%,
+    transparent 100%
+  );
+  animation: liquidShimmer 6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+.dark .liquid-glass-shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(168, 140, 255, 0.03) 30%,
+    rgba(168, 140, 255, 0.07) 50%,
+    rgba(168, 140, 255, 0.03) 70%,
+    transparent 100%
+  );
+}
+
+/* Spectral prismatic border effect */
+.liquid-glass-edge {
+  position: relative;
+}
+.liquid-glass-edge::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.7) 0%,
+    rgba(180, 160, 255, 0.3) 20%,
+    rgba(160, 200, 255, 0.2) 40%,
+    rgba(255, 180, 220, 0.15) 60%,
+    rgba(180, 255, 220, 0.1) 80%,
+    rgba(255, 255, 255, 0.5) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.dark .liquid-glass-edge::before {
+  background: linear-gradient(
+    160deg,
+    rgba(168, 140, 255, 0.35) 0%,
+    rgba(100, 160, 255, 0.15) 30%,
+    rgba(200, 140, 255, 0.1) 60%,
+    rgba(140, 200, 255, 0.08) 80%,
+    rgba(168, 140, 255, 0.2) 100%
+  );
+}
+
+/* Modal/overlay liquid glass — deeper blur + tinted */
+.liquid-glass-modal {
+  background: rgba(255, 255, 255, 0.25) !important;
+  backdrop-filter: blur(80px) saturate(220%) brightness(1.05) !important;
+  -webkit-backdrop-filter: blur(80px) saturate(220%) brightness(1.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  box-shadow:
+    0 32px 80px -16px rgba(0, 0, 0, 0.12),
+    inset 0 1px 3px rgba(255, 255, 255, 0.9),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.3) !important;
+}
+.dark .liquid-glass-modal {
+  background: rgba(15, 10, 25, 0.35) !important;
+  backdrop-filter: blur(80px) saturate(190%) brightness(0.88) !important;
+  -webkit-backdrop-filter: blur(80px) saturate(190%) brightness(0.88) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow:
+    0 32px 80px -16px rgba(0, 0, 0, 0.7),
+    inset 0 1px 2px rgba(255, 255, 255, 0.1),
+    inset 0 -1px 1px rgba(139, 92, 246, 0.05) !important;
+}
+
+/* Standalone liquid glass utilities (non-themed) */
+.liquid-glass {
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(60px) saturate(200%);
+  -webkit-backdrop-filter: blur(60px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1),
+              0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.liquid-glass-light {
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(60px) saturate(200%);
+  -webkit-backdrop-filter: blur(60px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.85),
+              0 12px 40px rgba(139, 92, 246, 0.1);
+}
 
 /* ═══════════════════════════════════════════════════════════════════
    TEMA FUTURISTIC (Android / PC)
@@ -341,8 +558,13 @@ textarea, input {
   }
   /* iOS mobile tetap pakai blur lebih tinggi (GPU iPhone lebih kuat) */
   .theme-ios .glass-panel {
-    backdrop-filter: blur(32px) saturate(160%);
-    -webkit-backdrop-filter: blur(32px) saturate(160%);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+  }
+  /* Disable shimmer animation on mobile for performance */
+  .liquid-glass-shimmer::after {
+    animation: none;
+    display: none;
   }
 }
 
@@ -379,37 +601,3 @@ textarea, input {
   line-gap-override: 0%;
 }
 
-/* ───────────────────────────────────────────────────────── */
-/* ── LIQUID GLASS (iOS 18+ Style UI) ── */
-/* ───────────────────────────────────────────────────────── */
-
-.liquid-glass {
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1),
-              0 8px 32px rgba(0, 0, 0, 0.5);
-}
-
-.liquid-glass-light {
-  background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.8),
-              0 8px 32px rgba(139, 92, 246, 0.15);
-}
-
-.theme-ios .sidebar,
-.theme-ios .dropdown,
-.theme-ios .glass-panel {
-  backdrop-filter: blur(70px) saturate(200%);
-  -webkit-backdrop-filter: blur(70px) saturate(200%);
-}
-
-.theme-ios .dark .glass-panel {
-  background: rgba(0, 0, 0, 0.65) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08);
-}

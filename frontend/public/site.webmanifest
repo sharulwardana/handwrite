@@ -1,6 +1,6 @@
 {
-  "name": "HandWrite AI",
-  "short_name": "HandWrite",
+  "name": "Mager Nulis",
+  "short_name": "Mager Nulis",
   "description": "Converter teks menjadi tulisan tangan realistis",
   "start_url": "/",
   "display": "standalone",
