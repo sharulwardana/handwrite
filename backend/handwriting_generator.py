@@ -606,7 +606,7 @@ class HandwritingGenerator:
                 continue
 
             # PERBAIKAN: Hapus margin drift agar teks tidak tumpah keluar garis
-            margin_jitter = int(random.gauss(0, self.config.get("marginJitter", 2)))
+            margin_jitter = 0
             current_line = ""
 
             for word in paragraph.split(" "):
@@ -789,7 +789,7 @@ class HandwritingGenerator:
         return Image.fromarray(result)
 
     def generate_page(self, lines, page_number=1):
-        self._page_margin_offset = int(random.gauss(0, 8))
+        self._page_margin_offset = 0  # Dihapus agar margin halaman konstan
         # Seed baseline berbeda tiap halaman agar gelombang tidak identik
         self.session_seed = random.uniform(0, 100)
         if self.tired_mode and self.total_pages > 1:
@@ -832,13 +832,8 @@ class HandwritingGenerator:
 
         for line in lines:
             if line["text"]:
-                # Margin kiri sedikit berbeda per halaman (beda posisi menaruh buku)
-                page_margin_offset = getattr(self, "_page_margin_offset", 0)
-                x_start = (
-                    self.config["startX"]
-                    + line.get("margin_jitter", 0)
-                    + page_margin_offset
-                )
+                # Margin kiri diset statis sesuai config agar konsisten di setiap halaman
+                x_start = self.config["startX"]
                 self.add_humanizer_effect(
                     text_layer,
                     draw,
