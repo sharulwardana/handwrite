@@ -211,8 +211,15 @@ def analyze_folio(image_path_or_url):
             return None
 
         line_gaps = [lines[i + 1] - lines[i] for i in range(len(lines) - 1)]
-        # Gunakan float dan MEDIAN. Median mencegah margin atas yang lebar ikut merusak jarak baris!
-        avg_gap = float(np.median(line_gaps))
+        
+        # 1. Cari median dulu untuk patokan kasar (agar header folio diabaikan)
+        median_gap = np.median(line_gaps)
+        
+        # 2. Ambil HANYA jarak garis yang normal (selisih maksimal 5 piksel dari median)
+        normal_gaps = [g for g in line_gaps if abs(g - median_gap) <= 5]
+        
+        # 3. Hitung RATA-RATA dari jarak normal tersebut. Ini menghasilkan desimal tingkat tinggi (misal: 34.38 px)
+        avg_gap = float(np.mean(normal_gaps)) if normal_gaps else float(median_gap)
 
         # Makin banyak garis terdeteksi, makin tinggi confidence
         line_confidence = min(50, int((len(lines) / 20) * 50))
