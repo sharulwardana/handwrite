@@ -8,13 +8,6 @@ module.exports = {
     ],
     theme: {
         // ── Responsive breakpoints ────────────────────────────────────────────
-        // xs   : 375px  → HP kecil (iPhone SE, Galaxy A series)
-        // sm   : 640px  → HP besar / landscape
-        // md   : 768px  → Tablet portrait
-        // lg   : 1024px → Tablet landscape / Laptop kecil
-        // xl   : 1280px → Laptop
-        // 2xl  : 1536px → Laptop L / Desktop
-        // 3xl  : 1920px → Full HD / 4K
         screens: {
             'xs': '375px',
             'sm': '640px',
@@ -26,6 +19,12 @@ module.exports = {
             '4xl': '2560px',
         },
         extend: {
+            // 👇 TAMBAHAN BARU: Kurva animasi khas Apple iOS
+            transitionTimingFunction: {
+                'apple-spring': 'cubic-bezier(0.25, 1.15, 0.4, 1)',
+                'apple-ease': 'cubic-bezier(0.32, 0.72, 0, 1)',
+            },
+            // 👆 TAMBAHAN BARU SELESAI
             animation: {
                 'fadeIn': 'fadeIn 0.3s ease-out both',
                 'slideUp': 'slideUp 0.35s ease-out both',
@@ -52,13 +51,11 @@ module.exports = {
                 '0.5': '0.5px',
             },
             maxWidth: {
-                // Content width di layar sangat lebar (4K / ultrawide)
-                '8xl': '88rem',  // 1408px
-                '9xl': '96rem',  // 1536px
-                '10xl': '120rem', // 1920px
+                '8xl': '88rem',
+                '9xl': '96rem',
+                '10xl': '120rem',
             },
             spacing: {
-                // Safe area untuk mobile (notch, home indicator)
                 'safe-t': 'env(safe-area-inset-top)',
                 'safe-b': 'env(safe-area-inset-bottom)',
                 'safe-l': 'env(safe-area-inset-left)',
@@ -67,7 +64,6 @@ module.exports = {
         },
     },
     plugins: [
-        // Plugin scrollbar-hide (agar tab bar mobile tidak tampilkan scrollbar)
         function ({ addUtilities }) {
             addUtilities({
                 '.scrollbar-hide': {
@@ -78,13 +74,27 @@ module.exports = {
                 '.scrollbar-thin': {
                     'scrollbar-width': 'thin',
                 },
-                // Safe area padding untuk bottom nav di mobile
                 '.safe-area-pb': {
                     'padding-bottom': 'max(12px, env(safe-area-inset-bottom))',
                 },
                 '.safe-area-pt': {
                     'padding-top': 'env(safe-area-inset-top)',
                 },
+
+                // 👇 TAMBAHAN BARU: Class khusus untuk Apple Liquid Glass
+                '.bg-liquid-glass': {
+                    'background': 'linear-gradient(145deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.15) 100%)',
+                    'backdrop-filter': 'blur(40px) saturate(200%) brightness(1.1)',
+                    '-webkit-backdrop-filter': 'blur(40px) saturate(200%) brightness(1.1)',
+                    'border': '0.5px solid rgba(255, 255, 255, 0.4)',
+                    'box-shadow': 'inset 0 1px 1px rgba(255, 255, 255, 0.8), 0 4px 24px rgba(0, 0, 0, 0.08)',
+                },
+                '.dark .bg-liquid-glass': {
+                    'background': 'linear-gradient(145deg, rgba(40, 40, 45, 0.45) 0%, rgba(20, 20, 25, 0.25) 100%)',
+                    'border': '0.5px solid rgba(255, 255, 255, 0.12)',
+                    'box-shadow': 'inset 0 1px 1px rgba(255, 255, 255, 0.15), 0 4px 24px rgba(0, 0, 0, 0.4)',
+                },
+                // 👆 TAMBAHAN BARU SELESAI
             });
         },
     ],

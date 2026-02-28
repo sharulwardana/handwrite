@@ -382,6 +382,61 @@ function BeforeAfterSlider() {
   );
 }
 
+/* ── LIQUID GLASS SLIDER (APPLE STYLE) ── */
+function LiquidGlassSlider({ value, min = 0, max = 1, step = 0.05, onChange, isDark, colorClass = "bg-violet-500" }: any) {
+  const [isPressed, setIsPressed] = useState(false);
+  const percentage = ((value - min) / (max - min)) * 100;
+
+  return (
+    <div
+      className="relative w-full h-8 flex items-center cursor-pointer touch-none group mt-2"
+      onPointerDown={(e) => {
+        setIsPressed(true);
+        const rect = e.currentTarget.getBoundingClientRect();
+        const newVal = min + ((e.clientX - rect.left) / rect.width) * (max - min);
+        onChange(Math.max(min, Math.min(max, Math.round(newVal / step) * step)));
+      }}
+      onPointerMove={(e) => {
+        if (!isPressed) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const newVal = min + ((e.clientX - rect.left) / rect.width) * (max - min);
+        onChange(Math.max(min, Math.min(max, Math.round(newVal / step) * step)));
+      }}
+      onPointerUp={() => setIsPressed(false)}
+      onPointerLeave={() => setIsPressed(false)}
+    >
+      <div className={`absolute w-full rounded-full transition-all duration-300 ease-apple-spring overflow-hidden ${isPressed ? 'h-5' : 'h-1.5'} ${isDark ? 'bg-white/10 shadow-inner' : 'bg-gray-200 shadow-inner'}`}>
+        <div className={`absolute h-full top-0 left-0 transition-all duration-100 ${colorClass}`} style={{ width: `${percentage}%` }} />
+      </div>
+      <div
+        className={`absolute rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.15)] flex items-center justify-center transition-all duration-300 ease-apple-spring border border-white/80 pointer-events-none ${isPressed ? 'w-8 h-8 opacity-60 backdrop-blur-md scale-125' : 'w-4 h-4 opacity-100 scale-100'}`}
+        style={{ left: `calc(${percentage}% - ${isPressed ? '16px' : '8px'})` }}
+      >
+        {isPressed && <div className="w-4 h-4 rounded-full bg-white/50 blur-[2px]" />}
+      </div>
+    </div>
+  );
+}
+
+/* ── LIQUID GLASS TOGGLE (MORPHING APPLE STYLE) ── */
+function LiquidGlassToggleMorph({ value, onChange, colorClass = "bg-emerald-500", isDark }: any) {
+  const [isPressed, setIsPressed] = useState(false);
+
+  return (
+    <button
+      onPointerDown={() => setIsPressed(true)}
+      onPointerUp={() => setIsPressed(false)}
+      onPointerLeave={() => setIsPressed(false)}
+      onClick={() => onChange(!value)}
+      className={`relative flex-shrink-0 w-[50px] h-[30px] rounded-full transition-all duration-300 ease-apple-ease border ${value ? `${colorClass} border-transparent shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]` : isDark ? 'bg-black/40 border-white/10 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)]' : 'bg-gray-200 border-gray-300 shadow-[inset_0_1px_3px_rgba(0,0,0,0.1)]'}`}
+    >
+      <div className={`absolute top-[2px] h-[24px] bg-white rounded-full shadow-[0_3px_8px_rgba(0,0,0,0.15),_0_1px_1px_rgba(0,0,0,0.1)] transition-all duration-300 ease-apple-spring ${isPressed ? 'w-[32px]' : 'w-[24px]'} ${value ? (isPressed ? 'left-[14px]' : 'left-[22px]') : 'left-[2px]'}`}>
+        <div className="absolute top-[1px] left-[10%] w-[80%] h-[10px] bg-gradient-to-b from-white to-transparent rounded-full opacity-60 pointer-events-none" />
+      </div>
+    </button>
+  );
+}
+
 export default function Home() {
 
   // PERF + HYDRATION FIX: Mounted guard — useState dan useEffect harus di atas.
@@ -1864,13 +1919,12 @@ export default function Home() {
               {writeSpeed < 0.35 ? "🐢 Lambat" : writeSpeed < 0.65 ? "✍️ Normal" : "⚡ Cepat"}
             </span>
           </div>
-          <input type="range" min="0" max="1" step="0.05" value={writeSpeed}
-            onChange={(e) => setWriteSpeed(Number(e.target.value))}
-            className="w-full cursor-pointer"
-            style={{
-              WebkitAppearance: "none", height: "5px", borderRadius: "99px",
-              background: `linear-gradient(to right, ${D ? "#fb923c" : "#ea580c"} 0%, ${D ? "#fb923c" : "#ea580c"} ${writeSpeed * 100}%, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} ${writeSpeed * 100}%, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} 100%)`
-            }}
+          <LiquidGlassSlider
+            min={0} max={1} step={0.05}
+            value={writeSpeed}
+            onChange={setWriteSpeed}
+            isDark={D}
+            colorClass={D ? "bg-orange-500" : "bg-orange-600"}
           />
           <div className={`flex justify-between text-[10px] mt-1.5 ${c.ts}`}>
             <span>🐢 Rapi</span><span>⚡ Cepat</span>
@@ -1884,13 +1938,12 @@ export default function Home() {
               {slantAngle > 0 ? `+${slantAngle}°` : `${slantAngle}°`}
             </span>
           </div>
-          <input type="range" min="-15" max="15" step="1" value={slantAngle}
-            onChange={(e) => setSlantAngle(Number(e.target.value))}
-            className="w-full cursor-pointer"
-            style={{
-              WebkitAppearance: "none", appearance: "none", height: "5px", borderRadius: "99px",
-              background: `linear-gradient(to right, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} 0%, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} ${((slantAngle + 15) / 30) * 100}%, ${D ? "#818cf8" : "#6366f1"} ${((slantAngle + 15) / 30) * 100}%, ${D ? "#818cf8" : "#6366f1"} 100%)`
-            }}
+          <LiquidGlassSlider
+            min={-15} max={15} step={1}
+            value={slantAngle}
+            onChange={setSlantAngle}
+            isDark={D}
+            colorClass={D ? "bg-indigo-500" : "bg-indigo-600"}
           />
           <div className={`flex justify-between text-[10px] mt-1.5 ${c.ts}`}>
             <span>← Kiri</span>
@@ -1929,14 +1982,12 @@ export default function Home() {
               {config.marginJitter ?? 6}px
             </span>
           </div>
-          <input type="range" min="0" max="20" step="1"
+          <LiquidGlassSlider
+            min={0} max={20} step={1}
             value={config.marginJitter ?? 6}
-            onChange={(e) => updateConfig({ ...config, marginJitter: Number(e.target.value) })}
-            className="w-full cursor-pointer mt-2"
-            style={{
-              WebkitAppearance: "none", height: "5px", borderRadius: "99px",
-              background: `linear-gradient(to right, ${D ? "#10b981" : "#059669"} 0%, ${D ? "#10b981" : "#059669"} ${((config.marginJitter ?? 6) / 20) * 100}%, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} ${((config.marginJitter ?? 6) / 20) * 100}%, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} 100%)`
-            }}
+            onChange={(v: number) => updateConfig({ ...config, marginJitter: v })}
+            isDark={D}
+            colorClass={D ? "bg-emerald-500" : "bg-emerald-600"}
           />
           <div className={`flex justify-between text-[10px] mt-1.5 ${c.ts}`}>
             <span>Rata kiri</span><span>Bergelombang</span>
@@ -1948,8 +1999,7 @@ export default function Home() {
             <p className={`text-[10.5px] font-semibold uppercase tracking-widest ${c.label}`}>Efek Typo</p>
             <p className={`text-[10px] mt-0.5 ${c.ts}`}>{enableTypo ? "Salah + coretan sesekali" : "Bersih tanpa coretan"}</p>
           </div>
-          <ToggleSwitch value={enableTypo} onChange={setEnableTypo}
-            colorClass={D ? "bg-violet-500 border-violet-400" : "bg-violet-600 border-violet-500"} isDark={D} isApple={isAppleDevice} />
+          <LiquidGlassToggleMorph value={enableTypo} onChange={setEnableTypo} colorClass="bg-violet-500" isDark={D} />
         </div>
 
         <div className="flex items-center justify-between">
@@ -1957,8 +2007,7 @@ export default function Home() {
             <p className={`text-[10.5px] font-semibold uppercase tracking-widest ${c.label}`}>Mode Lelah</p>
             <p className={`text-[10px] mt-0.5 ${c.ts}`}>{tiredMode ? "Makin acak di halaman akhir" : "Konsisten dari awal"}</p>
           </div>
-          <ToggleSwitch value={tiredMode} onChange={setTiredMode}
-            colorClass="bg-orange-500 border-orange-400" isDark={D} isApple={isAppleDevice} />
+          <LiquidGlassToggleMorph value={tiredMode} onChange={setTiredMode} colorClass="bg-orange-500" isDark={D} />
         </div>
 
         <div>
@@ -1967,8 +2016,7 @@ export default function Home() {
               <p className={`text-[10.5px] font-semibold uppercase tracking-widest ${c.label}`}>Nomor Halaman</p>
               <p className={`text-[10px] mt-0.5 ${c.ts}`}>{showPageNumber ? "Aktif" : "Tidak ada nomor"}</p>
             </div>
-            <ToggleSwitch value={showPageNumber} onChange={setShowPageNumber}
-              colorClass="bg-emerald-500 border-emerald-400" isDark={D} isApple={isAppleDevice} />
+            <LiquidGlassToggleMorph value={showPageNumber} onChange={setShowPageNumber} colorClass="bg-emerald-500" isDark={D} />
           </div>
           {showPageNumber && (
             <div className="grid grid-cols-3 gap-1 mt-2">
@@ -1990,8 +2038,7 @@ export default function Home() {
             <p className={`text-[10.5px] font-semibold uppercase tracking-widest ${c.label}`}>Tekstur Kertas</p>
             <p className={`text-[10px] mt-0.5 ${c.ts}`}>{config.paperTexture ? "Ada bayangan & lipatan" : "Kertas datar bersih"}</p>
           </div>
-          <ToggleSwitch value={config.paperTexture ?? false} onChange={(v) => updateConfig({ ...config, paperTexture: v })}
-            colorClass="bg-stone-500 border-stone-400" isDark={D} isApple={isAppleDevice} />
+          <LiquidGlassToggleMorph value={config.paperTexture ?? false} onChange={(v: boolean) => updateConfig({ ...config, paperTexture: v })} colorClass="bg-stone-500" isDark={D} />
         </div>
       </SidebarSection>
 
@@ -2035,13 +2082,12 @@ export default function Home() {
               {config.wordSpacing >= 0 ? `+${config.wordSpacing}` : config.wordSpacing}px
             </span>
           </div>
-          <input type="range" min="-10" max="40" step="1" value={config.wordSpacing}
-            onChange={(e) => updateConfig({ ...config, wordSpacing: Number(e.target.value) })}
-            className="w-full cursor-pointer"
-            style={{
-              WebkitAppearance: "none", height: "5px", borderRadius: "99px",
-              background: `linear-gradient(to right, ${D ? "#38bdf8" : "#0ea5e9"} 0%, ${D ? "#38bdf8" : "#0ea5e9"} ${((config.wordSpacing + 10) / 50) * 100}%, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} ${((config.wordSpacing + 10) / 50) * 100}%, ${D ? "rgba(255,255,255,0.12)" : "#d1d5db"} 100%)`
-            }}
+          <LiquidGlassSlider
+            min={-10} max={40} step={1}
+            value={config.wordSpacing}
+            onChange={(v: number) => updateConfig({ ...config, wordSpacing: v })}
+            isDark={D}
+            colorClass={D ? "bg-sky-500" : "bg-sky-600"}
           />
           {/* Animasi Gelembung Liquid iOS */}
           <div className={`relative flex rounded-full p-0.5 mt-3 overflow-hidden border ${isAppleDevice ? "liquid-glass-tabs border-white/20" : (D ? "border-[#ffffff10] bg-black/30" : "border-gray-200 bg-gray-100")}`}>
