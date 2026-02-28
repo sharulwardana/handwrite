@@ -2896,7 +2896,6 @@ export default function Home() {
           {/* ── ONBOARDING TOUR ── */}
           {showOnboarding && (
             <div className="fixed inset-0 z-[200] pointer-events-none">
-              {/* Overlay gelap — lebih terang di step 0 (welcome) */}
               <motion.div
                 className="absolute inset-0 pointer-events-auto"
                 animate={{ backgroundColor: onboardingStep === 0 ? "rgba(0,0,0,0.7)" : "rgba(0,0,0,0.55)" }}
@@ -2904,7 +2903,6 @@ export default function Home() {
                 onClick={() => { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); }}
               />
 
-              {/* Spotlight ring — muncul di step 1, 2, 3 */}
               {onboardingStep > 0 && (() => {
                 const targetId = ONBOARDING_SPOTLIGHT[onboardingStep]?.selector;
                 const el = targetId ? document.getElementById(targetId) : null;
@@ -2931,38 +2929,44 @@ export default function Home() {
 
               <div className="absolute pointer-events-auto left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
                 style={{ maxWidth: "340px", width: "90vw" }}>
-                <div className={`rounded-2xl border shadow-2xl p-5 ${isAppleDevice ? 'liquid-glass-modal liquid-glass-edge' : ''} ${isDark
-                  ? (isAppleDevice ? '' : "bg-[#0d0d14] border-[#ffffff10]") + " shadow-[0_24px_64px_rgba(0,0,0,0.8)]"
-                  : (isAppleDevice ? '' : "bg-white border-violet-100") + " shadow-[0_24px_64px_rgba(139,92,246,0.15)]"}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex gap-1.5">
-                      {[0, 1, 2, 3].map(i => (
-                        <div key={i} className={`h-1.5 rounded-full transition-colors duration-300 ${i === onboardingStep ? "w-6 bg-violet-500" : i < onboardingStep ? "w-3 bg-violet-300" : "w-3 bg-gray-300 dark:bg-white/10"}`} />
-                      ))}
-                    </div>
-                    <button onClick={() => { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); }}
-                      className={`text-[11px] px-2 py-1 rounded-lg transition-colors ${isDark ? "text-white/40 hover:text-white/70 hover:bg-white/5" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}>
-                      Skip
-                    </button>
-                  </div>
-                  <div className="text-3xl mb-2">{[["✍️"], ["🎨"], ["📝"], ["🚀"]][onboardingStep]}</div>
-                  <h3 className={`text-sm font-bold mb-1.5 ${isDark ? "text-white" : "text-gray-900"}`}>
-                    {["Selamat datang di Mager Nulis! 🎉", "Pilih & Atur Gaya Tulisan", "Ketik atau Tempel Teks", "Generate & Download"][onboardingStep]}
-                  </h3>
-                  <p className={`text-[12px] leading-relaxed mb-4 ${isDark ? "text-white/60" : "text-gray-500"}`}>
-                    {["Ubah teks apapun jadi tulisan tangan realistis di atas folio dalam hitungan detik.", "Di sidebar kiri, pilih font, kemiringan, warna tinta, efek typo, dan banyak lagi untuk tulisan yang benar-benar terasa manusiawi.", "Paste teks tugasmu di area utama. Bisa sampai 50.000 karakter! Gunakan Ctrl+Enter untuk langsung Generate.", "Klik Generate dan halaman muncul satu per satu secara real-time. Download sebagai JPG, ZIP, PDF, atau Word."][onboardingStep]}
-                  </p>
-                  <div className="flex gap-2">
-                    {onboardingStep > 0 && (
-                      <button onClick={handlePrevOnboardingStep}
-                        className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${isDark ? "border-white/10 text-white/60 hover:bg-white/5" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
-                        ← Kembali
+                <div className={`rounded-[2rem] border shadow-2xl overflow-hidden ${isAppleDevice
+                    ? (isDark ? "bg-[#1c1c1e]/85 backdrop-blur-3xl border-white/15" : "bg-white/85 backdrop-blur-3xl border-white/40")
+                    : (isDark ? "bg-[#0d0d14] border-[#ffffff10]" : "bg-white border-violet-100")
+                  } ${isDark ? "shadow-[0_24px_64px_rgba(0,0,0,0.8)]" : "shadow-[0_24px_64px_rgba(139,92,246,0.15)]"}`}>
+
+                  {isAppleDevice && <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-violet-500/10 pointer-events-none z-0" />}
+
+                  <div className="relative z-10 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex gap-1.5">
+                        {[0, 1, 2, 3].map(i => (
+                          <div key={i} className={`h-1.5 rounded-full transition-colors duration-300 ${i === onboardingStep ? "w-6 bg-violet-500" : i < onboardingStep ? "w-3 bg-violet-300" : "w-3 bg-gray-300 dark:bg-white/10"}`} />
+                        ))}
+                      </div>
+                      <button onClick={() => { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); }}
+                        className={`text-[11px] px-2.5 py-1.5 rounded-lg transition-colors font-medium ${isDark ? "text-white/50 hover:text-white hover:bg-white/10" : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"}`}>
+                        Skip
                       </button>
-                    )}
-                    <button onClick={handleNextOnboardingStep}
-                      className="flex-1 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 transition-colors">
-                      {onboardingStep < 3 ? "Lanjut →" : "Mulai Sekarang! 🚀"}
-                    </button>
+                    </div>
+                    <div className="text-4xl mb-3">{[["👋"], ["🎨"], ["📝"], ["🚀"]][onboardingStep]}</div>
+                    <h3 className={`text-base font-bold mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
+                      {["Selamat datang di Mager Nulis!", "Pilih Gaya Tulisan", "Ketik Teks Tugasmu", "Generate & Download"][onboardingStep]}
+                    </h3>
+                    <p className={`text-[12.5px] leading-relaxed mb-6 ${isDark ? "text-white/70" : "text-gray-600"}`}>
+                      {["Ubah teks apapun jadi tulisan tangan realistis di atas folio dalam hitungan detik.", "Di sidebar kiri, pilih font, kemiringan, warna tinta, efek typo, dan banyak lagi untuk tulisan yang benar-benar terasa manusiawi.", "Paste teks tugasmu di area utama. Bisa sampai 50.000 karakter! Gunakan Ctrl+Enter untuk langsung Generate.", "Klik Generate dan halaman muncul satu per satu secara real-time. Download sebagai JPG, ZIP, PDF, atau Word."][onboardingStep]}
+                    </p>
+                    <div className="flex gap-2">
+                      {onboardingStep > 0 && (
+                        <button onClick={handlePrevOnboardingStep}
+                          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isDark ? "bg-black/30 border border-white/10 text-white/80 hover:bg-white/10" : "bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100"}`}>
+                          ← Kembali
+                        </button>
+                      )}
+                      <button onClick={handleNextOnboardingStep}
+                        className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 active:scale-95 transition-colors shadow-lg shadow-violet-500/25">
+                        {onboardingStep < 3 ? "Lanjut →" : "Mulai Sekarang! 🚀"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2977,12 +2981,14 @@ export default function Home() {
                   className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                   onClick={() => setShowShortcuts(false)} />
                 <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-                  className={`relative w-full max-w-sm rounded-3xl p-6 border shadow-2xl overflow-hidden ${isAppleDevice ? "liquid-glass-modal liquid-glass-edge" : (D ? "bg-[#18181b] border-[#ffffff14]" : "bg-white border-gray-200")}`}>
+                  className={`relative w-full max-w-sm rounded-3xl border shadow-2xl overflow-hidden ${isAppleDevice
+                    ? (D ? "bg-[#1c1c1e]/85 backdrop-blur-3xl border-white/15" : "bg-white/85 backdrop-blur-3xl border-white/40")
+                    : (D ? "bg-[#18181b] border-[#ffffff14]" : "bg-white border-gray-200")
+                    }`}>
 
-                  {/* Efek kilauan kaca khusus Apple */}
-                  {isAppleDevice && <div className="absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-violet-500/5 pointer-events-none rounded-3xl" />}
+                  {isAppleDevice && <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-violet-500/10 pointer-events-none z-0" />}
 
-                  <div className="relative z-10">
+                  <div className="relative z-10 p-6 max-h-[85vh] overflow-y-auto scrollbar-hide">
                     <div className="flex items-center justify-between mb-5">
                       <h3 className={`font-bold text-base ${c.tp}`}>⌨️ Keyboard Shortcuts</h3>
                       <button onClick={() => setShowShortcuts(false)}
@@ -2997,8 +3003,8 @@ export default function Home() {
                         { keys: ["Esc"], label: "Tutup modal / Fullscreen" },
                         { keys: ["Ctrl", "Z"], label: "Undo config" },
                       ].map((s, i) => (
-                        <div key={i} className={`flex items-center justify-between px-3 py-2.5 rounded-xl ${D ? "bg-white/4" : "bg-gray-50"}`}>
-                          <span className={`text-xs ${c.tm}`}>{s.label}</span>
+                        <div key={i} className={`flex items-center justify-between px-3 py-2.5 rounded-xl ${D ? "bg-black/20" : "bg-gray-50"}`}>
+                          <span className={`text-xs font-medium ${c.tm}`}>{s.label}</span>
                           <div className="flex items-center gap-1">
                             {s.keys.map((k, ki) => (
                               <span key={ki}>
@@ -3016,7 +3022,7 @@ export default function Home() {
                     </div>
                     <button
                       onClick={() => { setShowShortcuts(false); setShowOnboarding(true); setOnboardingStep(0); }}
-                      className={`w-full mt-5 py-2.5 rounded-xl text-xs font-semibold border transition-all active:scale-95 ${isAppleDevice ? "bg-white/20 hover:bg-white/30 border-white/10 text-white" : c.btn}`}>
+                      className={`w-full mt-5 py-2.5 rounded-xl text-xs font-semibold border transition-all active:scale-95 ${isAppleDevice ? (D ? "bg-white/10 hover:bg-white/20 border-white/10 text-white" : "bg-black/5 hover:bg-black/10 border-black/10 text-black") : c.btn}`}>
                       Lihat Tutorial Onboarding
                     </button>
                   </div>
@@ -3033,14 +3039,18 @@ export default function Home() {
                   className="absolute inset-0 bg-black/70 backdrop-blur-sm"
                   onClick={() => setShowQrisModal(false)} />
 
-                {/* PERBAIKAN: Tambah max-h-[90dvh], overflow-y-auto, dan penyesuaian ukuran responsif */}
+                {/* PERBAIKAN: Pisahkan container utama dengan inner scrollable agar border tidak terpotong */}
                 <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                  className={`relative w-full max-w-sm sm:max-w-md max-h-[92dvh] overflow-y-auto scrollbar-hide rounded-[2rem] p-6 sm:p-8 border shadow-2xl flex flex-col items-center text-center ${isAppleDevice ? "liquid-glass-modal liquid-glass-edge" : (D ? "bg-[#13131f] border-[#ffffff14]" : "bg-white border-gray-200")}`}>
+                  className={`relative w-full max-w-sm sm:max-w-md max-h-[92dvh] rounded-[2rem] border shadow-2xl flex flex-col overflow-hidden ${isAppleDevice
+                    ? (D ? "bg-[#1c1c1e]/85 backdrop-blur-3xl border-white/15" : "bg-white/85 backdrop-blur-3xl border-white/40")
+                    : (D ? "bg-[#13131f] border-[#ffffff14]" : "bg-white border-gray-200")
+                    }`}>
 
-                  {/* Kilauan Liquid Glass — spectral glow overlay */}
-                  {isAppleDevice && <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-white/15 via-transparent to-violet-500/5 pointer-events-none" />}
+                  {/* Kilauan Liquid Glass — Tetap nempel statis di luar agar tidak ikut ke-scroll */}
+                  {isAppleDevice && <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-white/20 via-transparent to-violet-500/10 pointer-events-none z-0" />}
 
-                  <div className="relative z-10 flex flex-col items-center justify-center w-full">
+                  {/* INNER CONTENT SCROLLABLE (Ini yang menyembuhkan border aneh) */}
+                  <div className="relative z-10 flex flex-col items-center text-center w-full h-full overflow-y-auto scrollbar-hide p-6 sm:p-8">
                     <div className="w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0 rounded-full bg-amber-500/20 flex items-center justify-center mb-4 sm:mb-5 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
                       <Zap className="w-6 h-6 sm:w-7 sm:h-7 text-amber-500" fill="currentColor" />
                     </div>
@@ -3050,7 +3060,6 @@ export default function Home() {
                       Kamu butuh energi untuk menulis halaman. Yuk dukung kreator dengan Top Up untuk mendapatkan fitur Premium!
                     </p>
 
-                    {/* Tempat Gambar QRIS - Skala responsif menyesuaikan HP */}
                     <div className="w-40 h-40 sm:w-48 sm:h-48 flex-shrink-0 bg-white p-3 sm:p-4 rounded-2xl border-4 border-amber-500 mb-4 sm:mb-6 shadow-xl flex items-center justify-center relative group">
                       <QRCodeSVG
                         value="00020101021126570011ID.DANA.WWW011893600915300202425202090020242520303UMI51440014ID.CO.QRIS.WWW0215ID10254508315380303UMI5204594553033605802ID5909DUA PUTRA600409056105511526304B1DC"
@@ -3064,7 +3073,6 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* TIER HARGA BARU - Layout dibuat padat di mobile */}
                     <div className="w-full space-y-2 mb-4 sm:mb-6 flex-shrink-0">
                       {[
                         { name: "Paket Maba", energy: 15, price: "5.000", color: "blue", tag: "Hemat" },
@@ -3073,7 +3081,7 @@ export default function Home() {
                       ].map((tier) => (
                         <div key={tier.name} className={`flex items-center justify-between p-2.5 sm:p-3 rounded-2xl border transition-colors ${tier.tag === "Populer"
                           ? D ? "bg-violet-500/10 border-violet-500/40 ring-1 ring-violet-500/20" : "bg-violet-50 border-violet-200 ring-1 ring-violet-200"
-                          : D ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-100"
+                          : D ? "bg-black/20 border-white/10" : "bg-gray-50 border-gray-200"
                           }`}>
                           <div className="text-left">
                             <div className="flex items-center gap-1.5 sm:gap-2">
@@ -3091,9 +3099,8 @@ export default function Home() {
                       ))}
                     </div>
 
-                    {/* Tombol Action di bagian bawah (tetap aman walau scroll) */}
-                    <div className="w-full mt-auto flex-shrink-0">
-                      <a href="https://wa.me/6281234567890?text=Halo%20Admin%20HandWrite%20AI,%20saya%20sudah%20transfer%20via%20QRIS%20untuk%20Top%20Up%20Energi.%20Berikut%20bukti%20transfernya:"
+                    <div className="w-full mt-auto flex-shrink-0 pt-2">
+                      <a href="https://wa.me/6285156843756?text=Halo%20Admin%20HandWrite%20AI,%20saya%20sudah%20transfer%20via%20QRIS%20untuk%20Top%20Up%20Energi.%20Berikut%20bukti%20transfernya:"
                         target="_blank" rel="noopener noreferrer"
                         className="w-full py-2.5 sm:py-3 rounded-xl font-bold text-white bg-[#25D366] hover:bg-[#1ebd5a] active:scale-95 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-green-500/30 text-xs sm:text-sm">
                         <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -3101,11 +3108,10 @@ export default function Home() {
                       </a>
 
                       <button onClick={() => setShowQrisModal(false)}
-                        className={`mt-3 sm:mt-4 text-[11px] sm:text-xs font-medium transition-colors p-2 ${D ? "text-white/40 hover:text-white" : "text-gray-400 hover:text-gray-800"}`}>
+                        className={`mt-4 text-[11px] sm:text-xs font-semibold transition-colors px-4 py-2 rounded-xl ${D ? "text-white/60 hover:text-white hover:bg-white/10" : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"}`}>
                         Tutup dulu, mau lihat-lihat
                       </button>
                     </div>
-
                   </div>
                 </motion.div>
               </div>
