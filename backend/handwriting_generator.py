@@ -134,13 +134,8 @@ class HandwritingGenerator:
         self.font_cache = {}  # Tambahan: Inisialisasi penyimpanan cache font
 
     def get_baseline_wobble(self, line_index):
-        # Gelombang lambat antar baris
-        wave = math.sin(line_index * 0.9 + self.session_seed * 20) * 0.15
-        # Random kecil per baris
-        wobble = wave + random.uniform(-0.1, 0.1)
-        # Fatigue: ditiadakan agar baris bawah tidak selalu turun keluar garis
-        fatigue_drift = 0.0
-        return (wobble + fatigue_drift) * (-1.4 if self.left_handed else 1.0)
+        # MATIKAN semua efek gelombang agar baris lurus sempurna dan tidak makin turun
+        return 0.0
 
     def make_typo_version(self, word):
         """
@@ -175,13 +170,11 @@ class HandwritingGenerator:
     def ink_vary(self, pressure_delta=0):
         """
         Kembalikan warna tinta dengan variasi tekanan pena.
-        pressure_delta: negatif = tekan lebih kuat (lebih gelap),
-                        positif = tekan lebih ringan (lebih terang).
-        Warna hue TIDAK berubah — hanya brightness-nya saja.
+        pressure_delta: negatif = tekan lebih kuat (lebih gelap).
         """
         r, g, b = self.base_color_rgb
-        # Jitter kecil alami per goresan (±5), ditambah pressure offset
-        jitter = random.gauss(0, 5) + pressure_delta
+        # UBAH: Kurangi jitter dari 5 menjadi 2 agar warna tinta lebih stabil dan tidak pudar
+        jitter = random.gauss(0, 2) + pressure_delta
         return (
             max(0, min(255, int(r + jitter))),
             max(0, min(255, int(g + jitter))),
@@ -400,7 +393,9 @@ class HandwritingGenerator:
                 # FITUR BARU (Claude Poin 1): Pen Pressure Kurva Sinus
                 # Tinta ditekan kuat (gelap) di tengah kata, dan diangkat ringan di awal/akhir
                 pressure_curve = math.sin(word_progress * math.pi)
-                pen_pressure = -20 * pressure_curve + 10 * (1 - pressure_curve)
+                
+                # UBAH DI SINI: Angka +10 diganti jadi 0 agar ujung kata tidak pudar/transparan
+                pen_pressure = -20 * pressure_curve + 0 * (1 - pressure_curve)
 
                 if is_paragraph_start and word_count_seen == 0 and word_char_idx == 1:
                     pen_pressure -= 22  # Huruf pertama paragraf: sangat ditekan

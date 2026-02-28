@@ -211,7 +211,11 @@ def analyze_folio(image_path_or_url):
             return None
 
         line_gaps = [lines[i + 1] - lines[i] for i in range(len(lines) - 1)]
-        avg_gap = int(np.median(line_gaps))
+        
+        # UBAH DI SINI:
+        # Gunakan float() dan mean() alih-alih int() dan median().
+        # Desimal ini mencegah tulisan makin meleset turun di baris-baris bawah.
+        avg_gap = float(np.mean(line_gaps))
 
         # Makin banyak garis terdeteksi, makin tinggi confidence
         line_confidence = min(50, int((len(lines) / 20) * 50))
