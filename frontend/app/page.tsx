@@ -203,9 +203,9 @@ function ToggleSwitch({
     return (
       <button
         onClick={() => onChange(!value)}
-        className={`relative flex-shrink-0 w-[46px] h-[28px] rounded-full liquid-glass-toggle ${value ? 'active' : ''}`}
+        className={`relative flex-shrink-0 w-[50px] h-[30px] rounded-full liquid-glass-toggle ${value ? 'active' : ''}`}
       >
-        <span className={`absolute top-[2px] w-[22px] h-[22px] rounded-full liquid-glass-toggle-thumb ${value ? 'left-[22px]' : 'left-[2px]'}`} />
+        <span className={`absolute top-[3px] w-[24px] h-[24px] rounded-full liquid-glass-toggle-thumb ${value ? 'left-[23px]' : 'left-[3px]'}`} />
       </button>
     );
   }
@@ -2044,13 +2044,13 @@ export default function Home() {
             }}
           />
           {/* Animasi Gelembung Liquid iOS */}
-          <div className={`relative flex rounded-full p-0.5 ${isAppleDevice ? "liquid-glass-tabs overflow-visible" : (D ? "border border-[#ffffff10] bg-black/30 overflow-hidden" : "border border-gray-200 bg-gray-100 overflow-hidden")}`}>
+          <div className={`relative flex rounded-full p-0.5 overflow-hidden border ${isAppleDevice ? "liquid-glass-tabs border-white/20" : (D ? "border-[#ffffff10] bg-black/30" : "border-gray-200 bg-gray-100")}`}>
 
             {/* Ini Gelembung yang meluncur (Sliding Pill) — glass bubble on iOS */}
             <div
-              className={`absolute rounded-full transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? "liquid-glass-bubble inset-y-[-3px] w-[calc(33.33%+0.2rem)]" : "inset-y-0.5 w-[calc(33.33%-0.33rem)] shadow-md backdrop-blur-md"} ${!isAppleDevice ? (D ? "bg-[#2c2c35] border border-[#ffffff10]" : "bg-white border border-gray-300") : ""}`}
+              className={`absolute top-[2px] bottom-[2px] rounded-full transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? "liquid-glass-bubble w-[calc(33.33%-4px)]" : "w-[calc(33.33%-4px)] shadow-md backdrop-blur-md"} ${!isAppleDevice ? (D ? "bg-[#2c2c35] border border-[#ffffff10]" : "bg-white border border-gray-300") : ""}`}
               style={{
-                left: config.wordSpacing === -5 ? (isAppleDevice ? '-0.1rem' : '0.25rem') : config.wordSpacing === 8 ? 'calc(33.33% + 0.08rem)' : (isAppleDevice ? 'calc(66.66% - 0.2rem)' : 'calc(66.66% - 0.08rem)')
+                left: config.wordSpacing === -5 ? '2px' : config.wordSpacing === 8 ? 'calc(33.33% + 2px)' : 'calc(66.66% + 2px)'
               }}
             />
 
@@ -4086,12 +4086,12 @@ export default function Home() {
             <div className="flex lg:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
               {/* Mobile tab switcher (Modern iOS Style - Liquid Glass Active Tab) */}
               <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} bg-transparent`}>
-                <div className={`flex p-0.5 rounded-full relative ${isAppleDevice ? "liquid-glass-tabs overflow-visible" : (D ? "border border-[#ffffff10] bg-black/30 overflow-hidden" : "border border-gray-200 bg-gray-100 overflow-hidden")}`}>
+                <div className={`flex p-0.5 rounded-full relative overflow-hidden border ${isAppleDevice ? "liquid-glass-tabs border-white/20" : (D ? "border-[#ffffff10] bg-black/30" : "border-gray-200 bg-gray-100")}`}>
 
                   {/* Animasi Gelembung Sliding — glass bubble on iOS */}
                   <div
-                    className={`absolute rounded-full transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? "liquid-glass-bubble inset-y-[-4px] w-[calc(50%+0.2rem)]" : "inset-y-0.5 w-[calc(50%-0.25rem)] shadow-md backdrop-blur-md"} ${!isAppleDevice ? (D ? "bg-[#2c2c35] border border-[#ffffff10]" : "bg-white border border-gray-300") : ""}`}
-                    style={{ left: (activeTab === "result" ? (isAppleDevice ? "calc(50% - 0.1rem)" : "calc(50% + 0.125rem)") : (isAppleDevice ? "-0.1rem" : "0.125rem")) }}
+                    className={`absolute top-[2px] bottom-[2px] rounded-full transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? "liquid-glass-bubble w-[calc(50%-4px)]" : "w-[calc(50%-4px)] shadow-md backdrop-blur-md"} ${!isAppleDevice ? (D ? "bg-[#2c2c35] border border-[#ffffff10]" : "bg-white border border-gray-300") : ""}`}
+                    style={{ left: activeTab === "result" ? "calc(50% + 2px)" : "2px" }}
                   />
 
                   {/* Tombol Teks Tab */}
