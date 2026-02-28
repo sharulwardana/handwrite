@@ -522,45 +522,6 @@ class HandwritingGenerator:
                             anchor="ls",
                         )
 
-                # ── BARU: Ink Fiber Interaction ──────────────────────────────
-                # Simulasi tinta menyebar di serat kertas pada tekanan tinggi
-                if pen_pressure < -8 and random.random() < 0.12:
-                    r_f, g_f, b_f = self.base_color_rgb
-                    for _ in range(random.randint(1, 3)):
-                        fiber_len = random.uniform(2, 6)
-                        fiber_angle = random.uniform(0, math.pi * 2)
-                        fx = cursor_x + jitter_x + math.cos(fiber_angle) * fiber_len
-                        fy = y_baseline + math.sin(fiber_angle) * fiber_len
-                        draw.line(
-                            [(cursor_x + jitter_x, y_baseline), (fx, fy)],
-                            fill=(r_f, g_f, b_f, random.randint(30, 70)),
-                            width=1,
-                        )
-
-                # ── BARU: Start-of-word Pressure Spike ──────────────────────
-                # Huruf pertama kata ditekan lebih kuat (bolpoin menyentuh kertas)
-                if word_char_idx == 1 and random.random() < 0.35:
-                    draw.text(
-                        (cursor_x + jitter_x + 0.3, y_baseline + 0.3),
-                        char,
-                        fill=(*self.ink_vary(pressure_delta=-12), 60),
-                        font=char_font,
-                        anchor="ls",
-                    )
-
-                # ── BARU: Ink Pooling at Stops ──────────────────────────────
-                # Titik/koma: tinta menggenang sedikit (pena berhenti)
-                if char in ".,:;" and random.random() < 0.4:
-                    pool_r = random.uniform(1.5, 3.0)
-                    r_p, g_p, b_p = self.ink_vary(pressure_delta=-15)
-                    draw.ellipse(
-                        [
-                            (cursor_x + jitter_x - pool_r, y_baseline - pool_r),
-                            (cursor_x + jitter_x + pool_r, y_baseline + pool_r),
-                        ],
-                        fill=(r_p, g_p, b_p, random.randint(25, 55)),
-                    )
-
             # === 2. UPDATE KERNING (Letter Spacing Variation - Claude Poin 3) ===
             char_width = draw.textlength(char, font=char_font)
 
