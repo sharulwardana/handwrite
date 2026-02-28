@@ -195,10 +195,20 @@ function SidebarSection({
 
 /* ─── TOGGLE SWITCH COMPONENT ────────────────────────── */
 function ToggleSwitch({
-  value, onChange, colorClass = "bg-violet-500 border-violet-400", isDark
+  value, onChange, colorClass = "bg-violet-500 border-violet-400", isDark, isApple = false
 }: {
-  value: boolean; onChange: (v: boolean) => void; colorClass?: string; isDark: boolean;
+  value: boolean; onChange: (v: boolean) => void; colorClass?: string; isDark: boolean; isApple?: boolean;
 }) {
+  if (isApple) {
+    return (
+      <button
+        onClick={() => onChange(!value)}
+        className={`relative flex-shrink-0 w-[46px] h-[28px] rounded-full liquid-glass-toggle ${value ? 'active' : ''}`}
+      >
+        <span className={`absolute top-[2px] w-[22px] h-[22px] rounded-full liquid-glass-toggle-thumb ${value ? 'left-[22px]' : 'left-[2px]'}`} />
+      </button>
+    );
+  }
   return (
     <button
       onClick={() => onChange(!value)}
@@ -1939,7 +1949,7 @@ export default function Home() {
             <p className={`text-[10px] mt-0.5 ${c.ts}`}>{enableTypo ? "Salah + coretan sesekali" : "Bersih tanpa coretan"}</p>
           </div>
           <ToggleSwitch value={enableTypo} onChange={setEnableTypo}
-            colorClass={D ? "bg-violet-500 border-violet-400" : "bg-violet-600 border-violet-500"} isDark={D} />
+            colorClass={D ? "bg-violet-500 border-violet-400" : "bg-violet-600 border-violet-500"} isDark={D} isApple={isAppleDevice} />
         </div>
 
         <div className="flex items-center justify-between">
@@ -1948,7 +1958,7 @@ export default function Home() {
             <p className={`text-[10px] mt-0.5 ${c.ts}`}>{tiredMode ? "Makin acak di halaman akhir" : "Konsisten dari awal"}</p>
           </div>
           <ToggleSwitch value={tiredMode} onChange={setTiredMode}
-            colorClass="bg-orange-500 border-orange-400" isDark={D} />
+            colorClass="bg-orange-500 border-orange-400" isDark={D} isApple={isAppleDevice} />
         </div>
 
         <div>
@@ -1958,7 +1968,7 @@ export default function Home() {
               <p className={`text-[10px] mt-0.5 ${c.ts}`}>{showPageNumber ? "Aktif" : "Tidak ada nomor"}</p>
             </div>
             <ToggleSwitch value={showPageNumber} onChange={setShowPageNumber}
-              colorClass="bg-emerald-500 border-emerald-400" isDark={D} />
+              colorClass="bg-emerald-500 border-emerald-400" isDark={D} isApple={isAppleDevice} />
           </div>
           {showPageNumber && (
             <div className="grid grid-cols-3 gap-1 mt-2">
@@ -1981,7 +1991,7 @@ export default function Home() {
             <p className={`text-[10px] mt-0.5 ${c.ts}`}>{config.paperTexture ? "Ada bayangan & lipatan" : "Kertas datar bersih"}</p>
           </div>
           <ToggleSwitch value={config.paperTexture ?? false} onChange={(v) => updateConfig({ ...config, paperTexture: v })}
-            colorClass="bg-stone-500 border-stone-400" isDark={D} />
+            colorClass="bg-stone-500 border-stone-400" isDark={D} isApple={isAppleDevice} />
         </div>
       </SidebarSection>
 
@@ -2034,13 +2044,13 @@ export default function Home() {
             }}
           />
           {/* Animasi Gelembung Liquid iOS */}
-          <div className={`relative flex rounded-full overflow-hidden p-0.5 ${isAppleDevice ? "bg-transparent border-[0.5px] border-white/20 shadow-inner backdrop-blur-3xl" : (D ? "border border-[#ffffff10] bg-black/30" : "border border-gray-200 bg-gray-100")}`}>
+          <div className={`relative flex rounded-full p-0.5 ${isAppleDevice ? "liquid-glass-tabs overflow-visible" : (D ? "border border-[#ffffff10] bg-black/30 overflow-hidden" : "border border-gray-200 bg-gray-100 overflow-hidden")}`}>
 
-            {/* Ini Gelembung yang meluncur (Sliding Pill) */}
+            {/* Ini Gelembung yang meluncur (Sliding Pill) — glass bubble on iOS */}
             <div
-              className={`absolute inset-y-0.5 w-[calc(33.33%-0.33rem)] rounded-full shadow-md backdrop-blur-md transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? (D ? "bg-white/10 border border-white/5" : "bg-white/60 border border-black/5") : (D ? "bg-[#2c2c35] border border-[#ffffff10]" : "bg-white border border-gray-300")}`}
+              className={`absolute rounded-full transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? "liquid-glass-bubble inset-y-[-3px] w-[calc(33.33%+0.2rem)]" : "inset-y-0.5 w-[calc(33.33%-0.33rem)] shadow-md backdrop-blur-md"} ${!isAppleDevice ? (D ? "bg-[#2c2c35] border border-[#ffffff10]" : "bg-white border border-gray-300") : ""}`}
               style={{
-                left: config.wordSpacing === -5 ? '0.25rem' : config.wordSpacing === 8 ? 'calc(33.33% + 0.08rem)' : 'calc(66.66% - 0.08rem)'
+                left: config.wordSpacing === -5 ? (isAppleDevice ? '-0.1rem' : '0.25rem') : config.wordSpacing === 8 ? 'calc(33.33% + 0.08rem)' : (isAppleDevice ? 'calc(66.66% - 0.2rem)' : 'calc(66.66% - 0.08rem)')
               }}
             />
 
@@ -3227,7 +3237,7 @@ export default function Home() {
                                 setInputText(t); setText(t); toast.success("Teks ditempel!");
                               } catch { toast.error("Tidak bisa akses clipboard"); }
                             }}
-                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${c.btn}`}>
+                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${isAppleDevice ? 'liquid-glass-btn' : c.btn}`}>
                             <Clipboard className="w-3.5 h-3.5 flex-shrink-0" />
                             <span>Tempel</span>
                           </button>
@@ -3426,7 +3436,7 @@ export default function Home() {
                         }
                       }}
                       placeholder="Ketik atau paste teks di sini...&#10;&#10;Drag & drop file .txt atau .docx (Word) ⚡"
-                      className={`light-textarea w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-colors duration-300 outline-none border transform-gpu ${D
+                      className={`light-textarea w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-colors duration-300 outline-none border transform-gpu ${isAppleDevice ? 'liquid-glass-input' : ''} ${D
                         ? "bg-black/50 backdrop-blur-3xl border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50 focus:bg-black shadow-inner"
                         : "bg-gray-50/50 hover:bg-white border-gray-200/80 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400 focus:bg-white focus:shadow-[0_4px_24px_rgba(0,0,0,0.04)]"
                         }`}
@@ -4076,12 +4086,12 @@ export default function Home() {
             <div className="flex lg:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
               {/* Mobile tab switcher (Modern iOS Style - Liquid Glass Active Tab) */}
               <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} bg-transparent`}>
-                <div className={`flex p-0.5 rounded-full relative overflow-hidden ${isAppleDevice ? "bg-transparent border-[0.5px] border-white/20 shadow-inner backdrop-blur-3xl" : (D ? "border border-[#ffffff10] bg-black/30" : "border border-gray-200 bg-gray-100")}`}>
+                <div className={`flex p-0.5 rounded-full relative ${isAppleDevice ? "liquid-glass-tabs overflow-visible" : (D ? "border border-[#ffffff10] bg-black/30 overflow-hidden" : "border border-gray-200 bg-gray-100 overflow-hidden")}`}>
 
-                  {/* Animasi Gelembung Sliding (Bentuk Kotak Melengkung dan Full) — overflow-hidden di parent mencegah pill meluap di Android */}
+                  {/* Animasi Gelembung Sliding — glass bubble on iOS */}
                   <div
-                    className={`absolute inset-y-0.5 w-[calc(50%-0.25rem)] rounded-full shadow-md backdrop-blur-md transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? (D ? "bg-white/10 border border-white/5" : "bg-white/60 border border-black/5") : (D ? "bg-[#2c2c35] border border-[#ffffff10]" : "bg-white border border-gray-300")}`}
-                    style={{ left: (activeTab === "result" ? "calc(50% + 0.125rem)" : "0.125rem") }}
+                    className={`absolute rounded-full transition-[left] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAppleDevice ? "liquid-glass-bubble inset-y-[-4px] w-[calc(50%+0.2rem)]" : "inset-y-0.5 w-[calc(50%-0.25rem)] shadow-md backdrop-blur-md"} ${!isAppleDevice ? (D ? "bg-[#2c2c35] border border-[#ffffff10]" : "bg-white border border-gray-300") : ""}`}
+                    style={{ left: (activeTab === "result" ? (isAppleDevice ? "calc(50% - 0.1rem)" : "calc(50% + 0.125rem)") : (isAppleDevice ? "-0.1rem" : "0.125rem")) }}
                   />
 
                   {/* Tombol Teks Tab */}
