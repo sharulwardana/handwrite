@@ -596,13 +596,14 @@ class HandwritingGenerator:
         return cursor_x
 
     def calculate_text_width(self, text):
-        """Estimasi lebar teks termasuk wordSpacing & Margin Toleransi"""
+        """Estimasi lebar teks termasuk wordSpacing"""
         bbox = self.font.getbbox(text)
         base_width = bbox[2] - bbox[0]
         extra = text.count(" ") * self.word_spacing
 
-        # Ubah 1.08 menjadi 1.03 (Toleransi 3% cukup, 8% terlalu lebar)
-        return (base_width + extra) * 1.03
+        # Hapus toleransi 1.03 karena di humanizer sudah ada fitur end_squeeze
+        # yang justru merapatkan jarak antar huruf di akhir baris.
+        return base_width + extra
 
     def split_into_pages(self, text):
         pages, current_lines = [], []
@@ -636,13 +637,48 @@ class HandwritingGenerator:
                 test_line = current_line + word + " "
                 max_w = self.config["maxWidth"] - self.config["startX"]
 
-                if self.calculate_text_width(test_line) > max_w and current_line:
-                    remaining_space = max_w - self.calculate_text_width(current_line)
+                # FIX BUG 1: Baris pertama (line_index == 0) digambar lebih besar oleh humanizer.
+                # Kita kurangi jatah lebar khusus untuk baris pertama agar tidak tumpah melewati folio.
+                current_max_w = max_w
+                if line_index == 0:
+                    current_max_w = max_w - (self.config["fontSize"] * 2.0)
 
+                if self.calculate_text_width(test_line) > current_max_w and current_line:
+                    remaining_space = current_max_w - self.calculate_text_width(current_line)
                     word_split_handled = False
-                    
-                    # FITUR: Pemecah kata panjang (hyphenation) yang lebih pintar
-                    if remaining_space > self.config["fontSize"] * 2.0 and len(word) >= 5:
+
+                    # FIX BUG 3: Tangani kata yang sudah ada strip-nya (misal: "berwarna-warni")
+                    if "-" in word and word != "-":
+                        parts = word.split("-")
+                        # Coba pecah berdasarkan strip bawaannya dari belakang ke depan
+                        for i in range(len(parts) - 1, 0, -1):
+                            test_part1 = "-".join(parts[:i]) + "-"
+                            test_part2 = "-".join(parts[i:])
+                            
+                            if self.calculate_text_width(current_line + test_part1) <= current_max_w:
+                                current_line += test_part1
+                                current_lines.append(
+                                    {
+                                        "text": current_line.strip(),
+                                        "y": float(y),
+                                        "line_index": line_index,
+                                        "margin_jitter": margin_jitter,
+                                    }
+                                )
+                                current_line = test_part2 + " "
+                                y += self.config["lineHeight"]
+                                line_index += 1
+                                word_split_handled = True
+                                
+                                if y > self.config["pageBottom"]:
+                                    pages.append(current_lines)
+                                    current_lines = []
+                                    y = self.config["startY"]
+                                    line_index = 0
+                                break
+
+                    # FITUR: Pemecah kata panjang (hyphenation) Pyphen
+                    if not word_split_handled and remaining_space > self.config["fontSize"] * 1.5 and len(word) >= 5:
                         hyphenated = dic_id.inserted(word)
                         syllables = hyphenated.split('-')
 
@@ -653,12 +689,10 @@ class HandwritingGenerator:
                                 test_part1 = "".join(syllables[:i])
                                 test_part2 = "".join(syllables[i:])
 
-                                # Cegah pemotongan aneh seperti makana-n
                                 if len(test_part1) >= 2 and len(test_part2) >= 2:
                                     test_str = test_part1 + "-"
                                     
-                                    # Cek ulang agar strip tidak tumpah melewati max_w
-                                    if self.calculate_text_width(current_line + test_str) <= max_w:
+                                    if self.calculate_text_width(current_line + test_str) <= current_max_w:
                                         part1 = test_str
                                         part2 = test_part2
                                         break
