@@ -601,9 +601,9 @@ class HandwritingGenerator:
         base_width = bbox[2] - bbox[0]
         extra = text.count(" ") * self.word_spacing
 
-        # Hapus toleransi 1.03 karena di humanizer sudah ada fitur end_squeeze
-        # yang justru merapatkan jarak antar huruf di akhir baris.
-        return base_width + extra
+        # PINTAR: Beri "diskon" 4% (0.96) karena saat teks digambar, 
+        # efek 'end_squeeze' akan otomatis merapatkan huruf di ujung margin.
+        return (base_width + extra) * 0.96
 
     def split_into_pages(self, text):
         pages, current_lines = [], []
@@ -634,23 +634,25 @@ class HandwritingGenerator:
             current_line = ""
 
             for word in paragraph.split(" "):
-                test_line = current_line + word + " "
+                # FIX AKURASI: Cek lebar murni kata TANPA spasi gaib di akhir.
+                # Ini mencegah kata dipotong hanya karena spasi setelahnya menabrak margin.
+                test_line_exact = current_line + word
+                
                 max_w = self.config["maxWidth"] - self.config["startX"]
 
-                # FIX BUG 1: Baris pertama (line_index == 0) digambar lebih besar oleh humanizer.
-                # Kita kurangi jatah lebar khusus untuk baris pertama agar tidak tumpah melewati folio.
+                # FIX BUG 1: Jatah lebar khusus baris pertama (karena ada huruf besar/drop cap)
                 current_max_w = max_w
                 if line_index == 0:
-                    current_max_w = max_w - (self.config["fontSize"] * 2.0)
+                    current_max_w = max_w - int(self.config["fontSize"] * 2.0)
 
-                if self.calculate_text_width(test_line) > current_max_w and current_line:
+                # Gunakan test_line_exact untuk mengecek batas margin
+                if self.calculate_text_width(test_line_exact) > current_max_w and current_line:
                     remaining_space = current_max_w - self.calculate_text_width(current_line)
                     word_split_handled = False
 
                     # FIX BUG 3: Tangani kata yang sudah ada strip-nya (misal: "berwarna-warni")
                     if "-" in word and word != "-":
                         parts = word.split("-")
-                        # Coba pecah berdasarkan strip bawaannya dari belakang ke depan
                         for i in range(len(parts) - 1, 0, -1):
                             test_part1 = "-".join(parts[:i]) + "-"
                             test_part2 = "-".join(parts[i:])
@@ -677,7 +679,7 @@ class HandwritingGenerator:
                                     line_index = 0
                                 break
 
-                    # FITUR: Pemecah kata panjang (hyphenation) Pyphen
+                    # Pemecah kata panjang (hyphenation) Pyphen
                     if not word_split_handled and remaining_space > self.config["fontSize"] * 1.5 and len(word) >= 5:
                         hyphenated = dic_id.inserted(word)
                         syllables = hyphenated.split('-')
@@ -738,8 +740,11 @@ class HandwritingGenerator:
                             y = self.config["startY"]
                             line_index = 0
                 else:
-                    current_line = test_line
+                    # INGAT: Kalau kata MURNI-nya muat, baru kita tambahkan spasi 
+                    # sebagai persiapan untuk menempelkan kata selanjutnya!
+                    current_line = current_line + word + " "
 
+            # Memasukkan sisa teks terakhir di paragraf tersebut
             if current_line.strip():
                 current_lines.append(
                     {
@@ -757,6 +762,7 @@ class HandwritingGenerator:
                     y = self.config["startY"]
                     line_index = 0
 
+        # Memasukkan sisa baris terakhir ke halaman
         if current_lines:
             pages.append(current_lines)
 
