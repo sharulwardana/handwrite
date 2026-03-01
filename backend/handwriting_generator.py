@@ -611,9 +611,16 @@ class HandwritingGenerator:
 
         for paragraph in text.split("\n"):
             if not paragraph.strip():
-                current_lines.append({"text": "", "y": y, "line_index": line_index})
+                # [PERBAIKAN]: Cegah baris kosong di awal halaman baru
+                # Jika array current_lines kosong, berarti kita sedang di baris paling atas halaman baru.
+                # Abaikan baris kosong (enter) ini dan langsung lanjut ke paragraf berikutnya.
+                if len(current_lines) == 0:
+                    continue
+
+                current_lines.append({"text": "", "y": float(y), "line_index": line_index})
                 y += self.config["lineHeight"]
                 line_index += 1
+                
                 if y > self.config["pageBottom"]:
                     pages.append(current_lines)
                     current_lines = []
