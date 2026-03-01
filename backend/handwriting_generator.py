@@ -850,15 +850,29 @@ class HandwritingGenerator:
         self._page_margin_offset = 0  # Dihapus agar margin halaman konstan
         # Seed baseline berbeda tiap halaman agar gelombang tidak identik
         self.session_seed = random.uniform(0, 100)
+        
+        # --- FITUR BARU: GRADUAL TIRED MODE ---
         if self.tired_mode and self.total_pages > 1:
+            # Rasa lelah bertambah PELAN-PELAN dari halaman 1 (0%) sampai halaman terakhir (100%)
             fatigue = (page_number - 1) / max(1, self.total_pages - 1)
             self._tired_fatigue = fatigue
+            
+            # 1. Semakin lelah, nulis semakin ngebut & ceroboh
             self.write_speed = min(
-                1.0, self.config.get("writeSpeed", 0.5) + fatigue * 0.45
+                1.5, self.config.get("writeSpeed", 0.5) + (fatigue * 0.8)
             )
-            self.word_spacing = int(self.config.get("wordSpacing", 8) + fatigue * 6)
+            
+            # 2. Semakin lelah, spasi antar kata makin merenggang/berantakan
+            self.word_spacing = int(self.config.get("wordSpacing", 8) + (fatigue * 12))
+            
+            # 3. Semakin lelah, kemiringan tulisan makin error/melenceng ke bawah
+            base_slant = float(self.config.get("slantAngle", 0))
+            self.slant_angle = base_slant + (fatigue * random.uniform(2, 6))
         else:
             self._tired_fatigue = 0.0
+            self.write_speed = float(self.config.get("writeSpeed", 0.5))
+            self.word_spacing = int(self.config.get("wordSpacing", 8))
+            self.slant_angle = float(self.config.get("slantAngle", 0))
 
         folio = (
             self.folio_odd.copy() if page_number % 2 == 1 else self.folio_even.copy()

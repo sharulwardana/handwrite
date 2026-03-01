@@ -208,8 +208,6 @@ const getApiUrl = () => {
 
 const API_URL = getApiUrl();
 
-// === KOMPONEN OPTIMASI INP (Mencegah Lag saat Ngetik di React 18) ===
-// PERF FIX: Menggunakan useRef per-instance, bukan global window timer (race condition)
 const OptimizedTextarea = React.forwardRef(({ value, onChange, debounce = 300, ...props }: any, ref: any) => {
   const [localValue, setLocalValue] = useState(value);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -255,6 +253,39 @@ const OptimizedInput = React.forwardRef(({ value, onChange, debounce = 150, ...p
   );
 });
 OptimizedInput.displayName = "OptimizedInput";
+
+// === KOMPONEN MAGNETIC HOVER & TAPTIC SPRING (Apple Exclusive) ===
+function MagneticHover({ children, isApple, className }: { children: React.ReactNode, isApple: boolean, className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  const handleMouse = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isApple || !ref.current) return;
+    const { clientX, clientY } = e;
+    const { height, width, left, top } = ref.current.getBoundingClientRect();
+    const middleX = clientX - (left + width / 2);
+    const middleY = clientY - (top + height / 2);
+    setPosition({ x: middleX * 0.25, y: middleY * 0.25 });
+  };
+
+  const reset = () => {
+    setPosition({ x: 0, y: 0 });
+  };
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={handleMouse}
+      onMouseLeave={reset}
+      animate={{ x: position.x, y: position.y }}
+      transition={{ type: "spring", stiffness: 350, damping: 25, mass: 0.5 }}
+      whileTap={isApple ? { scale: 0.92, rotate: -2 } : undefined}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 // === KOMPONEN BEFORE/AFTER SLIDER ===
 function BeforeAfterSlider() {
@@ -716,6 +747,7 @@ export default function Home() {
   const [zoomLevel, setZoomLevel] = useState(100);
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isExportingTransparent, setIsExportingTransparent] = useState(false);
   const [isExportingDocx, setIsExportingDocx] = useState(false);
   const [fontDropdownOpen, setFontDropdownOpen] = useState(false);
   const [fullscreenPage, setFullscreenPage] = useState<GeneratedPage | null>(null);
@@ -737,6 +769,14 @@ export default function Home() {
   const [totalStreamPages, setTotalStreamPages] = useState(0);
   const [streamedPages, setStreamedPages] = useState<GeneratedPage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobileView(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
   const sessionIdRef = useRef<string>("");
   if (!sessionIdRef.current && typeof window !== "undefined") {
     sessionIdRef.current = `hw_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -1609,24 +1649,90 @@ export default function Home() {
   };
 
   const handleDownloadZip = async () => {
-    if (!generatedPages.length) return;
+    const pages = streamedPages.length > 0 ? streamedPages : generatedPages;
+    if (pages.length === 0) return;
     setIsDownloadingZip(true);
-    const tid = toast.loading("Membuat ZIP di server...");
+    const toastId = toast.loading("Mengepak semua halaman ke dalam ZIP...");
     try {
-      const res = await fetch(`${API_URL}/api/download/zip`, {
+      const response = await fetch(`${API_URL}/api/download/zip`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pages: generatedPages }),
+        body: JSON.stringify({ pages })
       });
-      if (!res.ok) throw new Error("Server gagal buat ZIP");
-      const blob = await res.blob();
-      const { saveAs } = await import("file-saver");
-      saveAs(blob, "Tugas_Handwriting.zip");
-      toast.success("ZIP berhasil didownload!", { id: tid });
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Gagal membuat ZIP", { id: tid });
+      if (!response.ok) throw new Error("Gagal kompilasi ZIP");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Tugas_Handwriting_${Date.now()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success("Berhasil mendownload ZIP!", { id: toastId });
+      setShowExportDropdown(false);
+    } catch (err: any) {
+      toast.error(err.message, { id: toastId });
     } finally {
       setIsDownloadingZip(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    const pages = streamedPages.length > 0 ? streamedPages : generatedPages;
+    if (pages.length === 0) return;
+    setIsExportingPdf(true);
+    const toastId = toast.loading("Menyusun PDF Resolusi Tinggi...");
+    try {
+      const response = await fetch(`${API_URL}/api/download-pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pages })
+      });
+      if (!response.ok) throw new Error("Gagal menyusun PDF");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Tugas_Handwriting_${Date.now()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success("Berhasil mendownload PDF!", { id: toastId });
+      setShowExportDropdown(false);
+    } catch (err: any) {
+      toast.error(err.message, { id: toastId });
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handleDownloadTransparent = async (pageData: GeneratedPage) => {
+    setIsExportingTransparent(true);
+    const toastId = toast.loading("Mengekstrak Tinta Transparan (Sticker)...");
+    try {
+      const response = await fetch(`${API_URL}/api/download/transparent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageData: pageData.image })
+      });
+      if (!response.ok) throw new Error("Gagal mengekstrak PNG transparan");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Tulisan_Sticker_Hal_${pageData.page}.png`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success("Berhasil mendownload PNG Transparan!", { id: toastId });
+      setShowExportDropdown(false);
+    } catch (err: any) {
+      toast.error(err.message, { id: toastId });
+    } finally {
+      setIsExportingTransparent(false);
     }
   };
 
@@ -2484,39 +2590,58 @@ export default function Home() {
   return (
     <div className={`min-h-screen ${c.page} ${platformTheme}`} style={{ fontFamily: "'DM Sans', system-ui, sans-serif", contain: "layout style" }} suppressHydrationWarning>
 
-      <Toaster position="top-center" toastOptions={{
-        duration: 4000,
-        success: {
-          iconTheme: { primary: '#10b981', secondary: '#fff' },
-          style: {
-            border: D ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(16, 185, 129, 0.4)',
-            background: D ? 'rgba(6, 78, 59, 0.85)' : '#ecfdf5',
-            color: D ? '#34d399' : '#065f46'
+      {/* ── TOASTER ── */}
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          duration: 4000,
+          className: isAppleDevice ? "apple-dynamic-toast" : "",
+          success: {
+            iconTheme: { primary: '#10b981', secondary: '#fff' },
+            style: {
+              border: D ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(16, 185, 129, 0.4)',
+              background: D ? 'rgba(6, 78, 59, 0.85)' : '#ecfdf5',
+              color: D ? '#34d399' : '#065f46'
+            },
           },
-        },
-        error: {
-          duration: 5000,
-          iconTheme: { primary: '#ef4444', secondary: '#fff' },
-          style: {
-            border: D ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(239, 68, 68, 0.4)',
-            background: D ? 'rgba(127, 29, 29, 0.85)' : '#fef2f2',
-            color: D ? '#f87171' : '#991b1b'
+          error: {
+            duration: 5000,
+            iconTheme: { primary: '#ef4444', secondary: '#fff' },
+            style: {
+              border: D ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(239, 68, 68, 0.4)',
+              background: D ? 'rgba(127, 29, 29, 0.85)' : '#fef2f2',
+              color: D ? '#f87171' : '#991b1b'
+            },
           },
-        },
-        style: {
-          background: D ? "rgba(15, 15, 20, 0.85)" : "rgba(255, 255, 255, 0.95)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          color: D ? "#fff" : "#111",
-          padding: "14px 24px",
-          borderRadius: "999px", // Bentuk kapsul Dynamic Island
-          fontSize: "13px",
-          fontWeight: "600",
-          letterSpacing: "0.2px",
-          border: D ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(139,92,246,0.15)",
-          boxShadow: D ? "0 20px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.02)" : "0 20px 40px rgba(139,92,246,0.15)",
-        },
-      }} />
+          style: isAppleDevice ? {
+            background: isDark ? 'rgba(30, 30, 30, 0.75)' : 'rgba(255, 255, 255, 0.85)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            color: isDark ? '#fff' : '#000',
+            border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+            boxShadow: isDark
+              ? '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.1)'
+              : '0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255,255,255,0.5)',
+            borderRadius: '999px',
+            padding: '12px 24px',
+            fontSize: '14px',
+            fontWeight: '500',
+            letterSpacing: '-0.01em',
+          } : {
+            background: D ? "rgba(15, 15, 20, 0.85)" : "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+            color: D ? "#fff" : "#111",
+            padding: "14px 24px",
+            borderRadius: "999px",
+            fontSize: "13px",
+            fontWeight: "600",
+            letterSpacing: "0.2px",
+            border: D ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(139,92,246,0.15)",
+            boxShadow: D ? "0 20px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.02)" : "0 20px 40px rgba(139,92,246,0.15)"
+          }
+        }}
+      />
 
       {/* --- TAMBAHKAN KODE INI MULAI DARI SINI --- */}
       {!showEditor && !user ? (
@@ -3406,9 +3531,44 @@ export default function Home() {
                   title="Keyboard Shortcuts">
                   ?
                 </button>
-                <button onClick={() => setIsDark(!isDark)}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${c.btn}`}>
-                  {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                <button
+                  onClick={() => setIsDark(!isDark)}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 overflow-hidden relative border ${isDark ? "bg-[#18181b] border-[#ffffff1a] shadow-[inset_0_2px_10px_rgba(255,255,255,0.05),0_0_15px_rgba(167,139,250,0.15)]" : "bg-gradient-to-br from-sky-50 to-amber-50 border-amber-200/50 shadow-[0_2px_15px_rgba(251,191,36,0.2)]"}`}
+                  title={isDark ? "Ke Mode Siang (Solar)" : "Ke Mode Malam (Lunar)"}
+                >
+                  <AnimatePresence mode="wait" initial={false}>
+                    {isDark ? (
+                      <motion.div
+                        key="moon"
+                        initial={{ y: 20, opacity: 0, rotate: -45 }}
+                        animate={{ y: 0, opacity: 1, rotate: 0 }}
+                        exit={{ y: -20, opacity: 0, rotate: 45 }}
+                        transition={{ duration: 0.3, type: "spring", stiffness: 200 }}
+                        className="relative flex items-center justify-center w-full h-full"
+                      >
+                        {/* Bintang-bintang kecil */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-50">
+                          <div className="w-0.5 h-0.5 bg-white rounded-full absolute top-1 left-2"></div>
+                          <div className="w-[1px] h-[1px] bg-white rounded-full absolute bottom-2 right-1"></div>
+                          <div className="w-0.5 h-0.5 bg-white rounded-full absolute top-3 right-2"></div>
+                        </div>
+                        <Moon className="w-[18px] h-[18px] text-violet-300 fill-violet-900/40 relative z-10" />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="sun"
+                        initial={{ y: 20, opacity: 0, rotate: -45 }}
+                        animate={{ y: 0, opacity: 1, rotate: 0 }}
+                        exit={{ y: -20, opacity: 0, rotate: 45 }}
+                        transition={{ duration: 0.3, type: "spring", stiffness: 200 }}
+                        className="relative flex items-center justify-center w-full h-full"
+                      >
+                        {/* Cahaya matahari menyebar */}
+                        <div className="absolute inset-0 bg-amber-400/20 blur-md rounded-full scale-110"></div>
+                        <Sun className="w-[18px] h-[18px] text-amber-500 fill-amber-200 relative z-10" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </button>
               </div>
 
@@ -3501,113 +3661,125 @@ export default function Home() {
                         <div className="flex items-center gap-1.5 flex-nowrap min-w-max">
 
                           {/* Tempel */}
-                          <button
-                            onClick={async () => {
-                              try {
-                                const t = await navigator.clipboard.readText();
-                                setInputText(t); setText(t); toast.success("Teks ditempel!");
-                              } catch { toast.error("Tidak bisa akses clipboard"); }
-                            }}
-                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${isAppleDevice ? 'liquid-glass-btn' : c.btn}`}>
-                            <Clipboard className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span>Tempel</span>
-                          </button>
+                          <MagneticHover isApple={isAppleDevice} className="flex-shrink-0">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const t = await navigator.clipboard.readText();
+                                  setInputText(t); setText(t); toast.success("Teks ditempel!");
+                                } catch { toast.error("Tidak bisa akses clipboard"); }
+                              }}
+                              className={`flex items-center w-full gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap ${isAppleDevice ? 'liquid-glass-btn' : c.btn}`}>
+                              <Clipboard className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>Tempel</span>
+                            </button>
+                          </MagneticHover>
 
                           {/* Tulis dengan AI */}
-                          <button
-                            onClick={() => setShowAiModal(true)}
-                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${D
-                              ? "bg-indigo-500/8 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/15 hover:border-indigo-500/35"
-                              : "bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300"
-                              }`}>
-                            <Bot className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span>Tulis AI</span>
-                          </button>
+                          <MagneticHover isApple={isAppleDevice} className="flex-shrink-0">
+                            <button
+                              onClick={() => setShowAiModal(true)}
+                              className={`flex items-center w-full gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap ${D
+                                ? "bg-indigo-500/8 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/15 hover:border-indigo-500/35"
+                                : "bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300"
+                                }`}>
+                              <Bot className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>Tulis AI</span>
+                            </button>
+                          </MagneticHover>
 
                           {/* Poles & Panjangkan AI */}
-                          <button
-                            onClick={handleAiExpand}
-                            disabled={!text.trim() || isAiExpanding}
-                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${!text.trim()
-                              ? "opacity-35 cursor-not-allowed " + c.btn
-                              : D
-                                ? "bg-purple-500/10 text-purple-400 border-purple-500/30 hover:bg-purple-500/20"
-                                : "bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100"
-                              }`}
-                          >
-                            {isAiExpanding ? <Loader2 className="w-3.5 h-3.5 flex-shrink-0 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 flex-shrink-0" />}
-                            <span>Poles & Panjangkan</span>
-                          </button>
+                          <MagneticHover isApple={isAppleDevice} className="flex-shrink-0">
+                            <button
+                              onClick={handleAiExpand}
+                              disabled={!text.trim() || isAiExpanding}
+                              className={`flex items-center w-full gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap ${!text.trim()
+                                ? "opacity-35 cursor-not-allowed border-gray-300"
+                                : D
+                                  ? "bg-purple-500/10 text-purple-400 border-purple-500/30 hover:bg-purple-500/20"
+                                  : "bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100"
+                                }`}
+                            >
+                              {isAiExpanding ? <Loader2 className="w-3.5 h-3.5 flex-shrink-0 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 flex-shrink-0" />}
+                              <span>Poles & Panjangkan</span>
+                            </button>
+                          </MagneticHover>
 
                           {/* Dikte */}
-                          <button
-                            onClick={toggleListening}
-                            title={isListening ? "Berhenti mendikte" : "Mulai mendikte"}
-                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${isListening
-                              ? "bg-red-500/15 text-red-400 border-red-500/30 animate-pulse"
-                              : c.btn
-                              }`}>
-                            <Mic className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span>{isListening ? "Dengerin..." : "Dikte"}</span>
-                          </button>
+                          <MagneticHover isApple={isAppleDevice} className="flex-shrink-0">
+                            <button
+                              onClick={toggleListening}
+                              title={isListening ? "Berhenti mendikte" : "Mulai mendikte"}
+                              className={`flex items-center w-full gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap ${isListening
+                                ? "bg-red-500/15 text-red-400 border-red-500/30 animate-pulse"
+                                : c.btn
+                                }`}>
+                              <Mic className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>{isListening ? "Dengerin..." : "Dikte"}</span>
+                            </button>
+                          </MagneticHover>
 
                           {/* Hapus */}
-                          <button
-                            onClick={() => {
-                              if (!text) return;
-                              toast((t) => (
-                                <div className="flex flex-row items-start gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                    <Trash2 className="w-4 h-4 text-red-500" />
-                                  </div>
-                                  <div className="flex flex-col">
-                                    <p className={`text-xs font-bold mb-1 ${D ? "text-white" : "text-gray-900"}`}>Bersihkan Editor?</p>
-                                    <p className={`text-[10px] mb-2.5 ${D ? "text-white/60" : "text-gray-500"}`}>Semua teks akan hilang dan tidak bisa dikembalikan.</p>
-                                    <div className="flex gap-2">
-                                      <button
-                                        onClick={() => { setInputText(""); setText(""); toast.dismiss(t.id); toast.success("Teks berhasil dihapus!"); }}
-                                        className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-[10px] font-bold transition-colors hover:bg-red-600 hover:scale-105 active:scale-95 shadow-md shadow-red-500/20">
-                                        Ya, Hapus
-                                      </button>
-                                      <button
-                                        onClick={() => toast.dismiss(t.id)}
-                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors hover:scale-105 active:scale-95 ${D ? "bg-white/10 text-white hover:bg-white/20" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
-                                        Batal
-                                      </button>
+                          <MagneticHover isApple={isAppleDevice} className="flex-shrink-0">
+                            <button
+                              onClick={() => {
+                                if (!text) return;
+                                toast((t) => (
+                                  <div className="flex flex-row items-start gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                      <Trash2 className="w-4 h-4 text-red-500" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <p className={`text-xs font-bold mb-1 ${D ? "text-white" : "text-gray-900"}`}>Bersihkan Editor?</p>
+                                      <p className={`text-[10px] mb-2.5 ${D ? "text-white/60" : "text-gray-500"}`}>Semua teks akan hilang dan tidak bisa dikembalikan.</p>
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => { setInputText(""); setText(""); toast.dismiss(t.id); toast.success("Teks berhasil dihapus!"); }}
+                                          className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-[10px] font-bold transition-colors hover:bg-red-600 hover:scale-105 active:scale-95 shadow-md shadow-red-500/20">
+                                          Ya, Hapus
+                                        </button>
+                                        <button
+                                          onClick={() => toast.dismiss(t.id)}
+                                          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors hover:scale-105 active:scale-95 ${D ? "bg-white/10 text-white hover:bg-white/20" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
+                                          Batal
+                                        </button>
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              ), {
-                                duration: 6000,
-                                position: "top-center",
-                                style: { padding: '14px', borderRadius: '16px', background: D ? '#18181b' : '#ffffff', border: D ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)' }
-                              });
-                            }}
-                            disabled={!text}
-                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${!text
-                              ? "opacity-35 cursor-not-allowed " + c.btn
-                              : D
-                                ? "hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25 " + c.btn
-                                : "hover:bg-red-50 hover:text-red-600 hover:border-red-200 " + c.btn
-                              }`}>
-                            <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span>Hapus</span>
-                          </button>
+                                ), {
+                                  duration: 6000,
+                                  position: "top-center",
+                                  style: { padding: '14px', borderRadius: '16px', background: D ? '#18181b' : '#ffffff', border: D ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)' }
+                                });
+                              }}
+                              disabled={!text}
+                              className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${!text
+                                ? "opacity-35 cursor-not-allowed " + c.btn
+                                : D
+                                  ? "hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25 " + c.btn
+                                  : "hover:bg-red-50 hover:text-red-600 hover:border-red-200 " + c.btn
+                                }`}>
+                              <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>Hapus</span>
+                            </button>
+                          </MagneticHover>
 
                           {/* Bagikan Link Publik */}
-                          <button
-                            onClick={handleSharePublicLink}
-                            disabled={!text.trim()}
-                            className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${!text.trim()
-                              ? "opacity-35 cursor-not-allowed " + c.btn
-                              : D
-                                ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/20"
-                                : "bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-100"
-                              }`}
-                          >
-                            <Link className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span>Link Publik</span>
-                          </button>
+                          <MagneticHover isApple={isAppleDevice} className="flex-shrink-0">
+                            <button
+                              onClick={handleSharePublicLink}
+                              disabled={!text.trim()}
+                              className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${!text.trim()
+                                ? "opacity-35 cursor-not-allowed " + c.btn
+                                : D
+                                  ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/20"
+                                  : "bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-100"
+                                }`}
+                            >
+                              <Link className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>Link Publik</span>
+                            </button>
+                          </MagneticHover>
 
                           {/* Divider */}
                           {currentFolio && (
@@ -4111,9 +4283,11 @@ export default function Home() {
                           );
                         }
 
-                        // STATE 2: Ada Halaman (Selesai atau Streaming)
                         if (generatedPages.length > 0 || streamedPages.length > 0) {
                           const pages = generatedPages.length > 0 ? generatedPages : streamedPages;
+
+                          // Logika Hologram Parallax 3D (Hanya untuk Desktop / Non-Apple)
+                          const enableHolo3D = !isAppleDevice && !isMobileView;
 
                           return (
                             <motion.div
@@ -4121,11 +4295,52 @@ export default function Home() {
                               initial={{ opacity: 0, scale: 0.95 }}
                               animate={{ opacity: 1, scale: 1 }}
                               className="p-4 lg:p-8 flex items-center justify-center min-h-full w-full"
+                              style={{ perspective: enableHolo3D ? "2000px" : "none" }}
                             >
-                              <div className="relative" style={{ width: `${zoomLevel}%`, maxWidth: "100%", display: "flex", justifyContent: "center" }}>
+                              <motion.div
+                                className="relative group"
+                                style={{
+                                  width: `${zoomLevel}%`,
+                                  maxWidth: "100%",
+                                  display: "flex",
+                                  justifyContent: "center",
+                                  transformStyle: "preserve-3d"
+                                }}
+                                whileHover={enableHolo3D ? { scale: 1.02 } : {}}
+                                onMouseMove={(e: any) => {
+                                  if (!enableHolo3D) return;
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const x = (e.clientX - rect.left) / rect.width - 0.5;
+                                  const y = (e.clientY - rect.top) / rect.height - 0.5;
+                                  e.currentTarget.style.transform = `rotateY(${x * 15}deg) rotateX(${-y * 15}deg)`;
+                                }}
+                                onMouseLeave={(e: any) => {
+                                  if (!enableHolo3D) return;
+                                  e.currentTarget.style.transition = "transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1)";
+                                  e.currentTarget.style.transform = "rotateY(0deg) rotateX(0deg)";
+                                  setTimeout(() => {
+                                    e.currentTarget.style.transition = "";
+                                  }, 600);
+                                }}
+                              >
+                                {/* Bayangan 3D di bawah kertas (menambah kesan Hologram terbang) */}
+                                {enableHolo3D && (
+                                  <>
+                                    <div
+                                      className="absolute inset-0 bg-black/40 blur-[40px] -z-10 translate-y-12 scale-90 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                                      style={{ transform: "translateZ(-80px)" }}
+                                    />
+                                    {/* Liquid Glow di belakang elemen saat di-hover */}
+                                    <div
+                                      className="absolute inset-0 bg-gradient-to-tr from-violet-500/20 via-fuchsia-500/20 to-cyan-500/20 blur-[60px] -z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 scale-110"
+                                      style={{ transform: "translateZ(-120px)" }}
+                                    />
+                                  </>
+                                )}
+
                                 {/* Render Buku 3D dari hasil Memo yang legal di atas */}
                                 {memoizedFlipBook}
-                              </div>
+                              </motion.div>
                             </motion.div>
                           );
                         }
@@ -4353,19 +4568,19 @@ export default function Home() {
               {/* Mobile editor panel */}
               {activeTab !== "result" && (
                 <div className="flex-1 flex flex-col overflow-hidden">
-                  {/* Tambahkan flex, flex-col, gap-3, dan pb-28 (padding bottom ekstra untuk area dock) */}
                   <div className="flex-1 flex flex-col overflow-y-auto p-4 pb-28 scrollbar-thin gap-3"
                     onScroll={(e) => {
-                      // Ubah target menjadi currentTarget di sini 👇
                       const currentScrollY = e.currentTarget.scrollTop;
-
-                      // Sembunyikan dock jika scroll ke bawah lebih dari 50px
-                      if (currentScrollY > lastScrollYRef.current && currentScrollY > 50) {
-                        setHideMobileDock(prev => prev ? prev : true);
-                      }
-                      // Munculkan dock jika scroll ke atas
-                      else if (currentScrollY < lastScrollYRef.current) {
-                        setHideMobileDock(prev => !prev ? prev : false);
+                      if (!isAppleDevice) {
+                        // Fitur Auto-Hide Dock khusus non-Apple (Android/Tablet/Laptop L)
+                        if (currentScrollY > lastScrollYRef.current && currentScrollY > 50) {
+                          setHideMobileDock(true);
+                        } else if (currentScrollY < lastScrollYRef.current) {
+                          setHideMobileDock(false);
+                        }
+                      } else {
+                        // Apple Device selalu tampil
+                        setHideMobileDock(false);
                       }
                       lastScrollYRef.current = currentScrollY;
                     }}
@@ -4541,59 +4756,69 @@ export default function Home() {
                       <div className="fixed bottom-8 left-0 right-0 z-[60] flex justify-center px-4 pointer-events-none">
                         <motion.div
                           layout
-                          initial={{ y: 50, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
+                          initial={{ y: 50, scale: 0.8, opacity: 0 }}
+                          animate={{ y: 0, scale: 1, opacity: 1 }}
+                          transition={{ type: "spring", bounce: 0.4, duration: 0.8 }}
                           className="flex items-center p-1.5 rounded-full shadow-2xl backdrop-blur-xl border overflow-hidden pointer-events-auto"
                           style={{
-                            background: D ? "rgba(0,0,0,0.65)" : "rgba(255,255,255,0.95)",
-                            borderColor: D ? "rgba(255,255,255,0.1)" : "rgba(139,92,246,0.2)",
-                            boxShadow: D ? "0 12px 40px rgba(0,0,0,0.6)" : "0 12px 40px rgba(139,92,246,0.2)"
+                            background: D ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.95)",
+                            borderColor: D ? "rgba(255,255,255,0.15)" : "rgba(139,92,246,0.3)",
+                            boxShadow: D ? "0 12px 40px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.1)" : "0 12px 40px rgba(139,92,246,0.25), inset 0 1px 1px rgba(255,255,255,0.8)"
                           }}
                         >
                           {isGenerating ? (
-                            /* ── STATE 1: SEDANG LOADING ── */
-                            <motion.div layout className="flex items-center gap-3 px-4 py-1.5">
-                              <Loader2 className="w-4 h-4 animate-spin text-violet-500" />
-                              <span className={`text-[11px] font-bold tracking-wide whitespace-nowrap ${c.tp}`}>
-                                Menulis {streamedPages.length}/{totalStreamPages} hal...
+                            /* ── STATE 1: SEDANG LOADING (Dynamic Island Expanded) ── */
+                            <motion.div layout className="flex items-center gap-3 px-5 py-2">
+                              {/* Audio Wave anim saat loading */}
+                              <div className="flex items-center gap-0.5 h-4">
+                                {[1, 2, 3, 4].map(i => (
+                                  <motion.div key={i}
+                                    animate={{ height: ["4px", "14px", "4px"] }}
+                                    transition={{ duration: 1, repeat: Infinity, delay: i * 0.15 }}
+                                    className="w-1 rounded-full bg-violet-500"
+                                  />
+                                ))}
+                              </div>
+                              <span className={`text-[12px] font-bold tracking-wide whitespace-nowrap ${D ? "text-white" : "text-gray-900"}`}>
+                                Menulis {streamedPages.length}/{totalStreamPages}...
                               </span>
-                              <div className={`w-px h-4 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
-                              <button onClick={() => setActiveTab("editor" as any)} className={`text-[10px] font-bold text-violet-500 hover:text-violet-400 transition-colors uppercase tracking-widest`}>
-                                Tutup
+                              <div className={`w-px h-5 mx-1 ${D ? "bg-white/20" : "bg-gray-300"}`} />
+                              <button onClick={() => setActiveTab("editor" as any)} className={`text-[11px] font-bold text-violet-500 hover:text-violet-400 transition-colors uppercase tracking-widest bg-violet-500/10 px-3 py-1.5 rounded-full`}>
+                                Sembunyikan
                               </button>
                             </motion.div>
                           ) : (
-                            /* ── STATE 2: SELESAI (TOOLS MUNCUL) ── */
+                            /* ── STATE 2: SELESAI (Tools Muncul - Compact Island) ── */
                             <motion.div layout className="flex items-center">
-                              <button onClick={() => setActiveTab("editor" as any)} className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`}>
-                                <PenTool className="w-4 h-4" />
+                              <button onClick={() => setActiveTab("editor" as any)} className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-violet-50 text-violet-600"}`}>
+                                <PenTool className="w-[18px] h-[18px]" />
                               </button>
 
-                              <div className={`w-px h-5 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
+                              <div className={`w-px h-6 mx-1.5 ${D ? "bg-white/20" : "bg-gray-300"}`} />
 
                               {activePages.length > 1 && (
                                 <>
-                                  <button onClick={() => setActivePageIndex(i => Math.max(0, i - 1))} disabled={activePageIndex === 0} className={`w-8 h-10 flex items-center justify-center transition-colors ${activePageIndex === 0 ? "opacity-30" : "text-violet-500"}`}>
-                                    <ChevronDown className="w-4 h-4 rotate-90" />
+                                  <button onClick={() => setActivePageIndex(i => Math.max(0, i - 1))} disabled={activePageIndex === 0} className={`w-8 h-10 flex items-center justify-center transition-colors active:scale-95 ${activePageIndex === 0 ? "opacity-30" : "text-violet-500"}`}>
+                                    <ChevronDown className="w-5 h-5 rotate-90" />
                                   </button>
-                                  <span className={`text-[11px] font-bold font-mono px-1 ${c.tp}`}>
+                                  <span className={`text-[13px] font-bold font-mono px-0.5 ${D ? "text-white" : "text-gray-900"}`}>
                                     {activePageIndex + 1}/{activePages.length}
                                   </span>
-                                  <button onClick={() => setActivePageIndex(i => Math.min(activePages.length - 1, i + 1))} disabled={activePageIndex === activePages.length - 1} className={`w-8 h-10 flex items-center justify-center transition-colors ${activePageIndex === activePages.length - 1 ? "opacity-30" : "text-violet-500"}`}>
-                                    <ChevronDown className="w-4 h-4 -rotate-90" />
+                                  <button onClick={() => setActivePageIndex(i => Math.min(activePages.length - 1, i + 1))} disabled={activePageIndex === activePages.length - 1} className={`w-8 h-10 flex items-center justify-center transition-colors active:scale-95 ${activePageIndex === activePages.length - 1 ? "opacity-30" : "text-violet-500"}`}>
+                                    <ChevronDown className="w-5 h-5 -rotate-90" />
                                   </button>
-                                  <div className={`w-px h-5 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
+                                  <div className={`w-px h-6 mx-1.5 ${D ? "bg-white/20" : "bg-gray-300"}`} />
                                 </>
                               )}
 
-                              <div className="ml-1">
+                              <div className="ml-1.5">
                                 {mobileZoom !== 100 ? (
-                                  <button onClick={() => setMobileZoom(100)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-amber-500/15 text-amber-500 hover:bg-amber-500/25 text-[11px] font-bold transition-colors">
-                                    <ZoomOut className="w-3.5 h-3.5" /><span>Reset ({mobileZoom}%)</span>
+                                  <button onClick={() => setMobileZoom(100)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-amber-500/15 text-amber-500 hover:bg-amber-500/25 text-[12px] font-bold transition-colors">
+                                    <ZoomOut className="w-4 h-4" /><span>Reset ({mobileZoom}%)</span>
                                   </button>
                                 ) : (
-                                  <button onClick={() => handleDownloadSingle(activePages[activePageIndex])} className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[11px] font-bold text-white shadow-lg active:scale-95 transition-colors bg-gradient-to-r ${c.accent}`}>
-                                    <Download className="w-3.5 h-3.5" /><span>Simpan</span>
+                                  <button onClick={() => handleDownloadSingle(activePages[activePageIndex])} className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[12px] font-bold text-white shadow-lg active:scale-95 transition-all hover:opacity-90 bg-gradient-to-r ${D ? "from-violet-600 to-indigo-600 shadow-violet-500/30" : "from-violet-500 to-indigo-500 shadow-violet-500/40"}`}>
+                                    <Download className="w-4 h-4" /><span>Simpan</span>
                                   </button>
                                 )}
                               </div>

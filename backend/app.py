@@ -670,6 +670,61 @@ def download_zip():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/download-pdf", methods=["POST"])
+def download_pdf():
+    """Jahit gambar-gambar hasil render menjadi satu dokumen PDF A4 resolusi tinggi siap print."""
+    try:
+        from fpdf import FPDF
+        
+        data = request.json
+        pages = data.get("pages", [])
+
+        if not pages:
+            return jsonify({"error": "No pages provided for PDF"}), 400
+
+        if len(pages) > 100:
+            return jsonify({"error": "Maksimal 100 halaman per PDF"}), 400
+
+        # Create PDF (A4 is 210x297 mm)
+        pdf = FPDF(unit="mm", format="A4")
+        
+        # Urutkan berdasarkan nomor halaman (jaga-jaga JSON tidak beraturan)
+        pages = sorted(pages, key=lambda p: int(p.get("page", 0)))
+        
+        import tempfile
+        
+        # Buat temp directory untuk menyimpan gambar sementera untuk FPDF
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for p in pages:
+                raw = p.get("image", "").split(",")[-1]
+                img_data = base64.b64decode(raw)
+                
+                # Simpan image ke disk sementara
+                temp_path = os.path.join(temp_dir, f"page_{p['page']}.jpg")
+                with open(temp_path, "wb") as f:
+                    f.write(img_data)
+                
+                # Tambah ke PDF penuh satu muka (tanpa margin)
+                pdf.add_page()
+                pdf.image(temp_path, x=0, y=0, w=210, h=297)
+
+            # Generate PDF ke memory buffer menggunakan output(dest='S') format binary string
+            pdf_bytes = pdf.output(dest='S').encode('latin1')
+            
+            buf = io.BytesIO(pdf_bytes)
+            buf.seek(0)
+
+        return send_file(
+            buf,
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name="Tugas_Handwriting.pdf",
+        )
+    except Exception as e:
+        print("PDF Generation Error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/download/transparent", methods=["POST"])
 def download_transparent():
     """Export tulisan tangan saja tanpa background folio (PNG transparan)."""
