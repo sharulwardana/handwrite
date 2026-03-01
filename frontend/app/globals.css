@@ -1074,3 +1074,267 @@ textarea, input {
   box-shadow: 0 0 20px rgba(139, 92, 246, 0.06), 0 4px 16px rgba(0, 0, 0, 0.3);
   border-color: rgba(255, 255, 255, 0.08);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   FIX 1: GENERATE BUTTON — Data Stream / Neural Pulse Effect
+   Mengganti animasi "balon" dengan data-stream canggih
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Animasi scan line dari kiri ke kanan (seperti data stream) */
+@keyframes dataStream {
+  0% { transform: translateX(-100%) skewX(-12deg); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateX(300%) skewX(-12deg); opacity: 0; }
+}
+
+/* Animasi pulse ring yang melebar keluar dari tombol */
+@keyframes pulseRing {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* Animasi neural dots yang bergerak */
+@keyframes neuralDot {
+  0%, 100% { opacity: 0.2; transform: translateY(0px); }
+  50% { opacity: 1; transform: translateY(-2px); }
+}
+
+/* Tombol Generate saat generating — versi modern */
+.btn-generate-active {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Data stream sweep — 2 lapisan dengan timing berbeda */
+.btn-generate-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.18) 50%,
+    rgba(255, 255, 255, 0.08) 55%,
+    transparent 70%
+  );
+  animation: dataStream 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.btn-generate-active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 60%
+  );
+  animation: dataStream 1.8s ease-in-out 0.9s infinite;
+  pointer-events: none;
+}
+
+/* Pulse ring di sekeliling tombol — menggunakan box-shadow animation */
+@keyframes generatePulse {
+  0% {
+    box-shadow:
+      0 4px 12px rgba(139, 92, 246, 0.25),
+      0 0 0 0 rgba(139, 92, 246, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 4px 20px rgba(139, 92, 246, 0.4),
+      0 0 0 6px rgba(139, 92, 246, 0.1);
+  }
+  100% {
+    box-shadow:
+      0 4px 12px rgba(139, 92, 246, 0.25),
+      0 0 0 0 rgba(139, 92, 246, 0);
+  }
+}
+
+.btn-generate-pulse {
+  animation: generatePulse 2s ease-in-out infinite;
+}
+
+/* Tombol idle — subtle glow on hover */
+.btn-generate-idle {
+  transition:
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+.btn-generate-idle:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow:
+    0 8px 24px rgba(139, 92, 246, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+}
+.btn-generate-idle:active:not(:disabled) {
+  transform: translateY(0px) scale(0.97);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FIX 2: TOGGLE SWITCH — Premium iOS-style dengan glow effect
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Overide toggle morph agar lebih premium */
+.toggle-premium {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 52px;
+  height: 30px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background-color 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease;
+  outline: none;
+  border: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* State OFF */
+.toggle-premium.off {
+  background: rgba(120, 120, 128, 0.2);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.15),
+    inset 0 0 0 0.5px rgba(0, 0, 0, 0.1);
+}
+.dark .toggle-premium.off {
+  background: rgba(60, 60, 68, 0.8);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.06);
+}
+
+/* State ON — warna tergantung colorClass */
+.toggle-premium.on-violet {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  box-shadow:
+    0 0 0 3px rgba(139, 92, 246, 0.15),
+    0 2px 8px rgba(139, 92, 246, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+.toggle-premium.on-green {
+  background: linear-gradient(135deg, #34d058, #22c55e);
+  box-shadow:
+    0 0 0 3px rgba(52, 208, 88, 0.15),
+    0 2px 8px rgba(52, 208, 88, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+.toggle-premium.on-orange {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  box-shadow:
+    0 0 0 3px rgba(249, 115, 22, 0.15),
+    0 2px 8px rgba(249, 115, 22, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+.toggle-premium.on-emerald {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow:
+    0 0 0 3px rgba(16, 185, 129, 0.15),
+    0 2px 8px rgba(16, 185, 129, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+.toggle-premium.on-stone {
+  background: linear-gradient(135deg, #78716c, #57534e);
+  box-shadow:
+    0 0 0 3px rgba(120, 113, 108, 0.15),
+    0 2px 8px rgba(120, 113, 108, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+/* Thumb / Lingkaran dalam toggle */
+.toggle-premium-thumb {
+  position: absolute;
+  top: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: white;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    inset 0 0.5px 1px rgba(255, 255, 255, 0.5);
+  transition: left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              width 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.2s ease;
+  will-change: left, width;
+}
+
+/* Thumb OFF position */
+.toggle-premium.off .toggle-premium-thumb {
+  left: 3px;
+}
+
+/* Thumb ON position */
+.toggle-premium.on-violet .toggle-premium-thumb,
+.toggle-premium.on-green .toggle-premium-thumb,
+.toggle-premium.on-orange .toggle-premium-thumb,
+.toggle-premium.on-emerald .toggle-premium-thumb,
+.toggle-premium.on-stone .toggle-premium-thumb {
+  left: calc(100% - 27px);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    0 1px 3px rgba(0, 0, 0, 0.15),
+    inset 0 0.5px 1px rgba(255, 255, 255, 0.6);
+}
+
+/* Efek squish saat ditekan — thumb melebar */
+.toggle-premium:active .toggle-premium-thumb {
+  width: 28px;
+}
+
+/* Efek squish saat ON dan ditekan */
+.toggle-premium.on-violet:active .toggle-premium-thumb,
+.toggle-premium.on-green:active .toggle-premium-thumb,
+.toggle-premium.on-orange:active .toggle-premium-thumb,
+.toggle-premium.on-emerald:active .toggle-premium-thumb,
+.toggle-premium.on-stone:active .toggle-premium-thumb {
+  left: calc(100% - 31px);
+  width: 28px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FIX 4: ONBOARDING — Mobile responsive fix
+   Memastikan modal onboarding tidak overflow di layar kecil
+   ═══════════════════════════════════════════════════════════════════ */
+.onboarding-modal {
+  position: fixed !important;
+  /* Gunakan koordinat viewport yang aman, bukan translate */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(340px, calc(100vw - 2rem));
+  max-height: calc(100dvh - 4rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Pastikan tidak ada konten yang melampaui batas */
+  box-sizing: border-box;
+}
+
+/* Spotlight highlight yang dibatasi viewport */
+.onboarding-spotlight {
+  pointer-events: none;
+  box-shadow:
+    0 0 0 4px #7C3AED,
+    0 0 0 9999px rgba(0,0,0,0.55);
+  border: 2px solid rgba(139, 92, 246, 0.8);
+  border-radius: 16px;
+  position: absolute;
+  z-index: 201;
+  /* Kunci: clamping agar tidak keluar viewport */
+  max-width: calc(100vw - 2rem);
+}

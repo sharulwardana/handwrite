@@ -448,30 +448,25 @@ function LiquidGlassSlider({ value, min = 0, max = 1, step = 0.05, onChange, isD
 }
 
 
-/* ── 2. LIQUID GLASS TOGGLE (BENTUK PIL/KAPSUL IOS 18 PRESISI) ── */
 function LiquidGlassToggleMorph({ value, onChange, colorClass = "bg-[#34c759]", isDark }: any) {
-  const [isPressed, setIsPressed] = useState(false);
+  const colorMap: Record<string, string> = {
+    "bg-violet-500": "violet",
+    "bg-[#34c759]": "green",
+    "bg-orange-500": "orange",
+    "bg-emerald-500": "emerald",
+    "bg-stone-500": "stone",
+  };
+  const colorKey = colorMap[colorClass] || "violet";
+  const onClass = `on-${colorKey}`;
 
   return (
     <button
       type="button"
-      onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setIsPressed(true); }}
-      onPointerUp={(e) => { e.currentTarget.releasePointerCapture(e.pointerId); setIsPressed(false); }}
-      onPointerLeave={() => setIsPressed(false)}
       onClick={() => onChange(!value)}
       style={{ WebkitTapHighlightColor: 'transparent' }}
-      className={`relative flex-shrink-0 w-[51px] h-[31px] rounded-full transition-colors duration-300 ease-in-out border outline-none select-none touch-none
-      ${value
-          ? `${colorClass} border-transparent shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]`
-          : isDark ? 'bg-[#39393d] border-[#ffffff10]' : 'bg-[#e9e9ea] border-black/5'}`}
+      className={`toggle-premium ${value ? onClass : 'off'} select-none touch-none`}
     >
-      <div
-        className={`absolute top-[2px] h-[25px] bg-white rounded-full shadow-[0_3px_8px_rgba(0,0,0,0.15),_0_1px_1px_rgba(0,0,0,0.1)] transition-all duration-300 ease-apple-spring
-        ${value
-            ? (isPressed ? 'w-[34px] left-[13px]' : 'w-[27px] left-[20px]')
-            : (isPressed ? 'w-[34px] left-[2px]' : 'w-[27px] left-[2px]')
-          }`}
-      />
+      <span className="toggle-premium-thumb" />
     </button>
   );
 }
@@ -754,10 +749,10 @@ export default function Home() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const ONBOARDING_SPOTLIGHT = [
-    { selector: null, description: "welcome" },                    // Step 0: welcome, tidak highlight apapun
-    { selector: "sidebar-settings", description: "sidebar" },     // Step 1: highlight sidebar
-    { selector: "editor-panel", description: "editor" },          // Step 2: highlight editor
-    { selector: "generate-btn", description: "generate" },        // Step 3: highlight tombol generate
+    { selector: null, description: "welcome" },
+    { selector: "sidebar-settings", selectorMobile: null, description: "sidebar" },   // mobile: tidak highlight, drawer sudah buka
+    { selector: "editor-panel", selectorMobile: null, description: "editor" },        // mobile: tidak highlight panel
+    { selector: "generate-btn", selectorMobile: "generate-btn", description: "generate" }, // generate btn ada di semua ukuran
   ];
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
@@ -821,6 +816,22 @@ export default function Home() {
   const lastPreviewHashRef = useRef<string>("");
   const cropImgRef = useRef<HTMLImageElement>(null);
   const swipeStartXRef = useRef<number | null>(null);
+  // Helper: navigasi halaman yang aman — priority: FlipBook API → setState fallback
+  const navigateToPage = useCallback((index: number) => {
+    const clampedIndex = Math.max(0, Math.min((generatedPages.length || streamedPages.length) - 1, index));
+    setActivePageIndex(clampedIndex);
+    // Coba sync FlipBook jika tersedia (tidak blocking)
+    try {
+      const flip = bookRef.current?.pageFlip?.();
+      if (flip && typeof flip.turnToPage === 'function') {
+        flip.turnToPage(clampedIndex);
+      } else if (flip && typeof flip.flip === 'function') {
+        flip.flip(clampedIndex);
+      }
+    } catch (e) {
+      // FlipBook belum ready, setState sudah cukup
+    }
+  }, [generatedPages.length, streamedPages.length]);
   const swipeStartYRef = useRef<number | null>(null);
   const pinchStartDistRef = useRef<number | null>(null);
   const pinchStartZoomRef = useRef<number>(100);
@@ -1425,14 +1436,12 @@ export default function Home() {
       }
       if (e.key === "ArrowRight" && !isGenerating && generatedPages.length > 0) {
         e.preventDefault();
-        if (bookRef.current?.pageFlip) bookRef.current.pageFlip().flipNext();
-        else setActivePageIndex(i => Math.min(generatedPages.length - 1, i + 1));
+        navigateToPage(activePageIndex + 1);
         return;
       }
       if (e.key === "ArrowLeft" && !isGenerating && generatedPages.length > 0) {
         e.preventDefault();
-        if (bookRef.current?.pageFlip) bookRef.current.pageFlip().flipPrev();
-        else setActivePageIndex(i => Math.max(0, i - 1));
+        navigateToPage(activePageIndex - 1);
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
@@ -1443,7 +1452,7 @@ export default function Home() {
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [isGenerating, text, selectedFolio, handleGenerate]);
+  }, [isGenerating, text, selectedFolio, handleGenerate, navigateToPage, activePageIndex]);
 
   // ── Downloads ────────────────────────────────────────────────────────────────
   // ── FUNGSI SHARE HALAMAN ──
@@ -2448,14 +2457,18 @@ export default function Home() {
         className="shadow-2xl rounded-sm"
         onFlip={(e: any) => setActivePageIndex(e.data)}
       >
-        {activePagesMemo.map((p) => (
+        {activePagesMemo.map((p, idx) => (
           <div key={p.page} className="bg-white overflow-hidden" style={{ boxShadow: "inset 0 0 20px rgba(0,0,0,0.05)" }}>
-            <img
+            <motion.img
+              key={`page-${p.page}`}
               src={p.image}
               alt={`Hal ${p.page}`}
               className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
               loading="lazy"
               decoding="async"
+              initial={{ opacity: 0.7 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
               onDoubleClick={() => generatedPages.length > 0 && setFullscreenPage(p)}
             />
           </div>
@@ -2894,84 +2907,152 @@ export default function Home() {
           </AnimatePresence>
 
           {/* ── ONBOARDING TOUR ── */}
-          {showOnboarding && (
-            <div className="fixed inset-0 z-[200] pointer-events-none">
-              <motion.div
-                className="absolute inset-0 pointer-events-auto"
-                animate={{ backgroundColor: onboardingStep === 0 ? "rgba(0,0,0,0.7)" : "rgba(0,0,0,0.55)" }}
-                transition={{ duration: 0.3 }}
-                onClick={() => { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); }}
-              />
+          {showOnboarding && (() => {
+            const isMobileView = typeof window !== 'undefined' && window.innerWidth < 1024;
 
-              {onboardingStep > 0 && (() => {
-                const targetId = ONBOARDING_SPOTLIGHT[onboardingStep]?.selector;
-                const el = targetId ? document.getElementById(targetId) : null;
-                const rect = el?.getBoundingClientRect();
-                if (!rect) return null;
-                return (
-                  <motion.div
-                    key={targetId}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3 }}
-                    className="absolute pointer-events-none rounded-2xl"
-                    style={{
-                      top: rect.top - 6,
-                      left: rect.left - 6,
-                      width: rect.width + 12,
-                      height: rect.height + 12,
-                      boxShadow: "0 0 0 4px #7C3AED, 0 0 0 9999px rgba(0,0,0,0.55)",
-                      border: "2px solid rgba(139,92,246,0.8)",
-                    }}
-                  />
-                );
-              })()}
+            // Tentukan selector berdasarkan ukuran layar
+            // Di mobile: sidebar-settings adalah hidden lg:flex, jadi tidak ada di DOM visible
+            // Hanya generate-btn yang ada di semua ukuran layar
+            const mobileSelectors: Record<number, string | null> = {
+              0: null,          // welcome — tidak highlight apapun
+              1: null,          // sidebar di mobile = drawer, tidak bisa di-highlight
+              2: null,          // editor panel di mobile tidak punya id yang visible
+              3: "generate-btn", // generate button ada di mobile dock bottom
+            };
+            const desktopSelectors: Record<number, string | null> = {
+              0: null,
+              1: "sidebar-settings",
+              2: "editor-panel",
+              3: "generate-btn",
+            };
 
-              <div className="absolute pointer-events-auto left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-                style={{ maxWidth: "340px", width: "90vw" }}>
-                <div className={`rounded-[2rem] border shadow-2xl overflow-hidden ${isAppleDevice
+            const targetId = isMobileView
+              ? mobileSelectors[onboardingStep] ?? null
+              : desktopSelectors[onboardingStep] ?? null;
+
+            const el = targetId ? document.getElementById(targetId) : null;
+            const rect = el?.getBoundingClientRect();
+            const hasValidRect = rect && rect.width > 0 && rect.height > 0;
+
+            return (
+              <div className="fixed inset-0 z-[200] pointer-events-none">
+                {/* Overlay gelap */}
+                <motion.div
+                  className="absolute inset-0 pointer-events-auto"
+                  animate={{ backgroundColor: onboardingStep === 0 ? "rgba(0,0,0,0.7)" : "rgba(0,0,0,0.55)" }}
+                  transition={{ duration: 0.3 }}
+                  onClick={() => { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); }}
+                />
+
+                {/* Spotlight — hanya render jika elemen valid & terlihat di viewport */}
+                {onboardingStep > 0 && hasValidRect && (() => {
+                  const safeLeft = Math.max(8, rect.left - 6);
+                  const safeTop = Math.max(8, rect.top - 6);
+                  const safeWidth = Math.min(
+                    rect.width + 12,
+                    (typeof window !== 'undefined' ? window.innerWidth : 400) - safeLeft - 8
+                  );
+                  return (
+                    <motion.div
+                      key={targetId}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3 }}
+                      className="absolute pointer-events-none rounded-2xl"
+                      style={{
+                        top: safeTop,
+                        left: safeLeft,
+                        width: safeWidth,
+                        height: rect.height + 12,
+                        boxShadow: "0 0 0 4px #7C3AED, 0 0 0 9999px rgba(0,0,0,0.55)",
+                        border: "2px solid rgba(139,92,246,0.8)",
+                      }}
+                    />
+                  );
+                })()}
+
+                {/* Modal card — fixed center, responsive semua ukuran S/M/L/XL/4K */}
+                <div
+                  className="pointer-events-auto"
+                  style={{
+                    position: 'fixed',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: 'min(340px, calc(100vw - 2rem))',
+                    maxHeight: 'calc(100dvh - 4rem)',
+                    overflowY: 'auto',
+                    zIndex: 202,
+                  }}
+                >
+                  <div className={`rounded-[2rem] border shadow-2xl overflow-hidden ${isAppleDevice
                     ? (isDark ? "bg-[#1c1c1e]/85 backdrop-blur-3xl border-white/15" : "bg-white/85 backdrop-blur-3xl border-white/40")
                     : (isDark ? "bg-[#0d0d14] border-[#ffffff10]" : "bg-white border-violet-100")
-                  } ${isDark ? "shadow-[0_24px_64px_rgba(0,0,0,0.8)]" : "shadow-[0_24px_64px_rgba(139,92,246,0.15)]"}`}>
+                    } ${isDark ? "shadow-[0_24px_64px_rgba(0,0,0,0.8)]" : "shadow-[0_24px_64px_rgba(139,92,246,0.15)]"}`}>
 
-                  {isAppleDevice && <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-violet-500/10 pointer-events-none z-0" />}
+                    {isAppleDevice && <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-violet-500/10 pointer-events-none z-0" />}
 
-                  <div className="relative z-10 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex gap-1.5">
-                        {[0, 1, 2, 3].map(i => (
-                          <div key={i} className={`h-1.5 rounded-full transition-colors duration-300 ${i === onboardingStep ? "w-6 bg-violet-500" : i < onboardingStep ? "w-3 bg-violet-300" : "w-3 bg-gray-300 dark:bg-white/10"}`} />
-                        ))}
-                      </div>
-                      <button onClick={() => { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); }}
-                        className={`text-[11px] px-2.5 py-1.5 rounded-lg transition-colors font-medium ${isDark ? "text-white/50 hover:text-white hover:bg-white/10" : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"}`}>
-                        Skip
-                      </button>
-                    </div>
-                    <div className="text-4xl mb-3">{[["👋"], ["🎨"], ["📝"], ["🚀"]][onboardingStep]}</div>
-                    <h3 className={`text-base font-bold mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
-                      {["Selamat datang di Mager Nulis!", "Pilih Gaya Tulisan", "Ketik Teks Tugasmu", "Generate & Download"][onboardingStep]}
-                    </h3>
-                    <p className={`text-[12.5px] leading-relaxed mb-6 ${isDark ? "text-white/70" : "text-gray-600"}`}>
-                      {["Ubah teks apapun jadi tulisan tangan realistis di atas folio dalam hitungan detik.", "Di sidebar kiri, pilih font, kemiringan, warna tinta, efek typo, dan banyak lagi untuk tulisan yang benar-benar terasa manusiawi.", "Paste teks tugasmu di area utama. Bisa sampai 50.000 karakter! Gunakan Ctrl+Enter untuk langsung Generate.", "Klik Generate dan halaman muncul satu per satu secara real-time. Download sebagai JPG, ZIP, PDF, atau Word."][onboardingStep]}
-                    </p>
-                    <div className="flex gap-2">
-                      {onboardingStep > 0 && (
-                        <button onClick={handlePrevOnboardingStep}
-                          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isDark ? "bg-black/30 border border-white/10 text-white/80 hover:bg-white/10" : "bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100"}`}>
-                          ← Kembali
+                    <div className="relative z-10 p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex gap-1.5">
+                          {[0, 1, 2, 3].map(i => (
+                            <div key={i} className={`h-1.5 rounded-full transition-colors duration-300 ${i === onboardingStep ? "w-6 bg-violet-500" : i < onboardingStep ? "w-3 bg-violet-300" : "w-3 bg-gray-300 dark:bg-white/10"}`} />
+                          ))}
+                        </div>
+                        <button onClick={() => { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); }}
+                          className={`text-[11px] px-2.5 py-1.5 rounded-lg transition-colors font-medium ${isDark ? "text-white/50 hover:text-white hover:bg-white/10" : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"}`}>
+                          Skip
                         </button>
+                      </div>
+                      <div className="text-4xl mb-3">{[["👋"], ["🎨"], ["📝"], ["🚀"]][onboardingStep]}</div>
+                      <h3 className={`text-base font-bold mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
+                        {["Selamat datang di Mager Nulis!", "Pilih Gaya Tulisan", "Ketik Teks Tugasmu", "Generate & Download"][onboardingStep]}
+                      </h3>
+                      <p className={`text-[12.5px] leading-relaxed mb-6 ${isDark ? "text-white/70" : "text-gray-600"}`}>
+                        {[
+                          "Ubah teks apapun jadi tulisan tangan realistis di atas folio dalam hitungan detik.",
+                          isMobileView
+                            ? "Ketuk tombol ☰ di pojok kiri atas untuk membuka sidebar. Di sana kamu bisa pilih font, warna tinta, efek typo, dan banyak lagi!"
+                            : "Di sidebar kiri, pilih font, kemiringan, warna tinta, efek typo, dan banyak lagi untuk tulisan yang benar-benar terasa manusiawi.",
+                          isMobileView
+                            ? "Ketuk tab Editor di atas, lalu ketik atau paste teks tugasmu. Bisa sampai 50.000 karakter!"
+                            : "Paste teks tugasmu di area utama. Bisa sampai 50.000 karakter! Gunakan Ctrl+Enter untuk langsung Generate.",
+                          "Klik Generate dan halaman muncul satu per satu secara real-time. Download sebagai JPG, ZIP, PDF, atau Word."
+                        ][onboardingStep]}
+                      </p>
+
+                      {/* Hint visual khusus mobile step 1: tunjukkan tombol hamburger */}
+                      {isMobileView && onboardingStep === 1 && (
+                        <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl mb-4 border ${isDark ? "bg-violet-500/10 border-violet-500/20" : "bg-violet-50 border-violet-200"}`}>
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${isDark ? "bg-white/10" : "bg-white shadow-sm border border-gray-200"}`}>
+                            <svg className={`w-4 h-4 ${isDark ? "text-white" : "text-gray-700"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                          </div>
+                          <p className={`text-[11px] font-medium ${isDark ? "text-white/80" : "text-gray-600"}`}>
+                            Tombol ini ada di pojok kiri atas header
+                          </p>
+                        </div>
                       )}
-                      <button onClick={handleNextOnboardingStep}
-                        className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 active:scale-95 transition-colors shadow-lg shadow-violet-500/25">
-                        {onboardingStep < 3 ? "Lanjut →" : "Mulai Sekarang! 🚀"}
-                      </button>
+
+                      <div className="flex gap-2">
+                        {onboardingStep > 0 && (
+                          <button onClick={handlePrevOnboardingStep}
+                            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isDark ? "bg-black/30 border border-white/10 text-white/80 hover:bg-white/10" : "bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100"}`}>
+                            ← Kembali
+                          </button>
+                        )}
+                        <button onClick={handleNextOnboardingStep}
+                          className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 active:scale-95 transition-colors shadow-lg shadow-violet-500/25">
+                          {onboardingStep < 3 ? "Lanjut →" : "Mulai Sekarang! 🚀"}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ── KEYBOARD SHORTCUT MODAL ── */}
           <AnimatePresence>
@@ -3394,19 +3475,12 @@ export default function Home() {
                       id="generate-btn"
                       onClick={handleGenerate}
                       disabled={isGenerating || !text.trim() || !selectedFolio}
-                      whileHover={!(isGenerating || !text.trim() || !selectedFolio) ? { scale: 1.03 } : {}}
-                      whileTap={!(isGenerating || !text.trim() || !selectedFolio) ? { scale: 0.95 } : {}}
-                      animate={isGenerating ? { boxShadow: ["0px 0px 0px rgba(139,92,246,0)", "0px 0px 20px rgba(139,92,246,0.6)", "0px 0px 0px rgba(139,92,246,0)"] } : {}}
-                      transition={isGenerating ? { duration: 2, repeat: Infinity, ease: "easeInOut" } : { type: "spring", stiffness: 400, damping: 25 }}
-                      className={`relative flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl font-bold text-xs transition-colors min-w-[110px] overflow-hidden ${isGenerating || !text.trim() || !selectedFolio
+                      whileHover={!(isGenerating || !text.trim() || !selectedFolio) ? { y: -1 } : {}}
+                      whileTap={!(isGenerating || !text.trim() || !selectedFolio) ? { scale: 0.97 } : {}}
+                      className={`relative flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl font-bold text-xs min-w-[110px] overflow-hidden ${isGenerating || !text.trim() || !selectedFolio
                         ? D ? "bg-[#ffffff05] text-white/30 cursor-not-allowed border border-[#ffffff0a]" : "bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-200"
-                        : `bg-gradient-to-r ${c.accent} text-white shadow-[0_4px_12px_rgba(139,92,246,0.25)] hover:shadow-[0_8px_24px_rgba(139,92,246,0.4)]`
-                        }`}>
-
-                      {/* Efek Sweeping Glow di dalam tombol saat loading */}
-                      {isGenerating && (
-                        <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_1.5s_infinite] -translate-x-full" />
-                      )}
+                        : `bg-gradient-to-r ${c.accent} text-white btn-generate-idle btn-generate-pulse`
+                        } ${isGenerating ? 'btn-generate-active' : ''}`}>
 
                       <div className="relative z-10 flex items-center gap-1.5">
                         {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <Sparkles className="w-3.5 h-3.5" />}
@@ -3818,10 +3892,7 @@ export default function Home() {
                       {generatedPages.length > 0 && (
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => {
-                              if (bookRef.current?.pageFlip) bookRef.current.pageFlip().flipPrev();
-                              else setActivePageIndex(i => Math.max(0, i - 1));
-                            }}
+                            onClick={() => navigateToPage(activePageIndex - 1)}
                             disabled={activePageIndex === 0}
                             className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs border transition-colors ${activePageIndex === 0
                               ? D ? "border-[#ffffff05] text-white/10 cursor-not-allowed" : "border-gray-100 text-gray-200 cursor-not-allowed"
@@ -3831,10 +3902,7 @@ export default function Home() {
                             {activePageIndex + 1}/{generatedPages.length}
                           </span>
                           <button
-                            onClick={() => {
-                              if (bookRef.current?.pageFlip) bookRef.current.pageFlip().flipNext();
-                              else setActivePageIndex(i => Math.min(generatedPages.length - 1, i + 1));
-                            }}
+                            onClick={() => navigateToPage(activePageIndex + 1)}
                             disabled={activePageIndex === generatedPages.length - 1}
                             className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs border transition-colors ${activePageIndex === generatedPages.length - 1
                               ? D ? "border-[#ffffff05] text-white/10 cursor-not-allowed" : "border-gray-100 text-gray-200 cursor-not-allowed"
@@ -3946,16 +4014,7 @@ export default function Home() {
                       {generatedPages.map((p, idx) => (
                         <button
                           key={p.page}
-                          onClick={() => {
-                            if (bookRef.current?.pageFlip) {
-                              const flip = bookRef.current.pageFlip();
-                              if (idx === activePageIndex + 1) flip.flipNext();
-                              else if (idx === activePageIndex - 1) flip.flipPrev();
-                              else flip.flip(idx);
-                            } else {
-                              setActivePageIndex(idx);
-                            }
-                          }}
+                          onClick={() => navigateToPage(idx)}
                           className={`flex-shrink-0 w-full rounded-lg overflow-hidden border-2 transition-colors ${idx === activePageIndex
                             ? "border-violet-500 shadow-lg shadow-violet-500/25 scale-[1.03]"
                             : D ? "border-[#ffffff10] hover:border-violet-500/40" : "border-gray-200 hover:border-violet-300"
@@ -4080,17 +4139,12 @@ export default function Home() {
                           <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             className="flex items-center justify-center min-h-full p-8 py-16">
                             <div className="text-center max-w-sm m-auto">
-                              {/* Animated Icon */}
-                              <div className="relative w-24 h-24 mx-auto mb-8 mt-6">
-                                <div className={`absolute inset-0 rounded-3xl gradient-border-animated ${D ? "bg-gradient-to-br from-violet-900/40 to-indigo-900/40 border border-violet-700/20" : "bg-gradient-to-br from-violet-100 to-indigo-100 border border-violet-200"}`} />
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                  <PenTool className={`w-10 h-10 ${D ? "text-violet-400/60" : "text-violet-400"}`}
-                                    style={{ animation: "bounce 2s ease-in-out infinite" }} />
-                                </div>
-                                <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${D ? "bg-indigo-500/40" : "bg-indigo-300"}`}
-                                  style={{ animation: "pulse 2s ease-in-out infinite" }} />
-                                <div className={`absolute -bottom-1 -left-1 w-2 h-2 rounded-full ${D ? "bg-violet-500/40" : "bg-violet-300"}`}
-                                  style={{ animation: "pulse 2.5s ease-in-out infinite" }} />
+                              <div className="relative w-24 h-24 mx-auto mb-8 mt-6 flex items-center justify-center">
+                                <div className={`absolute inset-0 rounded-3xl ${D ? "bg-gradient-to-br from-violet-900/40 to-indigo-900/40" : "bg-gradient-to-br from-violet-100 to-indigo-100"}`} />
+                                <PenTool
+                                  className={`relative z-10 w-10 h-10 ${D ? "text-violet-400/70" : "text-violet-500"}`}
+                                  style={{ animation: "bounce 2s ease-in-out infinite" }}
+                                />
                               </div>
 
                               <p className={`text-base font-bold mb-2 ${D ? "text-white/70" : "text-gray-700"}`}>
