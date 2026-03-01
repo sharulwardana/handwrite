@@ -200,6 +200,7 @@ function ToggleSwitch({
   value: boolean; onChange: (v: boolean) => void; colorClass?: string; isDark: boolean; isApple?: boolean;
 }) {
   if (isApple) {
+    // iOS/macOS/iPadOS: Liquid Glass toggle
     return (
       <button
         onClick={() => onChange(!value)}
@@ -209,15 +210,27 @@ function ToggleSwitch({
       </button>
     );
   }
+
+  // Android / Desktop / semua non-Apple: pakai toggle-premium CSS modern
+  const colorMap: Record<string, string> = {
+    "bg-violet-500 border-violet-400": "violet",
+    "bg-violet-500": "violet",
+    "bg-[#34c759]": "green",
+    "bg-orange-500": "orange",
+    "bg-emerald-500": "emerald",
+    "bg-stone-500": "stone",
+  };
+  const colorKey = colorMap[colorClass] || "violet";
+  const onClass = `on-${colorKey}`;
+
   return (
     <button
+      type="button"
       onClick={() => onChange(!value)}
-      className={`relative flex-shrink-0 w-11 h-6 rounded-full border-2 transition-colors duration-300 ${value
-        ? colorClass
-        : isDark ? "bg-white/10 border-[#ffffff18]" : "bg-gray-200 border-gray-300"
-        }`}
+      style={{ WebkitTapHighlightColor: 'transparent' }}
+      className={`toggle-premium ${value ? onClass : 'off'} select-none`}
     >
-      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-[left] duration-300 ${value ? "left-[22px]" : "left-0.5"}`} />
+      <span className="toggle-premium-thumb" />
     </button>
   );
 }
@@ -2035,7 +2048,7 @@ export default function Home() {
           </button>
 
           {fontDropdownOpen && Object.keys(fonts).length > 0 && (
-            <div className={`absolute top-full left-0 right-0 mt-1.5 z-50 overflow-hidden ${isAppleDevice ? "rounded-2xl border border-white/25 shadow-2xl liquid-glass-modal" : `rounded-xl border ${c.dropdown}`}`}>
+            <div className={`absolute top-full left-0 right-0 mt-1.5 z-50 overflow-hidden ${isAppleDevice ? "rounded-2xl border border-white/25 shadow-2xl liquid-glass-dropdown" : `rounded-xl border ${c.dropdown}`}`}>
               <div className={`max-h-52 overflow-y-auto py-1 ${isAppleDevice ? 'scrollbar-thin' : ''}`}>
                 {Object.entries(fonts).map(([key, font]) => (
                   <button key={key}
