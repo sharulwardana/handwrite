@@ -100,13 +100,16 @@ CACHE_FILE = "uploads/cache/folio_cache.json"
 _active_folios = set()
 _active_lock = threading.Lock()
 _folio_lock = threading.Lock()
+_json_lock = threading.Lock()  # <--- [BARU] Tambahkan pengunci khusus JSON
 generation_semaphore = threading.Semaphore(3)  # Max 3 generate sekaligus
 
 
 def save_folio_cache():
     try:
-        with open(CACHE_FILE, "w") as f:
-            json.dump(FOLIO_TEMPLATES, f)
+        # [BARU] Kunci file JSON saat sedang ditulis agar tidak korup
+        with _json_lock:
+            with open(CACHE_FILE, "w") as f:
+                json.dump(FOLIO_TEMPLATES, f)
     except Exception as e:
         print("Cache save error:", e)
 

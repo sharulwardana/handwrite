@@ -6,6 +6,9 @@ import threading
 import cv2
 import numpy as np
 import requests
+import pyphen
+# Inisialisasi kamus pemisah suku kata bahasa Indonesia
+dic_id = pyphen.Pyphen(lang='id_ID')
 from PIL import Image, ImageDraw, ImageFont
 
 
@@ -139,8 +142,13 @@ class HandwritingGenerator:
         self.font_cache = {}  # Tambahan: Inisialisasi penyimpanan cache font
 
     def get_baseline_wobble(self, line_index):
-        # MATIKAN semua efek gelombang agar baris lurus sempurna dan tidak makin turun
-        return 0.0
+        # PINTAR: Kita hanya mengembalikan "Amplitudo" (tinggi maksimal gelombang)
+        # Angka 1.5 sampai 2.5 piksel sangat aman, tidak akan pernah keluar dari garis folio.
+        amplitude = random.uniform(1.5, 2.5)
+        
+        # Kadang gelombangnya mulai dengan naik dulu (1), kadang turun dulu (-1)
+        direction = random.choice([-1, 1])
+        return amplitude * direction
 
     def make_typo_version(self, word):
         """
@@ -326,11 +334,15 @@ class HandwritingGenerator:
             progress = max(0.0, (cursor_x - x) / max(1, available_width))
             pen_pressure = 0  # default; dioverride di dalam if char.strip()
 
-            # FITUR BARU: Drift Kumulatif ditiadakan agar baris tidak menjadi miring ke bawah
-            line_drift_y = 0.0
+            # PINTAR: Gelombang Sinus (Sine Wave)
+            # progress berjalan dari 0.0 (awal) ke 1.0 (akhir baris).
+            # math.pi * 2 memastikan gelombang membentuk 1 siklus penuh (Tengah -> Naik -> Turun -> Tengah)
+            # Hasilnya: Tulisan tidak akan pernah miring ke bawah secara permanen!
+            wave_offset = math.sin(progress * math.pi * 2) * baseline_wobble
+            
             jitter_y = (
                 random.uniform(-0.1 * (1 + speed), 0.1 * (1 + speed))
-                + (baseline_wobble * progress * 0.5)
+                + wave_offset
             )
 
             is_upper = char.isupper() and char.isalpha()
@@ -589,9 +601,8 @@ class HandwritingGenerator:
         base_width = bbox[2] - bbox[0]
         extra = text.count(" ") * self.word_spacing
 
-        # Tambahkan toleransi 8% karena humanizer_effect kadang membesarkan font
-        # dan membuat jarak antar huruf (kerning) jadi lebih lebar
-        return (base_width + extra) * 1.08
+        # Ubah 1.08 menjadi 1.03 (Toleransi 3% cukup, 8% terlalu lebar)
+        return (base_width + extra) * 1.03
 
     def split_into_pages(self, text):
         pages, current_lines = [], []
@@ -621,58 +632,70 @@ class HandwritingGenerator:
                 if self.calculate_text_width(test_line) > max_w and current_line:
                     remaining_space = max_w - self.calculate_text_width(current_line)
 
-                    # FITUR: Pemecah kata panjang (hyphenation)
-                    if (
-                        remaining_space > self.config["fontSize"] * 2.5
-                        and len(word) > 6
-                    ):
-                        split_idx = int(
-                            len(word)
-                            * (remaining_space / self.calculate_text_width(word))
-                        )
-                        if split_idx >= 3:
-                            part1 = word[:split_idx] + "-"
-                            part2 = word[split_idx:]
+                    word_split_handled = False
+                    
+                    # FITUR: Pemecah kata panjang (hyphenation) yang lebih pintar
+                    if remaining_space > self.config["fontSize"] * 2.0 and len(word) >= 5:
+                        hyphenated = dic_id.inserted(word)
+                        syllables = hyphenated.split('-')
 
-                            current_line += part1
-                            current_lines.append(
-                                {
-                                    "text": current_line.strip(),
-                                    "y": float(y),
-                                    "line_index": line_index,
-                                    "margin_jitter": margin_jitter,
-                                }
-                            )
-                            current_line = part2 + " "
-                            y += self.config["lineHeight"]
-                            line_index += 1
+                        if len(syllables) > 1:
+                            part1 = ""
+                            part2 = ""
+                            for i in range(len(syllables) - 1, 0, -1):
+                                test_part1 = "".join(syllables[:i])
+                                test_part2 = "".join(syllables[i:])
 
-                            if y > self.config["pageBottom"]:
-                                pages.append(current_lines)
-                                current_lines = []
-                                y = self.config["startY"]
-                                line_index = 0
-                            
-                            continue
+                                # Cegah pemotongan aneh seperti makana-n
+                                if len(test_part1) >= 2 and len(test_part2) >= 2:
+                                    test_str = test_part1 + "-"
+                                    
+                                    # Cek ulang agar strip tidak tumpah melewati max_w
+                                    if self.calculate_text_width(current_line + test_str) <= max_w:
+                                        part1 = test_str
+                                        part2 = test_part2
+                                        break
+
+                            if part1 and part2:
+                                current_line += part1
+                                current_lines.append(
+                                    {
+                                        "text": current_line.strip(),
+                                        "y": float(y),
+                                        "line_index": line_index,
+                                        "margin_jitter": margin_jitter,
+                                    }
+                                )
+                                current_line = part2 + " "
+                                y += self.config["lineHeight"]
+                                line_index += 1
+                                word_split_handled = True
+
+                                if y > self.config["pageBottom"]:
+                                    pages.append(current_lines)
+                                    current_lines = []
+                                    y = self.config["startY"]
+                                    line_index = 0
 
                     # Jika tidak bisa dipotong, turun ke baris baru
-                    current_lines.append(
-                        {
-                            "text": current_line.strip(),
-                            "y": float(y),
-                            "line_index": line_index,
-                            "margin_jitter": margin_jitter,
-                        }
-                    )
-                    current_line = word + " "
-                    y += self.config["lineHeight"]
-                    line_index += 1
+                    if not word_split_handled:
+                        current_lines.append(
+                            {
+                                "text": current_line.strip(),
+                                "y": float(y),
+                                "line_index": line_index,
+                                "margin_jitter": margin_jitter,
+                            }
+                        )
+                        current_line = word + " "
+                        y += self.config["lineHeight"]
+                        line_index += 1
 
-                    if y > self.config["pageBottom"]:
-                        pages.append(current_lines)
-                        current_lines = []
-                        y = self.config["startY"]
-                        line_index = 0
+                        if y > self.config["pageBottom"]:
+                            pages.append(current_lines)
+                            current_lines = []
+                            y = self.config["startY"]
+                            line_index = 0
                 else:
                     current_line = test_line
 
