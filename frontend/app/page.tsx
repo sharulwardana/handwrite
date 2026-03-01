@@ -421,19 +421,6 @@ function LiquidGlassSlider({ value, min = 0, max = 1, step = 0.05, onChange, isD
 
 
 function LiquidGlassToggleMorph({ value, onChange, colorClass = "bg-[#34c759]", isDark, isApple = false }: any) {
-  if (isApple) {
-    // iOS/macOS/iPadOS native look
-    return (
-      <button
-        type="button"
-        onClick={() => onChange(!value)}
-        className={`relative flex-shrink-0 w-[51px] h-[31px] rounded-[32px] liquid-glass-toggle ${value ? 'active' : ''}`}
-      >
-        <span className={`absolute top-[2px] w-[27px] h-[27px] rounded-full liquid-glass-toggle-thumb ${value ? 'left-[22px]' : 'left-[2px]'}`} />
-      </button>
-    );
-  }
-
   const colorMap: Record<string, string> = {
     "bg-violet-500": "violet",
     "bg-[#34c759]": "green",
@@ -444,15 +431,30 @@ function LiquidGlassToggleMorph({ value, onChange, colorClass = "bg-[#34c759]", 
   const colorKey = colorMap[colorClass] || "violet";
   const onClass = `on-${colorKey}`;
 
-  // Futuristic/modern look for Android and Desktop
+  if (isApple) {
+    // iOS/macOS/iPadOS: Desain original yang disukai user
+    return (
+      <button
+        type="button"
+        onClick={() => onChange(!value)}
+        style={{ WebkitTapHighlightColor: 'transparent' }}
+        className={`toggle-premium ${value ? onClass : 'off'} select-none touch-none`}
+      >
+        <span className="toggle-premium-thumb" />
+      </button>
+    );
+  }
+
+  // Desain modern dan canggih (bukan kotak lengkung) bentuk garis / slider futuristik untuk Android dan PC
   return (
     <button
       type="button"
       onClick={() => onChange(!value)}
       style={{ WebkitTapHighlightColor: 'transparent' }}
-      className={`toggle-premium ${value ? onClass : 'off'} select-none touch-none`}
+      className={`toggle-cyber ${value ? onClass : 'off'} select-none touch-none`}
     >
-      <span className="toggle-premium-thumb" />
+      <div className="toggle-cyber-track" />
+      <span className="toggle-cyber-thumb" />
     </button>
   );
 }
