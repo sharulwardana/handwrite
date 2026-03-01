@@ -193,47 +193,6 @@ function SidebarSection({
   );
 }
 
-/* ─── TOGGLE SWITCH COMPONENT ────────────────────────── */
-function ToggleSwitch({
-  value, onChange, colorClass = "bg-violet-500 border-violet-400", isDark, isApple = false
-}: {
-  value: boolean; onChange: (v: boolean) => void; colorClass?: string; isDark: boolean; isApple?: boolean;
-}) {
-  if (isApple) {
-    // iOS/macOS/iPadOS: Liquid Glass toggle
-    return (
-      <button
-        onClick={() => onChange(!value)}
-        className={`relative flex-shrink-0 w-[51px] h-[31px] rounded-[32px] liquid-glass-toggle ${value ? 'active' : ''}`}
-      >
-        <span className={`absolute top-[2px] w-[27px] h-[27px] rounded-full liquid-glass-toggle-thumb ${value ? 'left-[22px]' : 'left-[2px]'}`} />
-      </button>
-    );
-  }
-
-  // Android / Desktop / semua non-Apple: pakai toggle-premium CSS modern
-  const colorMap: Record<string, string> = {
-    "bg-violet-500 border-violet-400": "violet",
-    "bg-violet-500": "violet",
-    "bg-[#34c759]": "green",
-    "bg-orange-500": "orange",
-    "bg-emerald-500": "emerald",
-    "bg-stone-500": "stone",
-  };
-  const colorKey = colorMap[colorClass] || "violet";
-  const onClass = `on-${colorKey}`;
-
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!value)}
-      style={{ WebkitTapHighlightColor: 'transparent' }}
-      className={`toggle-premium ${value ? onClass : 'off'} select-none`}
-    >
-      <span className="toggle-premium-thumb" />
-    </button>
-  );
-}
 
 /* ─── MAIN ───────────────────────────────────────────── */
 // Perbaikan: Memastikan API_URL selalu memiliki protokol yang benar
@@ -461,7 +420,20 @@ function LiquidGlassSlider({ value, min = 0, max = 1, step = 0.05, onChange, isD
 }
 
 
-function LiquidGlassToggleMorph({ value, onChange, colorClass = "bg-[#34c759]", isDark }: any) {
+function LiquidGlassToggleMorph({ value, onChange, colorClass = "bg-[#34c759]", isDark, isApple = false }: any) {
+  if (isApple) {
+    // iOS/macOS/iPadOS native look
+    return (
+      <button
+        type="button"
+        onClick={() => onChange(!value)}
+        className={`relative flex-shrink-0 w-[51px] h-[31px] rounded-[32px] liquid-glass-toggle ${value ? 'active' : ''}`}
+      >
+        <span className={`absolute top-[2px] w-[27px] h-[27px] rounded-full liquid-glass-toggle-thumb ${value ? 'left-[22px]' : 'left-[2px]'}`} />
+      </button>
+    );
+  }
+
   const colorMap: Record<string, string> = {
     "bg-violet-500": "violet",
     "bg-[#34c759]": "green",
@@ -472,6 +444,7 @@ function LiquidGlassToggleMorph({ value, onChange, colorClass = "bg-[#34c759]", 
   const colorKey = colorMap[colorClass] || "violet";
   const onClass = `on-${colorKey}`;
 
+  // Futuristic/modern look for Android and Desktop
   return (
     <button
       type="button"
@@ -2175,7 +2148,7 @@ export default function Home() {
             <p className={`text-[10.5px] font-semibold uppercase tracking-widest ${c.label}`}>Efek Typo</p>
             <p className={`text-[10px] mt-0.5 ${c.ts}`}>{enableTypo ? "Salah + coretan sesekali" : "Bersih tanpa coretan"}</p>
           </div>
-          <LiquidGlassToggleMorph value={enableTypo} onChange={setEnableTypo} colorClass="bg-violet-500" isDark={D} />
+          <LiquidGlassToggleMorph value={enableTypo} onChange={setEnableTypo} colorClass="bg-violet-500" isDark={D} isApple={isAppleDevice} />
         </div>
 
         <div className="flex items-center justify-between">
@@ -2183,7 +2156,7 @@ export default function Home() {
             <p className={`text-[10.5px] font-semibold uppercase tracking-widest ${c.label}`}>Mode Lelah</p>
             <p className={`text-[10px] mt-0.5 ${c.ts}`}>{tiredMode ? "Makin acak di halaman akhir" : "Konsisten dari awal"}</p>
           </div>
-          <LiquidGlassToggleMorph value={tiredMode} onChange={setTiredMode} colorClass="bg-orange-500" isDark={D} />
+          <LiquidGlassToggleMorph value={tiredMode} onChange={setTiredMode} colorClass="bg-orange-500" isDark={D} isApple={isAppleDevice} />
         </div>
 
         <div>
@@ -2192,7 +2165,7 @@ export default function Home() {
               <p className={`text-[10.5px] font-semibold uppercase tracking-widest ${c.label}`}>Nomor Halaman</p>
               <p className={`text-[10px] mt-0.5 ${c.ts}`}>{showPageNumber ? "Aktif" : "Tidak ada nomor"}</p>
             </div>
-            <LiquidGlassToggleMorph value={showPageNumber} onChange={setShowPageNumber} colorClass="bg-emerald-500" isDark={D} />
+            <LiquidGlassToggleMorph value={showPageNumber} onChange={setShowPageNumber} colorClass="bg-emerald-500" isDark={D} isApple={isAppleDevice} />
           </div>
           {showPageNumber && (
             <div className="grid grid-cols-3 gap-1 mt-2">
@@ -2214,7 +2187,7 @@ export default function Home() {
             <p className={`text-[10.5px] font-semibold uppercase tracking-widest ${c.label}`}>Tekstur Kertas</p>
             <p className={`text-[10px] mt-0.5 ${c.ts}`}>{config.paperTexture ? "Ada bayangan & lipatan" : "Kertas datar bersih"}</p>
           </div>
-          <LiquidGlassToggleMorph value={config.paperTexture ?? false} onChange={(v: boolean) => updateConfig({ ...config, paperTexture: v })} colorClass="bg-stone-500" isDark={D} />
+          <LiquidGlassToggleMorph value={config.paperTexture ?? false} onChange={(v: boolean) => updateConfig({ ...config, paperTexture: v })} colorClass="bg-stone-500" isDark={D} isApple={isAppleDevice} />
         </div>
       </SidebarSection>
 

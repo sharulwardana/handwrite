@@ -1214,127 +1214,98 @@ textarea, input {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   FIX 2: TOGGLE SWITCH — Premium iOS-style dengan glow effect
+   FIX 2: TOGGLE SWITCH — Futuristic Modern Style (Android/PC)
    ═══════════════════════════════════════════════════════════════════ */
 
-/* Overide toggle morph agar lebih premium */
 .toggle-premium {
   position: relative;
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  width: 52px;
-  height: 30px;
-  border-radius: 999px;
+  width: 48px;
+  height: 28px;
+  border-radius: 14px;
   cursor: pointer;
-  transition:
-    background-color 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   outline: none;
-  border: none;
+  border: 1px solid transparent;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  overflow: hidden;
 }
 
 /* State OFF */
 .toggle-premium.off {
-  background: rgba(120, 120, 128, 0.2);
-  box-shadow:
-    inset 0 1px 3px rgba(0, 0, 0, 0.15),
-    inset 0 0 0 0.5px rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 .dark .toggle-premium.off {
-  background: rgba(60, 60, 68, 0.8);
-  box-shadow:
-    inset 0 1px 3px rgba(0, 0, 0, 0.4),
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
-/* State ON — warna tergantung colorClass */
+/* State ON — Cyber/Neon Colors */
 .toggle-premium.on-violet {
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-  box-shadow:
-    0 0 0 3px rgba(139, 92, 246, 0.15),
-    0 2px 8px rgba(139, 92, 246, 0.4),
-    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  background: #7c3aed;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.5), inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 .toggle-premium.on-green {
-  background: linear-gradient(135deg, #34d058, #22c55e);
-  box-shadow:
-    0 0 0 3px rgba(52, 208, 88, 0.15),
-    0 2px 8px rgba(52, 208, 88, 0.4),
-    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  background: #10b981;
+  border-color: #34d399;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.5), inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 .toggle-premium.on-orange {
-  background: linear-gradient(135deg, #f97316, #ea580c);
-  box-shadow:
-    0 0 0 3px rgba(249, 115, 22, 0.15),
-    0 2px 8px rgba(249, 115, 22, 0.4),
-    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  background: #f97316;
+  border-color: #fb923c;
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.5), inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 .toggle-premium.on-emerald {
-  background: linear-gradient(135deg, #10b981, #059669);
-  box-shadow:
-    0 0 0 3px rgba(16, 185, 129, 0.15),
-    0 2px 8px rgba(16, 185, 129, 0.4),
-    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  background: #059669;
+  border-color: #10b981;
+  box-shadow: 0 0 12px rgba(5, 150, 105, 0.5), inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 .toggle-premium.on-stone {
-  background: linear-gradient(135deg, #78716c, #57534e);
-  box-shadow:
-    0 0 0 3px rgba(120, 113, 108, 0.15),
-    0 2px 8px rgba(120, 113, 108, 0.3),
-    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  background: #57534e;
+  border-color: #78716c;
+  box-shadow: 0 0 12px rgba(87, 83, 78, 0.5), inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Thumb / Lingkaran dalam toggle */
+/* Thumb / Inner Circle */
 .toggle-premium-thumb {
   position: absolute;
-  top: 3px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: linear-gradient(160deg, #ffffff 0%, #f5f5f7 100%);
-  box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.2),
-    0 1px 2px rgba(0, 0, 0, 0.12),
-    inset 0 0.5px 1px rgba(255, 255, 255, 0.5);
-  transition: left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
-              width 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
-              box-shadow 0.2s ease;
-  will-change: left, width;
+  top: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background: #ffffff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+              width 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform, width, left;
+  z-index: 2;
 }
 
 /* Thumb OFF position */
 .toggle-premium.off .toggle-premium-thumb {
-  left: 3px;
+  left: 2px;
 }
 
 /* Thumb ON position */
-.toggle-premium.on-violet .toggle-premium-thumb,
-.toggle-premium.on-green .toggle-premium-thumb,
-.toggle-premium.on-orange .toggle-premium-thumb,
-.toggle-premium.on-emerald .toggle-premium-thumb,
-.toggle-premium.on-stone .toggle-premium-thumb {
-  left: calc(100% - 27px);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.25),
-    0 1px 3px rgba(0, 0, 0, 0.15),
-    inset 0 0.5px 1px rgba(255, 255, 255, 0.6);
+.toggle-premium:not(.off) .toggle-premium-thumb {
+  left: calc(100% - 24px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), inset 0 -1px 1px rgba(0, 0, 0, 0.1);
 }
 
-/* Efek squish saat ditekan — thumb melebar */
-.toggle-premium:active .toggle-premium-thumb {
+/* Squish Effect On Click */
+.toggle-premium:active:not(.off) .toggle-premium-thumb {
   width: 28px;
+  left: calc(100% - 30px);
 }
-
-/* Efek squish saat ON dan ditekan */
-.toggle-premium.on-violet:active .toggle-premium-thumb,
-.toggle-premium.on-green:active .toggle-premium-thumb,
-.toggle-premium.on-orange:active .toggle-premium-thumb,
-.toggle-premium.on-emerald:active .toggle-premium-thumb,
-.toggle-premium.on-stone:active .toggle-premium-thumb {
-  left: calc(100% - 31px);
+.toggle-premium:active.off .toggle-premium-thumb {
   width: 28px;
 }
 
