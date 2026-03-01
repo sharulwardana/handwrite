@@ -568,31 +568,6 @@ class HandwritingGenerator:
                     letter_jitter = random.uniform(0.5, 2.5) + end_squeeze
                     cursor_x += char_width + letter_jitter
 
-                # ── CONNECTOR STROKE (sambungan antar huruf) ──────────────────
-                # Huruf yang punya ekor sambungan ke kanan di tulisan tangan asli
-                CONNECTABLE = set("acdeghimnopqrsuv")
-                if char.lower() in CONNECTABLE and random.random() < 0.20:
-                    # Titik awal: ujung kanan huruf yang baru digambar
-                    conn_start_x = cursor_x - random.uniform(1, 3)
-                    conn_start_y = y_baseline - random.uniform(
-                        font_size * 0.06, font_size * 0.16
-                    )
-                    # Titik akhir: awal huruf berikutnya (sedikit ke kanan)
-                    conn_end_x = min(
-                        cursor_x + random.uniform(1, 4), self.config["maxWidth"]
-                    )
-                    conn_end_y = conn_start_y + random.uniform(-2, 2)
-
-                    # Warna connector: sama dengan tinta tapi lebih transparan
-                    r_c, g_c, b_c = self.base_color_rgb
-                    connector_alpha = random.randint(55, 105)
-                    draw.line(
-                        [(conn_start_x, conn_start_y), (conn_end_x, conn_end_y)],
-                        fill=(r_c, g_c, b_c, connector_alpha),
-                        width=1,
-                    )
-                # ─────────────────────────────────────────────────────────────
-
         return cursor_x
 
     def calculate_text_width(self, text):
