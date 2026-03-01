@@ -1310,7 +1310,8 @@ textarea, input {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   FIX 3: TOGGLE CYBER — Futuristic Slider for Android/PC
+   FIX 3: TOGGLE CYBER — Futuristic Glass Pill for Android/PC
+   Menggunakan div (bukan button) agar kebal ghosting
    ═══════════════════════════════════════════════════════════════════ */
 
 .toggle-cyber {
@@ -1318,8 +1319,9 @@ textarea, input {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  width: 44px;
-  height: 20px;
+  width: 50px;
+  height: 26px;
+  border-radius: 999px; /* Bentuk pill / oval melintang sempurna */
   cursor: pointer;
   outline: none;
   border: none;
@@ -1328,73 +1330,71 @@ textarea, input {
   touch-action: manipulation;
 }
 
-/* Thin sleek track */
+/* Track / Background "Doff / Frosted Glass" */
 .toggle-cyber-track {
   position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 100%;
-  height: 3px;
-  border-radius: 2px;
-  background: rgba(0, 0, 0, 0.15);
-  transition: background 0.3s ease, box-shadow 0.3s ease;
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
 }
 .dark .toggle-cyber.off .toggle-cyber-track {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08); /* Doff terang sedikit di dark mode */
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
-/* Track ON state */
-.toggle-cyber.on-violet .toggle-cyber-track { background: #8b5cf6; box-shadow: 0 0 8px rgba(139, 92, 246, 0.6); }
-.toggle-cyber.on-green .toggle-cyber-track { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); }
-.toggle-cyber.on-orange .toggle-cyber-track { background: #f97316; box-shadow: 0 0 8px rgba(249, 115, 22, 0.6); }
-.toggle-cyber.on-emerald .toggle-cyber-track { background: #059669; box-shadow: 0 0 8px rgba(5, 150, 105, 0.6); }
-.toggle-cyber.on-stone .toggle-cyber-track { background: #78716c; box-shadow: 0 0 8px rgba(120, 113, 108, 0.6); }
+/* Track ON state: Menyedot warna dan memancarkan glow neon tebal */
+.toggle-cyber.on-violet .toggle-cyber-track { background: rgba(139, 92, 246, 0.2); border-color: rgba(139, 92, 246, 0.5); box-shadow: inset 0 0 12px rgba(139, 92, 246, 0.2); }
+.toggle-cyber.on-green .toggle-cyber-track { background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.5); box-shadow: inset 0 0 12px rgba(16, 185, 129, 0.2); }
+.toggle-cyber.on-orange .toggle-cyber-track { background: rgba(249, 115, 22, 0.2); border-color: rgba(249, 115, 22, 0.5); box-shadow: inset 0 0 12px rgba(249, 115, 22, 0.2); }
+.toggle-cyber.on-emerald .toggle-cyber-track { background: rgba(5, 150, 105, 0.2); border-color: rgba(5, 150, 105, 0.5); box-shadow: inset 0 0 12px rgba(5, 150, 105, 0.2); }
+.toggle-cyber.on-stone .toggle-cyber-track { background: rgba(120, 113, 108, 0.2); border-color: rgba(120, 113, 108, 0.5); box-shadow: inset 0 0 12px rgba(120, 113, 108, 0.2); }
 
-/* Circle Thumb */
+/* Circle Thumb: Tombol bulat mungil modern yang memancar */
 .toggle-cyber-thumb {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 18px;
-  height: 18px;
+  top: 3px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #ffffff;
-  border: 4px solid #ffffff;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-  transition: left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
-              background-color 0.3s ease,
-              border-color 0.3s ease,
-              transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  will-change: left, transform, background-color, border-color;
-  left: 0px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  transition: left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.4s ease,
+              box-shadow 0.4s ease,
+              width 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: left, width, background, box-shadow;
+  left: 3px;
 }
 
 .dark .toggle-cyber.off .toggle-cyber-thumb {
-  background: rgba(255, 255, 255, 0.8);
-  border-color: rgba(255, 255, 255, 0.8);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  background: rgba(240, 240, 245, 0.9);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.6);
 }
 
-/* Thumb ON state - Inner dot becomes white, border becomes color */
+/* Thumb ON State: Ganti warna full solid neon */
+.toggle-cyber.on-violet:not(.off) .toggle-cyber-thumb { background: #8b5cf6; box-shadow: 0 0 16px rgba(139, 92, 246, 0.8), inset 0 2px 2px rgba(255,255,255,0.4); }
+.toggle-cyber.on-green:not(.off) .toggle-cyber-thumb { background: #10b981; box-shadow: 0 0 16px rgba(16, 185, 129, 0.8), inset 0 2px 2px rgba(255,255,255,0.4); }
+.toggle-cyber.on-orange:not(.off) .toggle-cyber-thumb { background: #f97316; box-shadow: 0 0 16px rgba(249, 115, 22, 0.8), inset 0 2px 2px rgba(255,255,255,0.4); }
+.toggle-cyber.on-emerald:not(.off) .toggle-cyber-thumb { background: #059669; box-shadow: 0 0 16px rgba(5, 150, 105, 0.8), inset 0 2px 2px rgba(255,255,255,0.4); }
+.toggle-cyber.on-stone:not(.off) .toggle-cyber-thumb { background: #78716c; box-shadow: 0 0 16px rgba(120, 113, 108, 0.8), inset 0 2px 2px rgba(255,255,255,0.4); }
+
 .toggle-cyber:not(.off) .toggle-cyber-thumb {
-  left: calc(100% - 18px);
-  background: #ffffff;
-}
-.dark .toggle-cyber:not(.off) .toggle-cyber-thumb {
-  background: #111116; /* Dark inner dot matching dark theme */
+  left: calc(100% - 23px);
 }
 
-/* Dynamic Borders */
-.toggle-cyber.on-violet .toggle-cyber-thumb { border-color: #8b5cf6; box-shadow: 0 0 12px rgba(139, 92, 246, 0.4); }
-.toggle-cyber.on-green .toggle-cyber-thumb { border-color: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.4); }
-.toggle-cyber.on-orange .toggle-cyber-thumb { border-color: #f97316; box-shadow: 0 0 12px rgba(249, 115, 22, 0.4); }
-.toggle-cyber.on-emerald .toggle-cyber-thumb { border-color: #059669; box-shadow: 0 0 12px rgba(5, 150, 105, 0.4); }
-.toggle-cyber.on-stone .toggle-cyber-thumb { border-color: #78716c; box-shadow: 0 0 12px rgba(120, 113, 108, 0.4); }
-
-/* Squish/Press effect */
-.toggle-cyber:active .toggle-cyber-thumb {
-  transform: translateY(-50%) scale(0.85); /* Scales down when pressed */
+/* Interaksi Klik: Squish morphing murni berbasis CSS */
+.toggle-cyber:active:not(.off) .toggle-cyber-thumb {
+  width: 26px;
+  left: calc(100% - 29px);
+}
+.toggle-cyber:active.off .toggle-cyber-thumb {
+  width: 26px;
 }
 
 /* ═══════════════════════════════════════════════════════════════════

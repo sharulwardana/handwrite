@@ -445,17 +445,25 @@ function LiquidGlassToggleMorph({ value, onChange, colorClass = "bg-[#34c759]", 
     );
   }
 
-  // Desain modern dan canggih (bukan kotak lengkung) bentuk garis / slider futuristik untuk Android dan PC
+  // Desain modern dan canggih (bisa dibilang berbentuk oval/pill tapi memanjang lebar) untuk Android dan PC
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onChange(!value)}
+      // Untuk aksesibilitas keyboard
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onChange(!value);
+        }
+      }}
       style={{ WebkitTapHighlightColor: 'transparent' }}
       className={`toggle-cyber ${value ? onClass : 'off'} select-none touch-none`}
     >
       <div className="toggle-cyber-track" />
       <span className="toggle-cyber-thumb" />
-    </button>
+    </div>
   );
 }
 
