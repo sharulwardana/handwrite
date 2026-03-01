@@ -278,7 +278,8 @@ class HandwritingGenerator:
             full_width = full_bbox[2] - full_bbox[0]
             gap_after = int(self.config["fontSize"] * 0.35)
 
-            if cacat_width + gap_after + full_width <= available_total:
+            # Berikan safety margin 15 piksel agar coretan typo tidak mepet ujung kertas
+        if cacat_width + gap_after + full_width <= (available_total - 15):
                 draw.text(
                     (x, y),
                     cacat_word,
@@ -906,12 +907,14 @@ class HandwritingGenerator:
         blurred_np = cv2.GaussianBlur(text_np, (3, 3), 0.5)
         bleeding_np = cv2.addWeighted(text_np, 0.80, blurred_np, 0.20, 0)
 
-        # 2. FITUR BARU (Claude Poin 5): Efek Smudge (Tangan menggesek teks)
-        # Membuat Custom Kernel untuk Motion Blur searah horizontal ke kanan
+        # 2. FITUR BARU: Efek Smudge (Tangan menggesek teks asimetris)
         kernel_size = 9
         kernel_motion_blur = np.zeros((kernel_size, kernel_size))
-        kernel_motion_blur[int((kernel_size - 1) / 2), :] = np.ones(kernel_size)
-        kernel_motion_blur = kernel_motion_blur / kernel_size
+        
+        # PINTAR: Blur hanya menyapu ke arah kanan (menyimulasikan tangan kanan yang menulis)
+        mid = int((kernel_size - 1) / 2)
+        kernel_motion_blur[mid, mid:] = np.ones(kernel_size - mid)
+        kernel_motion_blur = kernel_motion_blur / np.sum(kernel_motion_blur)
 
         smudge_np = cv2.filter2D(bleeding_np, -1, kernel_motion_blur)
 

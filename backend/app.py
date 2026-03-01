@@ -499,8 +499,8 @@ def analyze_folio_route(folio_id):
 
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg"}
 
-
 @app.route("/api/folio/upload", methods=["POST"])
+@rate_limit_strict  # <--- Tambahkan ini agar maksimal upload 10x per menit per user
 def upload_folio():
     if "folio" not in request.files:
         return jsonify({"error": "No file provided"}), 400
@@ -824,14 +824,6 @@ def generate_handwriting_stream():
                             if len(HandwritingGenerator._image_cache) > 2:
                                 HandwritingGenerator._image_cache.clear()
 
-                        import ctypes
-
-                        try:
-                            # Paksa Linux/Server membebaskan RAM secara instan
-                            ctypes.CDLL("libc.so.6").malloc_trim(0)
-                        except Exception:
-                            pass
-
                         # Jalankan Garbage Collection setiap 2 halaman
                         if (idx + 1) % 2 == 0:
                             gc.collect()
@@ -846,6 +838,14 @@ def generate_handwriting_stream():
                             _active_folios.discard(folio_even_path)
             finally:
                 generation_semaphore.release()
+                
+                # OPTIMALISASI: Panggil malloc_trim SATU KALI saja di akhir proses stream.
+                # Ini menghemat CPU server tapi tetap mengembalikan RAM ke OS secara instan.
+                import ctypes
+                try:
+                    ctypes.CDLL("libc.so.6").malloc_trim(0)
+                except Exception:
+                    pass
 
         # CORS header harus ditambahkan MANUAL di streaming response
         # karena Flask-CORS tidak otomatis inject ke app.response_class()
