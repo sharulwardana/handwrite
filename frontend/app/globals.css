@@ -1310,6 +1310,94 @@ textarea, input {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   FIX 3: TOGGLE CYBER — Futuristic Slider for Android/PC
+   ═══════════════════════════════════════════════════════════════════ */
+
+.toggle-cyber {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 20px;
+  cursor: pointer;
+  outline: none;
+  border: none;
+  background: transparent;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Thin sleek track */
+.toggle-cyber-track {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.15);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+.dark .toggle-cyber.off .toggle-cyber-track {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Track ON state */
+.toggle-cyber.on-violet .toggle-cyber-track { background: #8b5cf6; box-shadow: 0 0 8px rgba(139, 92, 246, 0.6); }
+.toggle-cyber.on-green .toggle-cyber-track { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); }
+.toggle-cyber.on-orange .toggle-cyber-track { background: #f97316; box-shadow: 0 0 8px rgba(249, 115, 22, 0.6); }
+.toggle-cyber.on-emerald .toggle-cyber-track { background: #059669; box-shadow: 0 0 8px rgba(5, 150, 105, 0.6); }
+.toggle-cyber.on-stone .toggle-cyber-track { background: #78716c; box-shadow: 0 0 8px rgba(120, 113, 108, 0.6); }
+
+/* Circle Thumb */
+.toggle-cyber-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 4px solid #ffffff;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  transition: left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.3s ease,
+              border-color 0.3s ease,
+              transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: left, transform, background-color, border-color;
+  left: 0px;
+}
+
+.dark .toggle-cyber.off .toggle-cyber-thumb {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+
+/* Thumb ON state - Inner dot becomes white, border becomes color */
+.toggle-cyber:not(.off) .toggle-cyber-thumb {
+  left: calc(100% - 18px);
+  background: #ffffff;
+}
+.dark .toggle-cyber:not(.off) .toggle-cyber-thumb {
+  background: #111116; /* Dark inner dot matching dark theme */
+}
+
+/* Dynamic Borders */
+.toggle-cyber.on-violet .toggle-cyber-thumb { border-color: #8b5cf6; box-shadow: 0 0 12px rgba(139, 92, 246, 0.4); }
+.toggle-cyber.on-green .toggle-cyber-thumb { border-color: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.4); }
+.toggle-cyber.on-orange .toggle-cyber-thumb { border-color: #f97316; box-shadow: 0 0 12px rgba(249, 115, 22, 0.4); }
+.toggle-cyber.on-emerald .toggle-cyber-thumb { border-color: #059669; box-shadow: 0 0 12px rgba(5, 150, 105, 0.4); }
+.toggle-cyber.on-stone .toggle-cyber-thumb { border-color: #78716c; box-shadow: 0 0 12px rgba(120, 113, 108, 0.4); }
+
+/* Squish/Press effect */
+.toggle-cyber:active .toggle-cyber-thumb {
+  transform: translateY(-50%) scale(0.85); /* Scales down when pressed */
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    FIX 4: ONBOARDING — Mobile responsive fix
    Memastikan modal onboarding tidak overflow di layar kecil
    ═══════════════════════════════════════════════════════════════════ */
