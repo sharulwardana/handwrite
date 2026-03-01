@@ -278,8 +278,8 @@ class HandwritingGenerator:
             full_width = full_bbox[2] - full_bbox[0]
             gap_after = int(self.config["fontSize"] * 0.35)
 
-            # Berikan safety margin 15 piksel agar coretan typo tidak mepet ujung kertas
-        if cacat_width + gap_after + full_width <= (available_total - 15):
+            # 👇 PASTIKAN BARIS INI SEJAJAR DENGAN gap_after DI ATASNYA
+            if cacat_width + gap_after + full_width <= (available_total - 15):
                 draw.text(
                     (x, y),
                     cacat_word,
