@@ -42,6 +42,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         >
             <head>
                 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
+                <meta name="color-scheme" content="dark light" />
+                <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
+                <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FAFAFB" />
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
                 <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"} />

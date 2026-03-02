@@ -431,20 +431,26 @@ function LiquidGlassSlider({ value, min = 0, max = 1, step = 0.05, onChange, isD
           <div className={`absolute h-full left-0 top-0 ${colorClass}`} style={{ width: `${percentage}%` }} />
         </div>
 
-        {/* Thumb / Tombol Pil */}
+        {/* Thumb / Tombol Pil — Touch area 44px, visual tetap kecil */}
         <div
-          className={`absolute top-1/2 bg-white rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] pointer-events-none flex items-center justify-center border border-black/5
-          ${isPressed ? 'w-[36px] h-[22px]' : 'w-[28px] h-[18px]'}`}
+          className="absolute top-1/2 pointer-events-none flex items-center justify-center"
           style={{
-            // Posisi 0% sampai 100% sekarang dihitung dari Inner Container
             left: `${percentage}%`,
-            // Transform ini memastikan TENGAH tombol yang menempel pada batas persentase
             transform: 'translate(-50%, -50%)',
-            transitionProperty: 'width, height, box-shadow',
-            transitionDuration: '300ms',
-            transitionTimingFunction: 'cubic-bezier(0.25, 1.15, 0.4, 1)'
+            width: '44px',
+            height: '44px',
           }}
-        />
+        >
+          <div
+            className={`bg-white rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] flex items-center justify-center border border-black/5
+            ${isPressed ? 'w-[36px] h-[22px]' : 'w-[28px] h-[18px]'}`}
+            style={{
+              transitionProperty: 'width, height, box-shadow',
+              transitionDuration: '300ms',
+              transitionTimingFunction: 'cubic-bezier(0.25, 1.15, 0.4, 1)'
+            }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -873,6 +879,8 @@ export default function Home() {
   const pinchStartZoomRef = useRef<number>(100);
   const [mobileZoom, setMobileZoom] = useState(100);
   const [showAdminModal, setShowAdminModal] = useState(false);
+  const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [contextMenuPage, setContextMenuPage] = useState<GeneratedPage | null>(null);
   const [targetUserEmail, setTargetUserEmail] = useState("");
   const [addAmount, setAddAmount] = useState(100);
 
@@ -1400,6 +1408,11 @@ export default function Home() {
 
               toast.success(`✅ ${collectedPages.length} halaman selesai!`, { duration: 3000 });
 
+              // Haptic feedback untuk Android
+              if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+                navigator.vibrate([50, 30, 50]);
+              }
+
               // Simpan ke Cache & History (Sisa kode di bawahnya tetap sama)
               try {
                 await fetch(`${API_URL}/api/cache/save`, {
@@ -1913,6 +1926,23 @@ export default function Home() {
     setConfigHistoryIndex(newIndex);
     setConfig(configHistory[newIndex]);
   }, [configHistoryIndex, configHistory]);
+
+  const handleLongPressStart = (page: GeneratedPage) => {
+    if (!isAppleDevice) return;
+    const timer = setTimeout(() => {
+      // Haptic feedback Apple style
+      if ('vibrate' in navigator) navigator.vibrate(10);
+      setContextMenuPage(page);
+    }, 500);
+    setLongPressTimer(timer);
+  };
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
 
   const handleCopySeed = () => {
     navigator.clipboard.writeText(String(seed)).then(() => {
@@ -2572,6 +2602,10 @@ export default function Home() {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
               onDoubleClick={() => generatedPages.length > 0 && setFullscreenPage(p)}
+              onTouchStart={() => handleLongPressStart(p)}
+              onTouchEnd={handleLongPressEnd}
+              onTouchCancel={handleLongPressEnd}
+              onMouseLeave={handleLongPressEnd}
             />
           </div>
         ))}
@@ -2812,7 +2846,16 @@ export default function Home() {
               <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPendingHwConfig(null)} />
-                <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  drag={isAppleDevice ? "y" : false}
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  dragElastic={{ top: 0, bottom: 0.4 }}
+                  onDragEnd={(_, info) => {
+                    if (info.offset.y > 80) setPendingHwConfig(null);
+                  }}
                   className={`relative w-full max-w-sm rounded-2xl p-5 border shadow-2xl ${isDark ? "bg-[#18181b] border-[#ffffff14]" : "bg-white border-gray-200"}`}>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 rounded-full bg-violet-500/20 flex items-center justify-center">
@@ -2874,8 +2917,18 @@ export default function Home() {
               <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isAiDrafting && setShowAiModal(false)} />
-                <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  drag={isAppleDevice ? "y" : false}
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  dragElastic={{ top: 0, bottom: 0.4 }}
+                  onDragEnd={(_, info) => {
+                    if (info.offset.y > 80) { setShowAiModal(false); setAiDraftResult(""); }
+                  }}
                   className={`relative w-full max-w-lg rounded-2xl p-5 border shadow-2xl ${isDark ? "bg-[#18181b] border-[#ffffff14]" : "bg-white border-gray-200"}`}>
+                  {isAppleDevice && <div className="drag-handle" />}
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
@@ -3194,7 +3247,7 @@ export default function Home() {
                     <div className="flex items-center justify-between mb-5">
                       <h3 className={`font-bold text-base ${c.tp}`}>⌨️ Keyboard Shortcuts</h3>
                       <button onClick={() => setShowShortcuts(false)}
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center ${c.btn}`}>
+                        className={`w-11 h-11 rounded-xl flex items-center justify-center ${c.btn}`}>
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -3242,7 +3295,16 @@ export default function Home() {
                   onClick={() => setShowQrisModal(false)} />
 
                 {/* PERBAIKAN: Pisahkan container utama dengan inner scrollable agar border tidak terpotong */}
-                <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                  drag={isAppleDevice ? "y" : false}
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  dragElastic={{ top: 0, bottom: 0.4 }}
+                  onDragEnd={(_, info) => {
+                    if (info.offset.y > 80) setShowQrisModal(false);
+                  }}
                   className={`relative w-full max-w-sm sm:max-w-md max-h-[92dvh] rounded-[2rem] border shadow-2xl flex flex-col overflow-hidden ${isAppleDevice
                     ? (D ? "bg-[#1c1c1e]/85 backdrop-blur-3xl border-white/15" : "bg-white/85 backdrop-blur-3xl border-white/40")
                     : (D ? "bg-[#13131f] border-[#ffffff14]" : "bg-white border-gray-200")
@@ -3253,6 +3315,7 @@ export default function Home() {
 
                   {/* INNER CONTENT SCROLLABLE (Ini yang menyembuhkan border aneh) */}
                   <div className="relative z-10 flex flex-col items-center text-center w-full h-full overflow-y-auto scrollbar-hide p-6 sm:p-8">
+                    {isAppleDevice && <div className="drag-handle" />}
                     <div className="w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0 rounded-full bg-amber-500/20 flex items-center justify-center mb-4 sm:mb-5 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
                       <Zap className="w-6 h-6 sm:w-7 sm:h-7 text-amber-500" fill="currentColor" />
                     </div>
@@ -3382,6 +3445,77 @@ export default function Home() {
             )}
           </AnimatePresence>
 
+          {/* ── APPLE LONG PRESS CONTEXT MENU ── */}
+          <AnimatePresence>
+            {contextMenuPage && (
+              <div className="fixed inset-0 z-[150] flex items-end justify-center p-4"
+                onClick={() => setContextMenuPage(null)}>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                />
+                <motion.div
+                  initial={{ y: 100, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 100, opacity: 0 }}
+                  transition={{ type: "spring", damping: 28, stiffness: 300 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className={`relative w-full max-w-sm rounded-3xl border overflow-hidden shadow-2xl ${isDark
+                    ? "bg-[#1c1c1e]/90 backdrop-blur-3xl border-white/15"
+                    : "bg-white/90 backdrop-blur-3xl border-black/10"
+                    }`}
+                >
+                  <div className="drag-handle mt-3" />
+
+                  {/* Preview thumbnail */}
+                  <div className="px-4 pb-3">
+                    <img
+                      src={contextMenuPage.image}
+                      alt=""
+                      className="w-full h-32 object-cover object-top rounded-2xl"
+                    />
+                    <p className={`text-[11px] text-center mt-2 font-medium ${isDark ? "text-white/50" : "text-gray-400"}`}>
+                      Halaman {contextMenuPage.page}
+                    </p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className={`mx-4 mb-4 rounded-2xl overflow-hidden border ${isDark ? "border-white/10" : "border-gray-100"}`}>
+                    {[
+                      { icon: "⬇️", label: "Download JPG", action: () => handleDownloadSingle(contextMenuPage) },
+                      { icon: "📋", label: "Copy ke Clipboard", action: () => handleCopyImageToClipboard(contextMenuPage) },
+                      { icon: "⛶", label: "Lihat Fullscreen", action: () => setFullscreenPage(contextMenuPage) },
+                      { icon: "↗️", label: "Bagikan", action: () => handleSharePage(contextMenuPage) },
+                    ].map((item, i, arr) => (
+                      <button
+                        key={item.label}
+                        onClick={() => { item.action(); setContextMenuPage(null); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-medium transition-colors active:scale-[0.98] ${isDark ? "hover:bg-white/8 text-white" : "hover:bg-gray-50 text-gray-800"
+                          } ${i < arr.length - 1 ? (isDark ? "border-b border-white/8" : "border-b border-gray-100") : ""}`}
+                      >
+                        <span className="text-base">{item.icon}</span>
+                        <span>{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Cancel */}
+                  <div className="px-4 pb-6">
+                    <button
+                      onClick={() => setContextMenuPage(null)}
+                      className={`w-full py-3.5 rounded-2xl text-sm font-bold transition-colors ${isDark ? "bg-white/10 text-white hover:bg-white/15" : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                        }`}
+                    >
+                      Batal
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
           {/* ── FULLSCREEN ── */}
           {fullscreenPage && (
             <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4 backdrop-blur-sm"
@@ -3422,9 +3556,11 @@ export default function Home() {
                   {sidebarOpen ? <PanelLeftClose className="w-3.5 h-3.5" /> : <PanelLeftOpen className="w-3.5 h-3.5" />}
                 </button>
                 {/* Ubah md:hidden menjadi lg:hidden di bawah ini */}
-                <button onClick={() => setMobileSidebarOpen(true)}
-                  className={`flex lg:hidden w-8 h-8 rounded-lg items-center justify-center transition-colors ${c.btn}`}>
-                  <Menu className="w-3.5 h-3.5" />
+                <button
+                  onClick={() => setMobileSidebarOpen(true)}
+                  aria-label="Buka menu pengaturan"
+                  className={`flex lg:hidden w-11 h-11 rounded-xl items-center justify-center transition-colors ${c.btn}`}>
+                  <Menu className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
 
                 <div className="flex items-center gap-2">
@@ -3487,7 +3623,7 @@ export default function Home() {
                     </button>
                   </div>
                 ) : (
-                  <button onClick={handleLogin} className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors text-[11px] font-medium mr-2">
+                  <button onClick={handleLogin} className="btn-ripple hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors text-[11px] font-medium mr-2">
                     <LogIn className="w-3.5 h-3.5" />
                     <span>Login Cloud</span>
                   </button>
@@ -3533,42 +3669,28 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => setIsDark(!isDark)}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 overflow-hidden relative border ${isDark ? "bg-[#18181b] border-[#ffffff1a] shadow-[inset_0_2px_10px_rgba(255,255,255,0.05),0_0_15px_rgba(167,139,250,0.15)]" : "bg-gradient-to-br from-sky-50 to-amber-50 border-amber-200/50 shadow-[0_2px_15px_rgba(251,191,36,0.2)]"}`}
-                  title={isDark ? "Ke Mode Siang (Solar)" : "Ke Mode Malam (Lunar)"}
+                  className={`relative w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden border theme-toggle-btn ${isDark
+                    ? "bg-[#18181b] border-[#ffffff1a]"
+                    : "bg-gradient-to-br from-sky-50 to-amber-50 border-amber-200/50"
+                    }`}
+                  title={isDark ? "Ke Mode Siang" : "Ke Mode Malam"}
+                  aria-label={isDark ? "Aktifkan light mode" : "Aktifkan dark mode"}
                 >
-                  <AnimatePresence mode="wait" initial={false}>
-                    {isDark ? (
-                      <motion.div
-                        key="moon"
-                        initial={{ y: 20, opacity: 0, rotate: -45 }}
-                        animate={{ y: 0, opacity: 1, rotate: 0 }}
-                        exit={{ y: -20, opacity: 0, rotate: 45 }}
-                        transition={{ duration: 0.3, type: "spring", stiffness: 200 }}
-                        className="relative flex items-center justify-center w-full h-full"
-                      >
-                        {/* Bintang-bintang kecil */}
-                        <div className="absolute inset-0 flex items-center justify-center opacity-50">
-                          <div className="w-0.5 h-0.5 bg-white rounded-full absolute top-1 left-2"></div>
-                          <div className="w-[1px] h-[1px] bg-white rounded-full absolute bottom-2 right-1"></div>
-                          <div className="w-0.5 h-0.5 bg-white rounded-full absolute top-3 right-2"></div>
-                        </div>
-                        <Moon className="w-[18px] h-[18px] text-violet-300 fill-violet-900/40 relative z-10" />
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="sun"
-                        initial={{ y: 20, opacity: 0, rotate: -45 }}
-                        animate={{ y: 0, opacity: 1, rotate: 0 }}
-                        exit={{ y: -20, opacity: 0, rotate: 45 }}
-                        transition={{ duration: 0.3, type: "spring", stiffness: 200 }}
-                        className="relative flex items-center justify-center w-full h-full"
-                      >
-                        {/* Cahaya matahari menyebar */}
-                        <div className="absolute inset-0 bg-amber-400/20 blur-md rounded-full scale-110"></div>
-                        <Sun className="w-[18px] h-[18px] text-amber-500 fill-amber-200 relative z-10" />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {/* Background morphing circle */}
+                  <div className={`absolute inset-0 rounded-2xl theme-bg-morph ${isDark ? "theme-bg-dark" : "theme-bg-light"
+                    }`} />
+
+                  {/* Sun icon */}
+                  <Sun className={`absolute w-[18px] h-[18px] theme-icon theme-sun ${isDark ? "theme-icon-hidden-down" : "theme-icon-visible"
+                    } text-amber-500 fill-amber-200`} />
+
+                  {/* Moon icon */}
+                  <Moon className={`absolute w-[18px] h-[18px] theme-icon theme-moon ${isDark ? "theme-icon-visible" : "theme-icon-hidden-up"
+                    } text-violet-300 fill-violet-900/40`} />
+
+                  {/* Ripple effect on click */}
+                  <div className={`absolute inset-0 rounded-2xl theme-ripple ${isDark ? "theme-ripple-dark" : "theme-ripple-light"
+                    }`} />
                 </button>
               </div>
 
@@ -3633,7 +3755,7 @@ export default function Home() {
                       disabled={isGenerating || !text.trim() || !selectedFolio}
                       whileHover={!(isGenerating || !text.trim() || !selectedFolio) ? { y: -1 } : {}}
                       whileTap={!(isGenerating || !text.trim() || !selectedFolio) ? { scale: 0.97 } : {}}
-                      className={`relative flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl font-bold text-xs min-w-[110px] overflow-hidden ${isGenerating || !text.trim() || !selectedFolio
+                      className={`btn-ripple relative flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl font-bold text-xs min-w-[110px] overflow-hidden ${isGenerating || !text.trim() || !selectedFolio
                         ? D ? "bg-[#ffffff05] text-white/30 cursor-not-allowed border border-[#ffffff0a]" : "bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-200"
                         : `bg-gradient-to-r ${c.accent} text-white btn-generate-idle btn-generate-pulse`
                         } ${isGenerating ? 'btn-generate-active' : ''}`}>
@@ -3925,7 +4047,7 @@ export default function Home() {
                       <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[10px] ${c.pillBorder} ${c.pill}`}>
                         <span className={c.ts}>Seed:</span>
                         <span className={`font-mono font-semibold ${D ? "text-violet-400" : "text-violet-600"}`}>{String(seed).slice(-6)}</span>
-                        <button onClick={handleCopySeed} className={`ml-0.5 transition-colors ${showSeedCopied ? "text-emerald-500" : c.ts}`}>
+                        <button onClick={handleCopySeed} className={`ml-0.5 p-2 -m-2 transition-colors rounded-lg ${showSeedCopied ? "text-emerald-500" : c.ts}`}>
                           {showSeedCopied ? <CheckCircle2 className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                         </button>
                       </div>
@@ -4062,7 +4184,7 @@ export default function Home() {
                           <button
                             onClick={() => navigateToPage(activePageIndex - 1)}
                             disabled={activePageIndex === 0}
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs border transition-colors ${activePageIndex === 0
+                            className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm border transition-colors ${activePageIndex === 0
                               ? D ? "border-[#ffffff05] text-white/10 cursor-not-allowed" : "border-gray-100 text-gray-200 cursor-not-allowed"
                               : c.btn
                               }`}>←</button>
@@ -4072,7 +4194,7 @@ export default function Home() {
                           <button
                             onClick={() => navigateToPage(activePageIndex + 1)}
                             disabled={activePageIndex === generatedPages.length - 1}
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs border transition-colors ${activePageIndex === generatedPages.length - 1
+                            className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm border transition-colors ${activePageIndex === generatedPages.length - 1
                               ? D ? "border-[#ffffff05] text-white/10 cursor-not-allowed" : "border-gray-100 text-gray-200 cursor-not-allowed"
                               : c.btn
                               }`}>→</button>
@@ -4156,7 +4278,7 @@ export default function Home() {
 
                       <div className={`hidden sm:block w-px h-6 mx-1 ${D ? "bg-white/10" : "bg-gray-300"}`} />
 
-                      <button onClick={() => handleDownloadSingle(generatedPages[activePageIndex])} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-colors shadow-lg active:scale-95 ${D ? "bg-violet-500 hover:bg-violet-400 text-white shadow-violet-500/25" : "bg-violet-600 hover:bg-violet-700 text-white shadow-violet-600/30"}`}>
+                      <button onClick={() => handleDownloadSingle(generatedPages[activePageIndex])} className={`btn-ripple flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-colors shadow-lg active:scale-95 ${D ? "bg-violet-500 hover:bg-violet-400 text-white shadow-violet-500/25" : "bg-violet-600 hover:bg-violet-700 text-white shadow-violet-600/30"}`}>
                         <Download className="w-4 h-4" />
                         <span>JPG</span>
                       </button>
@@ -4431,7 +4553,7 @@ export default function Home() {
                                   <Trash2 className="w-3 h-3" />Hapus
                                 </button>
                               )}
-                              <button onClick={() => setActiveTab("result")} className={`w-7 h-7 rounded-lg flex items-center justify-center ${c.btn}`}>
+                              <button onClick={() => setActiveTab("result")} className={`w-11 h-11 rounded-xl flex items-center justify-center ${c.btn}`}>
                                 <X className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -4498,7 +4620,7 @@ export default function Home() {
                               <Save className={`w-4 h-4 ${c.ts}`} />
                               <span className={`text-sm font-semibold ${c.tp}`}>Preset</span>
                             </div>
-                            <button onClick={() => setActiveTab("result")} className={`w-7 h-7 rounded-lg flex items-center justify-center ${c.btn}`}>
+                            <button onClick={() => setActiveTab("result")} className={`w-11 h-11 rounded-xl flex items-center justify-center ${c.btn}`}>
                               <X className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -4667,12 +4789,12 @@ export default function Home() {
                 return (
                   <div className={`flex-1 overflow-y-auto pb-24 scrollbar-thin ${isAppleDevice ? "bg-transparent" : (D ? "bg-black" : "bg-gray-100")}`}>
                     {activePages.length > 0 ? (
-                      <div className="p-4 flex flex-col items-center">
+                      <div className="flex overflow-x-auto mobile-result-scroll">
 
                         {/* Thumbnail "Banyak Jendela" telah DIHAPUS agar layar HP lebih luas dan estetik */}
 
                         <div
-                          className="relative w-full max-w-md mx-auto"
+                          className="mobile-result-page relative px-4 flex items-start justify-center pt-4"
                           style={{ transform: `scale(${mobileZoom / 100})`, transformOrigin: "top center", transition: "transform 0.1s ease" }}
                           onTouchStart={(e) => {
                             if (e.touches.length === 2) {
@@ -4962,7 +5084,7 @@ export default function Home() {
               )}
 
               <button onClick={handleGenerate} disabled={isGenerating || !text.trim() || !selectedFolio}
-                className={`flex items-center gap-1.5 px-5 py-3 rounded-xl font-bold text-sm transition-colors flex-shrink-0 shadow-lg ${isGenerating || !text.trim() || !selectedFolio
+                className={`btn-ripple flex items-center gap-1.5 px-5 py-3 rounded-xl font-bold text-sm transition-colors flex-shrink-0 shadow-lg ${isGenerating || !text.trim() || !selectedFolio
                   ? D ? "bg-white/4 text-white/20 cursor-not-allowed border border-[#ffffff06] shadow-none" : "bg-gray-100 text-gray-300 cursor-not-allowed border border-gray-200 shadow-none"
                   : `bg-gradient-to-r ${c.accent} text-white hover:opacity-90 active:scale-95`
                   }`}>

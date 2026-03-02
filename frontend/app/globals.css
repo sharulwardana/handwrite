@@ -1444,3 +1444,168 @@ textarea, input {
   /* Kunci: clamping agar tidak keluar viewport */
   max-width: calc(100vw - 2rem);
 }
+
+/* ── MOBILE SCROLL IMPROVEMENTS ──────────────────────── */
+
+/* Scroll snap untuk swipe halaman di mobile */
+.mobile-result-scroll {
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-result-page {
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+/* Smooth momentum scroll iOS */
+.scrollable-ios {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* ── THEME TOGGLE BUTTON — Instant & Snappy ─────────── */
+
+.theme-toggle-btn {
+  /* Tombol sendiri tetap smooth tapi cepat */
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  /* Touch feedback instant */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.theme-toggle-btn:active {
+  transform: scale(0.88);
+  transition: transform 80ms ease;
+}
+
+.theme-toggle-btn:not(:active) {
+  transform: scale(1);
+  transition: transform 200ms cubic-bezier(0.25, 1.15, 0.4, 1), 
+              border-color 150ms ease;
+}
+
+/* Background morphing */
+.theme-bg-morph {
+  transition: opacity 180ms ease;
+}
+
+.theme-bg-dark {
+  background: radial-gradient(circle at 60% 40%, #3b1f6e 0%, #18181b 70%);
+}
+
+.theme-bg-light {
+  background: radial-gradient(circle at 40% 60%, #fef3c7 0%, #e0f2fe 80%);
+}
+
+/* Icon animations — CSS pure, tidak pakai Framer Motion */
+.theme-icon {
+  /* GPU-accelerated: hanya transform & opacity */
+  will-change: transform, opacity;
+  transition: 
+    transform 200ms cubic-bezier(0.34, 1.4, 0.64, 1),
+    opacity 150ms ease;
+}
+
+/* State: Icon terlihat */
+.theme-icon-visible {
+  opacity: 1;
+  transform: translateY(0px) rotate(0deg) scale(1);
+}
+
+/* State: Icon tersembunyi ke atas (exit ke atas) */
+.theme-icon-hidden-up {
+  opacity: 0;
+  transform: translateY(-14px) rotate(30deg) scale(0.6);
+  pointer-events: none;
+}
+
+/* State: Icon tersembunyi ke bawah (exit ke bawah) */
+.theme-icon-hidden-down {
+  opacity: 0;
+  transform: translateY(14px) rotate(-30deg) scale(0.6);
+  pointer-events: none;
+}
+
+/* Ripple effect */
+.theme-ripple {
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+}
+
+.theme-toggle-btn:active .theme-ripple {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 80ms ease, transform 80ms ease;
+}
+
+.theme-ripple-dark {
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.4) 0%, transparent 70%);
+}
+
+.theme-ripple-light {
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.4) 0%, transparent 70%);
+}
+
+/* Efek glow di sekitar tombol saat hover */
+.theme-toggle-btn:hover {
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.dark .theme-toggle-btn:hover {
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2), 
+              0 0 20px rgba(139, 92, 246, 0.15);
+}
+
+/* ── ANDROID RIPPLE EFFECT ───────────────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  .btn-ripple {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-ripple::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, rgba(255,255,255,0.25) 0%, transparent 60%);
+    opacity: 0;
+    transform: scale(0);
+    transition: opacity 400ms ease, transform 400ms ease;
+  }
+
+  .btn-ripple:active::after {
+    opacity: 1;
+    transform: scale(2.5);
+    transition: none;
+  }
+}
+
+/* ── APPLE ICON STYLE ────────────────────────────────── */
+.theme-ios .lucide {
+  stroke-width: 1.75;
+}
+
+/* Sedikit lebih tipis di layar Retina */
+@media (-webkit-min-device-pixel-ratio: 2) {
+  .theme-ios .lucide {
+    stroke-width: 1.6;
+  }
+}
+
+/* ── SWIPE TO DISMISS HANDLE (Apple Style) ───────────── */
+.drag-handle {
+  width: 36px;
+  height: 4px;
+  background: rgba(128, 128, 128, 0.35);
+  border-radius: 999px;
+  margin: 0 auto 16px auto;
+  flex-shrink: 0;
+}
+
+.dark .drag-handle {
+  background: rgba(255, 255, 255, 0.2);
+}
