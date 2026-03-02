@@ -2622,6 +2622,7 @@ export default function Home() {
         maxShadowOpacity={0.3}
         showCover={false}
         mobileScrollSupport={true}
+        usePortrait={isMobileView}
         className="shadow-2xl rounded-sm"
         onFlip={(e: any) => setActivePageIndex(e.data)}
       >
@@ -3757,7 +3758,7 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => setIsDark(!isDark)}
-                  className={`relative w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden border theme-toggle-btn ${isDark
+                  className={`relative flex-shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden border theme-toggle-btn ${isDark
                     ? "bg-[#18181b] border-[#ffffff1a]"
                     : "bg-gradient-to-br from-sky-50 to-amber-50 border-amber-200/50"
                     }`}
