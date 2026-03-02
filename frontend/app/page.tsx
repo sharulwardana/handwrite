@@ -2622,7 +2622,6 @@ export default function Home() {
         maxShadowOpacity={0.3}
         showCover={false}
         mobileScrollSupport={true}
-        usePortrait={isMobileView}
         className="shadow-2xl rounded-sm"
         onFlip={(e: any) => setActivePageIndex(e.data)}
       >
@@ -3758,7 +3757,7 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => setIsDark(!isDark)}
-                  className={`relative flex-shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden border theme-toggle-btn ${isDark
+                  className={`relative w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden border theme-toggle-btn ${isDark
                     ? "bg-[#18181b] border-[#ffffff1a]"
                     : "bg-gradient-to-br from-sky-50 to-amber-50 border-amber-200/50"
                     }`}
@@ -4818,23 +4817,15 @@ export default function Home() {
                   <div className="flex-1 flex flex-col overflow-y-auto p-4 pb-28 scrollbar-thin gap-3"
                     onScroll={(e) => {
                       const currentScrollY = e.currentTarget.scrollTop;
-
-                      // ── Auto-hide header saat scroll ke bawah ──
-                      if (currentScrollY > 80) {
-                        setHideHeader(currentScrollY > lastHeaderScrollRef.current);
-                      } else {
-                        setHideHeader(false);
-                      }
-                      lastHeaderScrollRef.current = currentScrollY;
-                      // ── End auto-hide header ──
-
                       if (!isAppleDevice) {
+                        // Fitur Auto-Hide Dock khusus non-Apple (Android/Tablet/Laptop L)
                         if (currentScrollY > lastScrollYRef.current && currentScrollY > 50) {
                           setHideMobileDock(true);
                         } else if (currentScrollY < lastScrollYRef.current) {
                           setHideMobileDock(false);
                         }
                       } else {
+                        // Apple Device selalu tampil
                         setHideMobileDock(false);
                       }
                       lastScrollYRef.current = currentScrollY;
