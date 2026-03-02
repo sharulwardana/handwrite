@@ -1,18 +1,3 @@
-/* ── FONT VARIABLE FALLBACKS ─────────────────────────
-   Next.js inject var() ini lewat className di layout.tsx,
-   tapi kita definisikan fallback eksplisit agar Android
-   Chrome lama tidak render blank saat font gagal load.
-─────────────────────────────────────────────────────── */
-:root {
-  --font-virgil: 'Virgil', 'Caveat', cursive;
-  --font-kalam: 'Kalam', cursive;
-  --font-patrick-hand: 'Patrick Hand', cursive;
-  --font-indie-flower: 'Indie Flower', cursive;
-  --font-architects-daughter: 'Architects Daughter', cursive;
-  --font-gochi-hand: 'Gochi Hand', cursive;
-  --font-caveat: 'Caveat', cursive;
-  --font-dm-sans: 'DM Sans', system-ui, sans-serif;
-}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
