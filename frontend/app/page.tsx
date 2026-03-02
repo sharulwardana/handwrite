@@ -473,7 +473,12 @@ function LiquidGlassToggleMorph({ value, onChange, colorClass = "bg-[#34c759]", 
     return (
       <button
         type="button"
-        onClick={() => onChange(!value)}
+        onClick={() => {
+          if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+            navigator.vibrate(8);
+          }
+          onChange(!value);
+        }}
         style={{ WebkitTapHighlightColor: 'transparent' }}
         className={`toggle-premium ${value ? onClass : 'off'} select-none touch-none`}
       >
@@ -487,7 +492,12 @@ function LiquidGlassToggleMorph({ value, onChange, colorClass = "bg-[#34c759]", 
     <div
       role="button"
       tabIndex={0}
-      onClick={() => onChange(!value)}
+      onClick={() => {
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+          navigator.vibrate(8);
+        }
+        onChange(!value);
+      }}
       // Untuk aksesibilitas keyboard
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -801,13 +811,18 @@ export default function Home() {
   ];
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
+  const prevBackendOnlineRef = useRef<boolean | null>(null);
   const [showSeedCopied, setShowSeedCopied] = useState(false);
+  const [showKeyboardHint, setShowKeyboardHint] = useState(false);
   const [activePageIndex, setActivePageIndex] = useState(0);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const exportDropdownRef = useRef<HTMLDivElement>(null);
   const exportBtnRef = useRef<HTMLButtonElement>(null);
   const [exportDropdownPos, setExportDropdownPos] = useState<{ top: number; left: number; height: number; width: number } | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const pullStartYRef = useRef<number | null>(null);
   const [isUploadingFolio, setIsUploadingFolio] = useState(false);
   const [isAnalyzingFolio, setIsAnalyzingFolio] = useState(false);
   const [isAnalyzingPhoto, setIsAnalyzingPhoto] = useState(false);
@@ -1090,8 +1105,24 @@ export default function Home() {
     const check = async () => {
       try {
         const res = await fetch(`${API_URL}/api/health`, { signal: AbortSignal.timeout(3000) });
-        setBackendOnline(res.ok);
-      } catch { setBackendOnline(false); }
+        const isOnline = res.ok;
+        setBackendOnline(isOnline);
+        // Hanya tampilkan toast jika status berubah (bukan saat pertama kali check)
+        if (prevBackendOnlineRef.current !== null && prevBackendOnlineRef.current !== isOnline) {
+          if (isOnline) {
+            toast.success("Server terhubung kembali ✅", { duration: 3000 });
+          } else {
+            toast.error("Server terputus. Coba lagi nanti.", { duration: 5000 });
+          }
+        }
+        prevBackendOnlineRef.current = isOnline;
+      } catch {
+        setBackendOnline(false);
+        if (prevBackendOnlineRef.current === true) {
+          toast.error("Koneksi ke server terputus.", { duration: 5000 });
+        }
+        prevBackendOnlineRef.current = false;
+      }
     };
     check();
     const interval = setInterval(check, 30000);
@@ -1436,6 +1467,14 @@ export default function Home() {
               toast.success(`✅ ${collectedPages.length} halaman selesai!`, { duration: 3000 });
               setGenerateSuccess(true);
               setTimeout(() => setGenerateSuccess(false), 2000);
+              // Tampilkan keyboard hint sekali saja
+              if (!localStorage.getItem("hw_kb_hint_shown") && !isMobileView) {
+                setShowKeyboardHint(true);
+                setTimeout(() => {
+                  setShowKeyboardHint(false);
+                  localStorage.setItem("hw_kb_hint_shown", "1");
+                }, 3000);
+              }
 
               // Haptic feedback untuk Android
               if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
@@ -2034,6 +2073,20 @@ export default function Home() {
     }
   };
 
+  const handlePullRefresh = async () => {
+    if (isPullRefreshing) return;
+    setIsPullRefreshing(true);
+    try {
+      await Promise.all([loadFonts(), loadFolios()]);
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate([30, 20, 30]);
+      }
+    } finally {
+      setIsPullRefreshing(false);
+      setPullDistance(0);
+    }
+  };
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: { "image/jpeg": [".jpeg", ".jpg"], "image/png": [".png"] },
     onDrop,
@@ -2508,9 +2561,16 @@ export default function Home() {
               ))}
             </div>
           ) : folios.length === 0 ? (
-            <div className={`col-span-2 py-8 rounded-xl border-2 border-dashed text-center ${D ? "border-[#ffffff0a] text-white/25" : "border-[#d1d5db] text-gray-400"}`}>
-              <ImageIcon className="w-6 h-6 mx-auto mb-1.5 opacity-40" />
-              <p className="text-xs">Upload folio dulu</p>
+            <div className={`col-span-2 py-8 px-4 rounded-xl border-2 border-dashed text-center ${D ? "border-violet-500/20 bg-violet-500/5" : "border-violet-300 bg-violet-50/50"}`}>
+              <div className={`w-10 h-10 mx-auto mb-3 rounded-xl flex items-center justify-center ${D ? "bg-violet-500/15" : "bg-violet-100"}`}>
+                <ImageIcon className="w-5 h-5 text-violet-500" />
+              </div>
+              <p className={`text-xs font-bold mb-1 ${D ? "text-violet-400" : "text-violet-600"}`}>
+                Belum ada folio
+              </p>
+              <p className={`text-[10px] leading-relaxed ${D ? "text-white/30" : "text-gray-500"}`}>
+                Drag & drop gambar folio di atas, atau klik area upload untuk memilih file JPG/PNG
+              </p>
             </div>
           ) : (
             folios.map((folio) => (
@@ -2518,8 +2578,14 @@ export default function Home() {
                 <input type="radio" name="folio" value={folio.id} checked={selectedFolio === folio.id}
                   onChange={(e) => handleFolioChangeWithAnalyze(e.target.value)} className="hidden" />
                 <div className="relative group">
-                  <img src={folio.preview.startsWith("http") ? folio.preview : `${API_URL}${folio.preview}`}
-                    alt={folio.name} className="w-full h-20 object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <img
+                    src={folio.preview.startsWith("http") ? folio.preview : `${API_URL}${folio.preview}`}
+                    alt={folio.name}
+                    className="w-full h-20 object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(139,92,246,0.08)' }}
+                  />
                   {selectedFolio === folio.id && (
                     <div className="absolute inset-0 bg-violet-500/20 flex items-center justify-center backdrop-blur-[1px] transition-colors">
                       <div className="bg-violet-500 rounded-full p-1 shadow-lg transform scale-100 animate-in zoom-in duration-200">
@@ -2730,8 +2796,9 @@ export default function Home() {
         <div className={`relative min-h-[100dvh] w-full flex flex-col items-center p-4 sm:p-6 text-center overflow-clip ${isDark ? "aurora-bg-dark" : "aurora-bg-light"}`}>
           {/* Background Ambient Glow */}
           <div className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none">
-            <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/20 blur-[150px] animate-pulse" />
-            <div className="absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-600/20 blur-[150px]" />
+            <div className={`absolute top-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[150px] animate-pulse ${isDark ? "bg-violet-600/20" : "bg-violet-400/35"}`} />
+            <div className={`absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] rounded-full blur-[150px] ${isDark ? "bg-indigo-600/20" : "bg-indigo-400/30"}`} />
+            <div className={`absolute top-[40%] left-[30%] w-[40%] h-[40%] rounded-full blur-[120px] ${isDark ? "bg-fuchsia-600/10" : "bg-fuchsia-400/20"}`} />
           </div>
 
           {/* Staggered Container */}
@@ -2746,9 +2813,18 @@ export default function Home() {
           >
             {/* 1. Badge */}
             <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } }}>
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border mb-8 shadow-xl backdrop-blur-md ${isDark ? "bg-[#ffffff08] border-[#ffffff15]" : "glass-panel border-violet-200"}`}>
-                <Sparkles className={`w-4 h-4 ${isDark ? "text-violet-400" : "text-violet-600"}`} />
-                <span className={`text-xs font-bold uppercase tracking-widest ${isDark ? "text-gray-300" : "text-violet-700"}`}>Teknologi Humanizer AI</span>
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border mb-8 shadow-xl backdrop-blur-md ${isDark ? "bg-[#ffffff08] border-[#ffffff15]" : "bg-white/70 border-violet-200 shadow-violet-100"}`}>
+                <motion.div
+                  animate={{ rotate: [0, 15, -15, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}>
+                  <Sparkles className={`w-4 h-4 ${isDark ? "text-violet-400" : "text-violet-600"}`} />
+                </motion.div>
+                <span className={`text-xs font-bold uppercase tracking-widest ${isDark ? "text-gray-300" : "text-violet-700"}`}>
+                  Teknologi Humanizer AI
+                </span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${isDark ? "bg-emerald-500/20 text-emerald-400" : "bg-emerald-100 text-emerald-600"}`}>
+                  GRATIS
+                </span>
               </div>
             </motion.div>
 
@@ -3803,8 +3879,11 @@ export default function Home() {
               style={{ height: "calc(100dvh - 56px)" }}
             >
               <motion.div
-                animate={{ opacity: sidebarOpen ? 1 : 0 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                animate={{
+                  opacity: sidebarOpen ? 1 : 0,
+                  x: sidebarOpen ? 0 : -20
+                }}
+                transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                 className="sidebar-scroll-container flex-1 overflow-y-auto pb-8 scrollbar-thin w-[288px] 2xl:w-[320px] 3xl:w-[380px] 4xl:w-[440px]"
               >
                 {renderSidebarContent()}
@@ -3874,7 +3953,12 @@ export default function Home() {
                           <Sparkles className="w-3.5 h-3.5" />
                         )}
                         <span>
-                          {isGenerating ? 'Menulis...' : generateSuccess ? 'Selesai!' : 'Generate'}
+                          {isGenerating
+                            ? `${Math.round(generateProgress)}%`
+                            : generateSuccess
+                              ? 'Selesai!'
+                              : 'Generate'
+                          }
                         </span>
                         {!isGenerating && estimatedPages > 1 && (
                           <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${D ? "bg-black/20" : "bg-white/25"}`}>{estimatedPages}</span>
@@ -4036,8 +4120,8 @@ export default function Home() {
                       <div className={`flex items-center justify-between px-1`}>
                         <div className="flex items-center gap-2">
                           <span className={`text-[10.5px] ${c.ts}`}>
-                            <span className={`font-semibold tabular-nums ${text.length > 40000 ? "text-red-400" : D ? "text-emerald-400" : "text-emerald-600"
-                              }`}>
+                            <span className={`font-semibold tabular-nums transition-all duration-300 ${text.length > 40000 ? "text-red-400 scale-110" : D ? "text-emerald-400" : "text-emerald-600"}`}
+                              style={{ display: 'inline-block' }}>
                               {text.length.toLocaleString()}
                             </span>
                             <span className={c.ts}>/50k karakter</span>
@@ -4146,6 +4230,18 @@ export default function Home() {
                       </div>
                     </div>
 
+                    {text.length > 45000 && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${D ? "bg-red-500/10 border-red-500/25 text-red-400" : "bg-red-50 border-red-200 text-red-600"}`}>
+                        <span className="text-base flex-shrink-0">🚨</span>
+                        <p className="text-[11px] leading-relaxed">
+                          Hampir penuh! <strong>{(50000 - text.length).toLocaleString()} karakter</strong> tersisa. Teks di atas 50.000 karakter akan dipotong otomatis.
+                        </p>
+                      </motion.div>
+                    )}
+
                     {estimatedPages > 1 && (
                       <div className={`flex items-start gap-2 px-3 py-2 rounded-lg border ${D ? "bg-amber-500/10 border-amber-500/20" : "bg-amber-50 border-amber-200"}`}>
                         <span className="text-amber-500 text-sm mt-0.5 flex-shrink-0">⚠️</span>
@@ -4242,7 +4338,7 @@ export default function Home() {
                 {/* Live Preview Strip */}
                 {livePreviewUrl && (
                   <div className={`relative rounded-xl overflow-hidden border mx-3 mb-3 ${c.pillBorder} ${isLoadingPreview ? "opacity-50" : "opacity-100"} transition-opacity duration-300`}>
-                    <img src={livePreviewUrl} alt="Preview" className="w-full h-24 object-cover object-top" />
+                    <img src={livePreviewUrl} alt="Preview" className="w-full h-24 lg:h-32 xl:h-40 2xl:h-48 3xl:h-56 object-cover object-top" />
                     <div className={`absolute top-1.5 right-1.5 flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] ${D ? "bg-black/70 text-white/60" : "bg-white/85 text-gray-500"}`}>
                       {isLoadingPreview && <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse inline-block" />}
                       Live Preview
@@ -4349,6 +4445,34 @@ export default function Home() {
                 {/* ── MAIN CONTENT AREA ── */}
                 <div className="flex-1 min-h-0 overflow-hidden flex relative">
 
+                  {/* Keyboard Navigation Hint */}
+                  <AnimatePresence>
+                    {showKeyboardHint && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className={`absolute bottom-28 left-1/2 -translate-x-1/2 z-[55] flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium border shadow-lg backdrop-blur-xl pointer-events-none ${D ? "bg-black/80 border-white/10 text-white/70" : "bg-white/95 border-violet-200 text-gray-600"}`}>
+                        <kbd className={`px-1.5 py-0.5 rounded border font-mono text-[10px] ${D ? "bg-white/10 border-white/20 text-white" : "bg-gray-100 border-gray-300 text-gray-700"}`}>←</kbd>
+                        <span>navigasi halaman</span>
+                        <kbd className={`px-1.5 py-0.5 rounded border font-mono text-[10px] ${D ? "bg-white/10 border-white/20 text-white" : "bg-gray-100 border-gray-300 text-gray-700"}`}>→</kbd>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Scroll to First Page Button — Desktop */}
+                  {generatedPages.length > 1 && activePageIndex > 0 && activeTab === "result" && (
+                    <motion.button
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      onClick={() => navigateToPage(0)}
+                      className={`absolute top-4 right-4 z-[55] flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border shadow-lg transition-colors ${D ? "bg-black/70 backdrop-blur-xl border-white/15 text-white/70 hover:text-white hover:bg-black/90" : "bg-white/90 backdrop-blur-xl border-violet-200 text-violet-600 hover:bg-white"}`}>
+                      <ChevronDown className="w-3.5 h-3.5 rotate-180" />
+                      <span>Hal. 1</span>
+                    </motion.button>
+                  )}
+
                   {/* === FLOATING TOOLBAR (Figma Style) === */}
                   {generatedPages.length > 0 && activeTab === "result" && (
                     <div className="absolute left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1.5 px-3 py-2.5 rounded-2xl shadow-2xl backdrop-blur-2xl border transition-colors animate-in slide-in-from-bottom-4 duration-500"
@@ -4424,8 +4548,10 @@ export default function Home() {
                             }`}
                         >
                           <img src={p.image} alt={`Hal ${p.page}`} className="w-full object-cover object-top" style={{ aspectRatio: "210/297" }} />
-                          <div className={`text-[8px] text-center py-0.5 font-mono font-semibold ${idx === activePageIndex ? "text-violet-400" : c.ts}`}>
-                            {p.page}
+                          <div className={`text-[8px] text-center py-1 font-mono font-bold transition-colors ${idx === activePageIndex
+                            ? D ? "bg-violet-500/20 text-violet-300" : "bg-violet-100 text-violet-600"
+                            : c.ts}`}>
+                            {idx === activePageIndex ? `● ${p.page}` : p.page}
                           </div>
                         </button>
                       ))}
@@ -4436,21 +4562,34 @@ export default function Home() {
                       }).map((_, idx) => (
                         <div
                           key={`skeleton-${idx}`}
-                          className={`flex-shrink-0 w-full rounded-lg overflow-hidden border-2 animate-pulse ${D ? "border-[#ffffff08]" : "border-gray-100"}`}>
+                          className={`flex-shrink-0 w-full rounded-lg overflow-hidden border-2 ${D ? "border-[#ffffff08]" : "border-gray-100"}`}>
                           <div
-                            className={`w-full ${D ? "bg-white/4" : "bg-gray-100"}`}
+                            className={`w-full relative overflow-hidden ${D ? "bg-white/4" : "bg-gray-50"}`}
                             style={{ aspectRatio: "210/297" }}>
-                            <div className="w-full h-full flex flex-col gap-1.5 p-2 pt-3">
-                              {Array.from({ length: 8 }).map((_, i) => (
-                                <div
+                            {/* Shimmer sweep */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_1.8s_ease-in-out_infinite]"
+                              style={{ animationDelay: `${idx * 0.15}s` }} />
+                            <div className="w-full h-full flex flex-col gap-2 p-2 pt-3">
+                              {Array.from({ length: 10 }).map((_, i) => (
+                                <motion.div
                                   key={i}
-                                  className={`h-px rounded-full ${D ? "bg-white/8" : "bg-gray-300/60"}`}
-                                  style={{ width: `${55 + (i % 3) * 15}%` }}
+                                  initial={{ width: 0, opacity: 0 }}
+                                  animate={{
+                                    width: `${50 + (i % 4) * 12}%`,
+                                    opacity: 0.6
+                                  }}
+                                  transition={{
+                                    duration: 1.2,
+                                    repeat: Infinity,
+                                    repeatType: "reverse",
+                                    delay: i * 0.08 + idx * 0.1
+                                  }}
+                                  className={`h-[2px] rounded-full ${D ? "bg-violet-400/30" : "bg-violet-300/50"}`}
                                 />
                               ))}
                             </div>
                           </div>
-                          <div className={`text-[8px] text-center py-0.5 font-mono ${D ? "text-white/10" : "text-gray-300"}`}>
+                          <div className={`text-[8px] text-center py-0.5 font-mono ${D ? "text-white/20" : "text-gray-400"}`}>
                             {generatedPages.length + idx + 1}
                           </div>
                         </div>
@@ -4573,6 +4712,19 @@ export default function Home() {
                                     />
                                   </>
                                 )}
+
+                                <AnimatePresence mode="wait">
+                                  <motion.div
+                                    key={activePageIndex}
+                                    initial={{ opacity: 0, scale: 0.98 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.98 }}
+                                    transition={{ duration: 0.2, ease: "easeOut" }}
+                                    style={{ width: "100%", display: "flex", justifyContent: "center" }}
+                                  >
+                                    {memoizedFlipBook}
+                                  </motion.div>
+                                </AnimatePresence>
 
                                 {/* Render Buku 3D dari hasil Memo yang legal di atas */}
                                 {memoizedFlipBook}
@@ -4795,10 +4947,9 @@ export default function Home() {
             </div>
 
             {/* ══ MOBILE & TABLET: Editor + Output tabs (< lg) ══ */}
-            <div className="flex lg:hidden flex-col md:flex-row w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
-              {/* Mobile tab switcher (Modern iOS Style - Liquid Glass Active Tab) */}
-              {/* Bagian Tab Switcher Mobile (Editor vs Hasil) */}
-              <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} bg-transparent`}>
+            <div className="flex lg:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
+              {/* Tab Switcher — sembunyikan di tablet karena layout split */}
+              <div className={`flex-shrink-0 px-4 py-3 border-b md:hidden ${c.divider} bg-transparent`}>
                 <DraggableLiquidTabs
                   options={[
                     { label: "✏️ Editor", value: "editor" },
@@ -4816,107 +4967,134 @@ export default function Home() {
                 />
               </div>
 
-              {/* Mobile editor panel */}
-              {(activeTab !== "result" || window.innerWidth >= 768) && (
-                <div className={`${typeof window !== 'undefined' && window.innerWidth >= 768 ? 'w-[340px] border-r' : 'flex-1'} flex flex-col overflow-hidden ${c.sidebar} ${c.divider}`}>
-                  <div className="flex-1 flex flex-col overflow-y-auto p-4 pb-28 scrollbar-thin gap-3"
-                    onScroll={(e) => {
-                      const currentScrollY = e.currentTarget.scrollTop;
-                      if (!isAppleDevice) {
-                        // Fitur Auto-Hide Dock khusus non-Apple (Android/Tablet/Laptop L)
-                        if (currentScrollY > lastScrollYRef.current && currentScrollY > 50) {
-                          setHideMobileDock(true);
-                        } else if (currentScrollY < lastScrollYRef.current) {
-                          setHideMobileDock(false);
-                        }
-                      } else {
-                        // Apple Device selalu tampil
+              {/* Editor panel — full di mobile, fixed width di tablet */}
+              <div className={`md:w-[340px] md:border-r md:flex-shrink-0 flex-1 flex flex-col overflow-hidden ${c.sidebar} ${c.divider} ${activeTab === "result" ? "hidden md:flex" : "flex"}`}>
+                <div className="flex-1 flex flex-col overflow-y-auto p-4 pb-28 scrollbar-thin gap-3"
+                  onScroll={(e) => {
+                    const currentScrollY = e.currentTarget.scrollTop;
+                    if (!isAppleDevice) {
+                      // Fitur Auto-Hide Dock khusus non-Apple (Android/Tablet/Laptop L)
+                      if (currentScrollY > lastScrollYRef.current && currentScrollY > 50) {
+                        setHideMobileDock(true);
+                      } else if (currentScrollY < lastScrollYRef.current) {
                         setHideMobileDock(false);
                       }
-                      lastScrollYRef.current = currentScrollY;
-                    }}
-                  >
+                    } else {
+                      // Apple Device selalu tampil
+                      setHideMobileDock(false);
+                    }
+                    lastScrollYRef.current = currentScrollY;
+                  }}
+                >
 
-                    {/* Mobile toolbar — scroll horizontal */}
-                    <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 flex-shrink-0">
-                      <div className="flex items-center gap-2 flex-nowrap min-w-max pb-1">
-                        <button onClick={async () => {
-                          try { const t = await navigator.clipboard.readText(); setInputText(t); setText(t); toast.success("Ditempel!"); }
-                          catch { toast.error("Gagal akses clipboard"); }
-                        }} className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${c.btn}`}>
-                          <Clipboard className="w-3.5 h-3.5" /><span>Tempel</span>
-                        </button>
-                        <button onClick={() => setShowAiModal(true)}
-                          className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${D ? "bg-indigo-500/8 text-indigo-400 border-indigo-500/20" : "bg-indigo-50 text-indigo-600 border-indigo-200"}`}>
-                          <Bot className="w-3.5 h-3.5" /><span>Tulis AI</span>
-                        </button>
-                        {/* Poles AI Mobile */}
-                        <button onClick={handleAiExpand} disabled={!text.trim() || isAiExpanding}
-                          className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${!text.trim() ? "opacity-35 cursor-not-allowed " + c.btn : D ? "bg-purple-500/10 text-purple-400 border-purple-500/30" : "bg-purple-50 text-purple-600 border-purple-200"}`}>
-                          {isAiExpanding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
-                          <span>Poles AI</span>
-                        </button>
-                        <button onClick={toggleListening}
-                          className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${isListening ? "bg-red-500/15 text-red-400 border-red-500/30 animate-pulse" : c.btn}`}>
-                          <Mic className="w-3.5 h-3.5" /><span>{isListening ? "Dengerin..." : "Dikte"}</span>
-                        </button>
-                        <button onClick={() => { setInputText(""); setText(""); toast.success("Teks dihapus!"); }}
-                          disabled={!text}
-                          className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${!text ? "opacity-35 cursor-not-allowed " + c.btn : D ? "hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25 " + c.btn : "hover:bg-red-50 hover:text-red-600 hover:border-red-200 " + c.btn}`}>
-                          <Trash2 className="w-3.5 h-3.5" /><span>Hapus</span>
-                        </button>
-                        {currentFolio && (
-                          <>
-                            <div className={`w-px h-5 flex-shrink-0 ${D ? "bg-white/10" : "bg-gray-200"}`} />
-                            <span className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${c.tag}`}>
-                              <span>📄</span><span className="max-w-[70px] truncate">{currentFolio.name}</span>
-                            </span>
-                          </>
-                        )}
-                      </div>
+                  {/* Mobile toolbar — scroll horizontal */}
+                  <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-nowrap min-w-max pb-1">
+                      <button onClick={async () => {
+                        try { const t = await navigator.clipboard.readText(); setInputText(t); setText(t); toast.success("Ditempel!"); }
+                        catch { toast.error("Gagal akses clipboard"); }
+                      }} className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${c.btn}`}>
+                        <Clipboard className="w-3.5 h-3.5" /><span>Tempel</span>
+                      </button>
+                      <button onClick={() => setShowAiModal(true)}
+                        className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${D ? "bg-indigo-500/8 text-indigo-400 border-indigo-500/20" : "bg-indigo-50 text-indigo-600 border-indigo-200"}`}>
+                        <Bot className="w-3.5 h-3.5" /><span>Tulis AI</span>
+                      </button>
+                      {/* Poles AI Mobile */}
+                      <button onClick={handleAiExpand} disabled={!text.trim() || isAiExpanding}
+                        className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${!text.trim() ? "opacity-35 cursor-not-allowed " + c.btn : D ? "bg-purple-500/10 text-purple-400 border-purple-500/30" : "bg-purple-50 text-purple-600 border-purple-200"}`}>
+                        {isAiExpanding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                        <span>Poles AI</span>
+                      </button>
+                      <button onClick={toggleListening}
+                        className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${isListening ? "bg-red-500/15 text-red-400 border-red-500/30 animate-pulse" : c.btn}`}>
+                        <Mic className="w-3.5 h-3.5" /><span>{isListening ? "Dengerin..." : "Dikte"}</span>
+                      </button>
+                      <button onClick={() => { setInputText(""); setText(""); toast.success("Teks dihapus!"); }}
+                        disabled={!text}
+                        className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${!text ? "opacity-35 cursor-not-allowed " + c.btn : D ? "hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25 " + c.btn : "hover:bg-red-50 hover:text-red-600 hover:border-red-200 " + c.btn}`}>
+                        <Trash2 className="w-3.5 h-3.5" /><span>Hapus</span>
+                      </button>
+                      {currentFolio && (
+                        <>
+                          <div className={`w-px h-5 flex-shrink-0 ${D ? "bg-white/10" : "bg-gray-200"}`} />
+                          <span className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${c.tag}`}>
+                            <span>📄</span><span className="max-w-[70px] truncate">{currentFolio.name}</span>
+                          </span>
+                        </>
+                      )}
                     </div>
-
-                    {/* Textarea — Ditambahkan flex-1 agar memenuhi sisa ruang layar dan UI lebih modern ala Notion */}
-                    <OptimizedTextarea
-                      ref={textareaRef}
-                      value={inputText}
-                      onChange={(val: string) => {
-                        setInputText(val);
-                        setText(val);
-                      }}
-                      placeholder="Ketik atau paste teks di sini..."
-                      className={`flex-1 w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-colors duration-300 outline-none border ${isAppleDevice ? (D
-                        ? "bg-black/50 backdrop-blur-3xl border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50 shadow-inner"
-                        : "bg-white/40 backdrop-blur-3xl border-white/60 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400 shadow-[0_4px_24px_rgba(0,0,0,0.04)]"
-                      ) : (D
-                        ? "bg-black/50 border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50"
-                        : "bg-gray-50/50 border-gray-200/80 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400"
-                      )}`}
-                      style={{
-                        minHeight: "280px",
-                        fontFamily: currentFont ? (FONT_FAMILY_MAP[currentFont.name] || currentFont.name) : "inherit"
-                      }}
-                    />
-
-                    {/* Progress bar — Ditambahkan flex-shrink-0 agar tidak gepeng */}
-                    {text.length > 0 && (
-                      <div className={`h-1 flex-shrink-0 rounded-full overflow-hidden ${D ? "bg-[#ffffff08]" : "bg-gray-200"}`}>
-                        <div className={`h-full rounded-full ${text.length > 45000 ? "bg-red-500" : D ? "bg-emerald-500" : "bg-emerald-600"}`}
-                          style={{ width: `${Math.min(100, (text.length / 50000) * 100)}%` }} />
-                      </div>
-                    )}
-
                   </div>
-                </div>
-              )}
 
-              {/* Mobile result panel */}
-              {activeTab === "result" && (() => {
+                  {/* Textarea — Ditambahkan flex-1 agar memenuhi sisa ruang layar dan UI lebih modern ala Notion */}
+                  <OptimizedTextarea
+                    ref={textareaRef}
+                    value={inputText}
+                    onChange={(val: string) => {
+                      setInputText(val);
+                      setText(val);
+                    }}
+                    placeholder="Ketik atau paste teks di sini..."
+                    className={`flex-1 w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-colors duration-300 outline-none border ${isAppleDevice ? (D
+                      ? "bg-black/50 backdrop-blur-3xl border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50 shadow-inner"
+                      : "bg-white/40 backdrop-blur-3xl border-white/60 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400 shadow-[0_4px_24px_rgba(0,0,0,0.04)]"
+                    ) : (D
+                      ? "bg-black/50 border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50"
+                      : "bg-gray-50/50 border-gray-200/80 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400"
+                    )}`}
+                    style={{
+                      minHeight: "280px",
+                      fontFamily: currentFont ? (FONT_FAMILY_MAP[currentFont.name] || currentFont.name) : "inherit"
+                    }}
+                  />
+
+                  {/* Progress bar — Ditambahkan flex-shrink-0 agar tidak gepeng */}
+                  {text.length > 0 && (
+                    <div className={`h-1 flex-shrink-0 rounded-full overflow-hidden ${D ? "bg-[#ffffff08]" : "bg-gray-200"}`}>
+                      <div className={`h-full rounded-full ${text.length > 45000 ? "bg-red-500" : D ? "bg-emerald-500" : "bg-emerald-600"}`}
+                        style={{ width: `${Math.min(100, (text.length / 50000) * 100)}%` }} />
+                    </div>
+                  )}
+
+                </div>
+              </div>
+
+              {/* Result panel — full di mobile, flex-1 di tablet */}
+              {(activeTab === "result" || (typeof window !== 'undefined' && window.innerWidth >= 768)) && (() => {
                 // KODE BARU: Dukung Live Streaming di HP
                 const activePages = generatedPages.length > 0 ? generatedPages : streamedPages;
 
                 return (
-                  <div className={`flex-1 overflow-y-auto pb-24 scrollbar-thin ${isAppleDevice ? "bg-transparent" : (D ? "bg-black" : "bg-gray-100")}`}>
+                  <div
+                    className={`flex-1 overflow-y-auto pb-24 scrollbar-thin ${isAppleDevice ? "bg-transparent" : (D ? "bg-black" : "bg-gray-100")}`}
+                    onTouchStart={(e) => {
+                      if (e.currentTarget.scrollTop === 0) {
+                        pullStartYRef.current = e.touches[0].clientY;
+                      }
+                    }}
+                    onTouchMove={(e) => {
+                      if (pullStartYRef.current === null) return;
+                      const dist = Math.max(0, Math.min(80, e.touches[0].clientY - pullStartYRef.current));
+                      setPullDistance(dist);
+                    }}
+                    onTouchEnd={() => {
+                      if (pullDistance > 60) handlePullRefresh();
+                      else setPullDistance(0);
+                      pullStartYRef.current = null;
+                    }}
+                  >
+                    {/* Pull to refresh indicator */}
+                    {(pullDistance > 0 || isPullRefreshing) && (
+                      <div className="flex justify-center pt-2 pb-1 transition-all duration-200"
+                        style={{ height: isPullRefreshing ? 44 : pullDistance * 0.6 }}>
+                        <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-medium border ${D ? "bg-black/60 border-white/10 text-white/70" : "bg-white/90 border-violet-200 text-violet-600"}`}>
+                          {isPullRefreshing
+                            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span>Memuat ulang...</span></>
+                            : <><RefreshCw className="w-3.5 h-3.5" style={{ transform: `rotate(${pullDistance * 3}deg)` }} /><span>{pullDistance > 60 ? "Lepas untuk refresh" : "Tarik untuk refresh"}</span></>
+                          }
+                        </div>
+                      </div>
+                    )}
                     {activePages.length > 0 ? (
                       <div className="flex overflow-x-auto mobile-result-scroll">
 
@@ -4993,6 +5171,19 @@ export default function Home() {
                               )}
                             </AnimatePresence>
                           </div>
+
+                          {activePages.length > 1 && activePageIndex === 0 && (
+                            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-medium backdrop-blur-md border animate-pulse pointer-events-none"
+                              style={{
+                                background: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                                borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(139,92,246,0.2)',
+                                color: isDark ? 'rgba(255,255,255,0.7)' : '#7c3aed'
+                              }}>
+                              <span>←</span>
+                              <span>Geser untuk ganti halaman</span>
+                              <span>→</span>
+                            </div>
+                          )}
 
                           {/* Indikator Halaman Minimalis ala Instagram */}
                           {activePages.length > 1 && (
@@ -5106,9 +5297,18 @@ export default function Home() {
                                     <ZoomOut className="w-4 h-4" /><span>Reset ({mobileZoom}%)</span>
                                   </button>
                                 ) : (
-                                  <button onClick={() => handleDownloadSingle(activePages[activePageIndex])} className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[12px] font-bold text-white shadow-lg active:scale-95 transition-all hover:opacity-90 bg-gradient-to-r ${D ? "from-violet-600 to-indigo-600 shadow-violet-500/30" : "from-violet-500 to-indigo-500 shadow-violet-500/40"}`}>
-                                    <Download className="w-4 h-4" /><span>Simpan</span>
-                                  </button>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => handleDownloadSingle(activePages[activePageIndex])}
+                                      className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-[12px] font-bold text-white shadow-lg active:scale-95 transition-all hover:opacity-90 bg-gradient-to-r ${D ? "from-violet-600 to-indigo-600" : "from-violet-500 to-indigo-500"}`}>
+                                      <Download className="w-4 h-4" /><span>JPG</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleDownloadPdf()}
+                                      className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-[12px] font-bold active:scale-95 transition-all border ${D ? "bg-white/10 text-white border-white/20" : "bg-violet-50 text-violet-700 border-violet-200"}`}>
+                                      <FileDown className="w-4 h-4" /><span>PDF</span>
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                             </motion.div>

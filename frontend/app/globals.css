@@ -1,3 +1,6 @@
+:root {
+  color-scheme: dark light;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -45,9 +48,19 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition:
-    background-color 0.4s ease,
-    color 0.4s ease;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+@media (min-width: 2560px) {
+  html {
+    font-size: 18px;
+  }
+}
+
+@media (min-width: 3840px) {
+  html {
+    font-size: 22px;
+  }
 }
 
 /* Pengecualian: animasi & transform tidak ikut transition tema */
