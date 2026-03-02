@@ -3736,16 +3736,14 @@ export default function Home() {
                 </div>
                 {/* INDIKATOR ENERGI / ADMIN DASHBOARD */}
                 {user?.email === (process.env.NEXT_PUBLIC_DEV_EMAIL || "sharulwrdn10@gmail.com") ? (
-                  <div className="flex items-center flex-shrink-0 max-w-[90px] sm:max-w-none">
-                    <div className="flex items-center gap-1 px-1.5 py-1.5 rounded-l-lg border bg-violet-500/10 text-violet-500 border-violet-500/30 text-[8px] font-bold tracking-widest cursor-default">
-                      <Zap className="w-3 h-3 flex-shrink-0" fill="currentColor" />
-                    </div>
-                    <button
-                      onClick={() => setShowAdminModal(true)}
-                      className="px-1.5 py-1.5 rounded-r-lg border border-l-0 bg-violet-600 text-white text-[8px] font-bold hover:bg-violet-700 transition-colors flex-shrink-0">
-                      MGR
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setShowAdminModal(true)}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border bg-violet-600 border-violet-500 text-white text-[10px] sm:text-[11px] font-bold hover:bg-violet-700 transition-colors flex-shrink-0 shadow-sm"
+                    title="Admin Control Panel">
+                    <Settings className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">ADMIN</span>
+                    <span className="sm:hidden">MGR</span>
+                  </button>
                 ) : (
                   <button onClick={() => setShowQrisModal(true)}
                     className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-colors ${energy < estimatedPages
