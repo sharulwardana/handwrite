@@ -758,6 +758,7 @@ export default function Home() {
   const [isExportingTransparent, setIsExportingTransparent] = useState(false);
   const [isExportingDocx, setIsExportingDocx] = useState(false);
   const [fontDropdownOpen, setFontDropdownOpen] = useState(false);
+  const [fontsLoaded, setFontsLoaded] = useState(false);
   const [fullscreenPage, setFullscreenPage] = useState<GeneratedPage | null>(null);
   const [activeTab, setActiveTab] = useState<"result" | "history" | "presets">("result");
   const [presetName, setPresetName] = useState("");
@@ -1147,7 +1148,14 @@ export default function Home() {
     } catch { } finally { setIsLoadingFolios(false); }
   }, [API_URL]);
 
-  useEffect(() => { loadFonts(); loadFolios(); }, [loadFonts, loadFolios]);
+  useEffect(() => {
+    loadFonts();
+    loadFolios();
+    // Trigger font load untuk iOS
+    if (typeof document !== 'undefined') {
+      document.fonts.ready.then(() => setFontsLoaded(true));
+    }
+  }, [loadFonts, loadFolios]);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("hw_theme");
@@ -2196,10 +2204,10 @@ export default function Home() {
                     className={`w-full flex items-center justify-between px-3 py-2.5 transition-colors ${c.rowHover} ${selectedFont === key ? D ? "bg-violet-500/12" : "bg-violet-50" : ""}`}
                   >
                     <div className="flex flex-col gap-0.5 text-left">
-                      <span className={`text-[13px] font-medium ${c.tp}`} style={{ fontFamily: FONT_FAMILY_MAP[font.name] || font.name }}>
+                      <span className={`text-[13px] font-medium ${c.tp}`} style={{ fontFamily: fontsLoaded ? (FONT_FAMILY_MAP[font.name] || font.name) : 'inherit' }}>
                         {font.name}
                       </span>
-                      <span className={`text-[12px] ${c.ts}`} style={{ fontFamily: FONT_FAMILY_MAP[font.name] || font.name }}>
+                      <span className={`text-[12px] ${c.ts}`} style={{ fontFamily: fontsLoaded ? (FONT_FAMILY_MAP[font.name] || font.name) : 'inherit' }}>
                         {text.trim().slice(0, 28) || "Halo, ini contoh tulisanku."}
                       </span>
                     </div>
@@ -3728,15 +3736,14 @@ export default function Home() {
                 </div>
                 {/* INDIKATOR ENERGI / ADMIN DASHBOARD */}
                 {user?.email === (process.env.NEXT_PUBLIC_DEV_EMAIL || "sharulwrdn10@gmail.com") ? (
-                  <div className="flex items-center flex-shrink-0">
-                    <div className="flex items-center gap-1 px-1.5 py-1.5 sm:px-2.5 sm:py-1.5 rounded-l-lg border bg-violet-500/10 text-violet-500 border-violet-500/30 text-[8px] sm:text-[10px] font-bold tracking-widest cursor-default">
-                      <Zap className="w-3 h-3" fill="currentColor" />
-                      <span className="hidden sm:inline">DEV</span>
+                  <div className="flex items-center flex-shrink-0 max-w-[90px] sm:max-w-none">
+                    <div className="flex items-center gap-1 px-1.5 py-1.5 rounded-l-lg border bg-violet-500/10 text-violet-500 border-violet-500/30 text-[8px] font-bold tracking-widest cursor-default">
+                      <Zap className="w-3 h-3 flex-shrink-0" fill="currentColor" />
                     </div>
                     <button
                       onClick={() => setShowAdminModal(true)}
-                      className="px-1.5 py-1.5 sm:px-2 sm:py-1.5 rounded-r-lg border border-l-0 bg-violet-600 text-white text-[8px] sm:text-[9px] font-bold hover:bg-violet-700 transition-colors flex-shrink-0">
-                      MANAGE
+                      className="px-1.5 py-1.5 rounded-r-lg border border-l-0 bg-violet-600 text-white text-[8px] font-bold hover:bg-violet-700 transition-colors flex-shrink-0">
+                      MGR
                     </button>
                   </div>
                 ) : (
@@ -4987,18 +4994,6 @@ export default function Home() {
                                 </motion.div>
                               )}
                             </AnimatePresence>
-                          </div>
-
-                          {/* PERF: aspect-ratio mencegah CLS + lazy loading */}
-                          <div style={{ aspectRatio: '210/297' }}>
-                            <img
-                              src={activePages[activePageIndex]?.image}
-                              alt={`Halaman ${activePageIndex + 1}`}
-                              className="w-full h-full object-contain rounded-xl shadow-xl select-none"
-                              loading="lazy"
-                              decoding="async"
-                              onClick={() => mobileZoom === 100 && setFullscreenPage(activePages[activePageIndex])}
-                            />
                           </div>
 
                           {/* Indikator Halaman Minimalis ala Instagram */}
