@@ -727,6 +727,8 @@ export default function Home() {
   const [inputText, setInputText] = useState("");
   const [text, setText] = useState("");
   const [hideMobileDock, setHideMobileDock] = useState(false);
+  const [hideHeader, setHideHeader] = useState(false);
+  const lastHeaderScrollRef = useRef(0);
   const lastScrollYRef = useRef(0);
   const [energy, setEnergy] = useState<number>(5); // Modal awal 5 Energi untuk user gratis
   const [showQrisModal, setShowQrisModal] = useState(false);
@@ -861,8 +863,25 @@ export default function Home() {
   // Helper: navigasi halaman yang aman — priority: FlipBook API → setState fallback
   const navigateToPage = useCallback((index: number) => {
     const clampedIndex = Math.max(0, Math.min((generatedPages.length || streamedPages.length) - 1, index));
+
+    // Audio feedback saat ganti halaman (Apple only, sangat halus)
+    if (isAppleDevice && typeof AudioContext !== 'undefined' && clampedIndex !== activePageIndex) {
+      try {
+        const ctx = new AudioContext();
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        oscillator.frequency.setValueAtTime(800, ctx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.08);
+        gainNode.gain.setValueAtTime(0.03, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.08);
+      } catch { }
+    }
+
     setActivePageIndex(clampedIndex);
-    // Coba sync FlipBook jika tersedia (tidak blocking)
     try {
       const flip = bookRef.current?.pageFlip?.();
       if (flip && typeof flip.turnToPage === 'function') {
@@ -870,15 +889,15 @@ export default function Home() {
       } else if (flip && typeof flip.flip === 'function') {
         flip.flip(clampedIndex);
       }
-    } catch (e) {
-      // FlipBook belum ready, setState sudah cukup
-    }
-  }, [generatedPages.length, streamedPages.length]);
+    } catch { }
+  }, [generatedPages.length, streamedPages.length, isAppleDevice, activePageIndex]);
   const swipeStartYRef = useRef<number | null>(null);
   const pinchStartDistRef = useRef<number | null>(null);
   const pinchStartZoomRef = useRef<number>(100);
   const [mobileZoom, setMobileZoom] = useState(100);
+  const [swipeFeedback, setSwipeFeedback] = useState<'left' | 'right' | null>(null);
   const [showAdminModal, setShowAdminModal] = useState(false);
+  const [generateSuccess, setGenerateSuccess] = useState(false);
   const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [contextMenuPage, setContextMenuPage] = useState<GeneratedPage | null>(null);
   const [targetUserEmail, setTargetUserEmail] = useState("");
@@ -1407,6 +1426,8 @@ export default function Home() {
               }
 
               toast.success(`✅ ${collectedPages.length} halaman selesai!`, { duration: 3000 });
+              setGenerateSuccess(true);
+              setTimeout(() => setGenerateSuccess(false), 2000);
 
               // Haptic feedback untuk Android
               if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
@@ -2179,7 +2200,7 @@ export default function Home() {
                         {font.name}
                       </span>
                       <span className={`text-[12px] ${c.ts}`} style={{ fontFamily: FONT_FAMILY_MAP[font.name] || font.name }}>
-                        Halo, ini contoh tulisanku hari ini.
+                        {text.trim().slice(0, 28) || "Halo, ini contoh tulisanku."}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -2425,6 +2446,17 @@ export default function Home() {
               <p className={`text-[10px] font-mono ${c.ts}`}>{config.color.toUpperCase()}</p>
             </div>
           </div>
+
+          {/* Live ink preview */}
+          <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border ${c.pillBorder} ${c.pill} mt-2`}>
+            <p className="text-[13px] leading-relaxed"
+              style={{
+                fontFamily: currentFont ? (FONT_FAMILY_MAP[currentFont.name] || currentFont.name) : 'cursive',
+                color: config.color
+              }}>
+              Halo, ini warna tintaku hari ini.
+            </p>
+          </div>
         </div>
       </SidebarSection>
 
@@ -2460,7 +2492,11 @@ export default function Home() {
           {isLoadingFolios ? (
             <div className="grid grid-cols-2 gap-2">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className={`h-20 rounded-lg animate-pulse ${isDark ? "bg-white/5" : "bg-gray-100"}`} />
+                <div key={i}
+                  className={`h-20 rounded-xl overflow-hidden relative ${isDark ? "bg-white/5" : "bg-gray-100"}`}
+                  style={{ animationDelay: `${i * 0.08}s` }}>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+                </div>
               ))}
             </div>
           ) : folios.length === 0 ? (
@@ -2626,7 +2662,10 @@ export default function Home() {
 
       {/* ── TOASTER ── */}
       <Toaster
-        position="top-center"
+        position={isMobileView ? "bottom-center" : "top-center"}
+        containerStyle={isMobileView ? {
+          bottom: 'calc(5rem + env(safe-area-inset-bottom))'
+        } : {}}
         toastOptions={{
           duration: 4000,
           className: isAppleDevice ? "apple-dynamic-toast" : "",
@@ -2706,7 +2745,7 @@ export default function Home() {
             </motion.div>
 
             {/* 2. Headline — DILUAR motion.div agar render langsung tanpa animasi = LCP optimal */}
-            <h1 className={`text-3xl xs:text-4xl sm:text-6xl md:text-8xl 2xl:text-[7rem] 3xl:text-[8rem] font-black mb-6 tracking-tight leading-[1.1] ${c.tp} ${caveat.variable}`} style={{ fontFamily: "var(--font-caveat), 'Caveat Fallback', cursive" }}>
+            <h1 className={`text-3xl xs:text-4xl sm:text-6xl md:text-8xl 2xl:text-[7rem] 3xl:text-[8rem] 4xl:text-[10rem] font-black mb-6 tracking-tight leading-[1.1] ${c.tp} ${caveat.variable}`} style={{ fontFamily: "var(--font-caveat), 'Caveat Fallback', cursive" }}>
               Tugas Tulis Tangan <br />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-400 via-indigo-400 to-cyan-400">
                 Selesai dalam 5 Detik.
@@ -3031,7 +3070,11 @@ export default function Home() {
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
                   className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden"
-                  onClick={() => setMobileSidebarOpen(false)}
+                  onClick={() => {
+                    setMobileSidebarOpen(false);
+                    // Kembalikan fokus ke textarea setelah drawer tertutup
+                    setTimeout(() => textareaRef.current?.focus(), 350);
+                  }}
                 />
                 <motion.aside
                   key="mob-drawer"
@@ -3046,7 +3089,11 @@ export default function Home() {
                       </div>
                       <span className={`text-[13px] font-semibold ${c.tp}`}>Pengaturan</span>
                     </div>
-                    <button onClick={() => setMobileSidebarOpen(false)}
+                    <button onClick={() => {
+                      setMobileSidebarOpen(false);
+                      // Kembalikan fokus ke textarea setelah drawer tertutup
+                      setTimeout(() => textareaRef.current?.focus(), 350);
+                    }}
                       className={`w-8 h-8 rounded-lg flex items-center justify-center ${c.btn}`}>
                       <X className="w-4 h-4" />
                     </button>
@@ -3518,29 +3565,70 @@ export default function Home() {
 
           {/* ── FULLSCREEN ── */}
           {fullscreenPage && (
-            <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4 backdrop-blur-sm"
+            <div
+              className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4 backdrop-blur-sm"
               onClick={() => setFullscreenPage(null)}>
-              <button className="absolute top-4 right-4 w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+              <button
+                className="absolute top-4 right-4 w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
                 onClick={() => setFullscreenPage(null)}>
                 <X className="w-5 h-5" />
               </button>
               <div className="text-center" onClick={(e) => e.stopPropagation()}>
-                <p className="text-white/35 text-[11px] mb-3 tracking-widest uppercase">
-                  Halaman {fullscreenPage.page} · ESC untuk tutup
+                <p className="text-white/35 text-[11px] mb-3 tracking-widest uppercase flex items-center justify-center gap-3">
+                  <span>Halaman {fullscreenPage.page}</span>
+                  <span>·</span>
+                  <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/50 font-mono text-[10px]">ESC</kbd>
+                  <span className="text-white/20">tutup</span>
+                  {generatedPages.length > 1 && (
+                    <>
+                      <span>·</span>
+                      <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/50 font-mono text-[10px]">←</kbd>
+                      <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/50 font-mono text-[10px]">→</kbd>
+                      <span className="text-white/20">navigasi</span>
+                    </>
+                  )}
                 </p>
-                <img src={fullscreenPage.image} alt={`Halaman ${fullscreenPage.page}`} className="max-h-[88vh] max-w-[92vw] rounded-xl shadow-2xl object-contain" decoding="async" />
+                <img
+                  src={fullscreenPage.image}
+                  alt={`Halaman ${fullscreenPage.page}`}
+                  className="max-h-[88vh] max-w-[92vw] rounded-xl shadow-2xl object-contain"
+                  decoding="async"
+                />
                 <div className="flex justify-center gap-3 mt-4">
-                  <button onClick={() => handleDownloadSingle(fullscreenPage)}
+                  {generatedPages.length > 1 && (
+                    <button
+                      onClick={() => {
+                        const idx = generatedPages.findIndex(p => p.page === fullscreenPage.page);
+                        if (idx > 0) setFullscreenPage(generatedPages[idx - 1]);
+                      }}
+                      disabled={generatedPages.findIndex(p => p.page === fullscreenPage.page) === 0}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-30 text-white rounded-xl text-sm font-medium transition-colors">
+                      ← Prev
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDownloadSingle(fullscreenPage)}
                     className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors">
                     <Download className="w-4 h-4" />Download
                   </button>
+                  {generatedPages.length > 1 && (
+                    <button
+                      onClick={() => {
+                        const idx = generatedPages.findIndex(p => p.page === fullscreenPage.page);
+                        if (idx < generatedPages.length - 1) setFullscreenPage(generatedPages[idx + 1]);
+                      }}
+                      disabled={generatedPages.findIndex(p => p.page === fullscreenPage.page) === generatedPages.length - 1}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-30 text-white rounded-xl text-sm font-medium transition-colors">
+                      Next →
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           )}
 
           {/* ── HEADER ── */}
-          <header className={`${c.header} border-b sticky top-0 z-50 transition-colors duration-200 ${isAppleDevice ? 'liquid-glass-shimmer' : ''}`}>
+          <header className={`${c.header} border-b sticky top-0 z-50 transition-all duration-300 ${hideHeader && isMobileView ? "-translate-y-full" : "translate-y-0"} ${isAppleDevice ? 'liquid-glass-shimmer' : ''}`}>
             {isGenerating && (
               <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-violet-500/10">
                 <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-[width] duration-500"
@@ -3712,7 +3800,7 @@ export default function Home() {
               <motion.div
                 animate={{ opacity: sidebarOpen ? 1 : 0 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="flex-1 overflow-y-auto pb-8 scrollbar-thin w-[288px] 2xl:w-[320px] 3xl:w-[360px]"
+                className="sidebar-scroll-container flex-1 overflow-y-auto pb-8 scrollbar-thin w-[288px] 2xl:w-[320px] 3xl:w-[380px] 4xl:w-[440px]"
               >
                 {renderSidebarContent()}
               </motion.div>
@@ -3757,12 +3845,32 @@ export default function Home() {
                       whileTap={!(isGenerating || !text.trim() || !selectedFolio) ? { scale: 0.97 } : {}}
                       className={`btn-ripple relative flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl font-bold text-xs min-w-[110px] overflow-hidden ${isGenerating || !text.trim() || !selectedFolio
                         ? D ? "bg-[#ffffff05] text-white/30 cursor-not-allowed border border-[#ffffff0a]" : "bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-200"
-                        : `bg-gradient-to-r ${c.accent} text-white btn-generate-idle btn-generate-pulse`
+                        : generateSuccess
+                          ? "bg-emerald-500 text-white shadow-emerald-500/30 shadow-lg"
+                          : `bg-gradient-to-r ${c.accent} text-white btn-generate-idle btn-generate-pulse`
                         } ${isGenerating ? 'btn-generate-active' : ''}`}>
 
                       <div className="relative z-10 flex items-center gap-1.5">
-                        {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <Sparkles className="w-3.5 h-3.5" />}
-                        <span>{isGenerating ? 'Menulis...' : 'Generate'}</span>
+                        {isGenerating ? (
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="2.5" />
+                            <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="2.5"
+                              strokeDasharray={`${2 * Math.PI * 10}`}
+                              strokeDashoffset={`${2 * Math.PI * 10 * (1 - generateProgress / 100)}`}
+                              strokeLinecap="round"
+                              style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', transition: 'stroke-dashoffset 0.4s ease' }}
+                            />
+                          </svg>
+                        ) : generateSuccess ? (
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <Sparkles className="w-3.5 h-3.5" />
+                        )}
+                        <span>
+                          {isGenerating ? 'Menulis...' : generateSuccess ? 'Selesai!' : 'Generate'}
+                        </span>
                         {!isGenerating && estimatedPages > 1 && (
                           <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${D ? "bg-black/20" : "bg-white/25"}`}>{estimatedPages}</span>
                         )}
@@ -4421,6 +4529,7 @@ export default function Home() {
                             >
                               <motion.div
                                 className="relative group"
+                                data-hologram="true"
                                 style={{
                                   width: `${zoomLevel}%`,
                                   maxWidth: "100%",
@@ -4560,9 +4669,19 @@ export default function Home() {
                           </div>
                           <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin">
                             {history.length === 0 ? (
-                              <div className="py-12 text-center">
-                                <Clock className={`w-8 h-8 mx-auto mb-3 ${c.ts} opacity-40`} />
-                                <p className={`text-sm ${c.tm}`}>Belum ada riwayat</p>
+                              <div className="py-10 text-center px-4">
+                                <div className={`w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center ${D ? "bg-white/5" : "bg-violet-50"}`}>
+                                  <Clock className={`w-6 h-6 ${c.ts} opacity-60`} />
+                                </div>
+                                <p className={`text-sm font-semibold mb-1 ${c.tp}`}>Belum ada riwayat</p>
+                                <p className={`text-[11px] leading-relaxed ${c.ts}`}>
+                                  Setiap kali kamu Generate, hasilnya otomatis tersimpan di sini.
+                                </p>
+                                <button
+                                  onClick={() => { setActiveTab("result"); textareaRef.current?.focus(); }}
+                                  className={`mt-4 px-4 py-2 rounded-xl text-xs font-bold border-2 border-dashed transition-colors ${D ? "border-violet-500/40 text-violet-400 hover:bg-violet-500/8" : "border-violet-400 text-violet-600 hover:bg-violet-50"}`}>
+                                  ✍️ Mulai Generate Pertama
+                                </button>
                               </div>
                             ) : history.map((item) => (
                               <div key={item.id} className={`flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer ${c.pillBorder} ${c.rowHover}`}>
@@ -4671,14 +4790,19 @@ export default function Home() {
             </div>
 
             {/* ══ MOBILE & TABLET: Editor + Output tabs (< lg) ══ */}
-            <div className="flex lg:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
+            <div className="flex lg:hidden flex-col md:flex-row w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
               {/* Mobile tab switcher (Modern iOS Style - Liquid Glass Active Tab) */}
               {/* Bagian Tab Switcher Mobile (Editor vs Hasil) */}
               <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} bg-transparent`}>
                 <DraggableLiquidTabs
                   options={[
                     { label: "✏️ Editor", value: "editor" },
-                    { label: "✨ Hasil", value: "result" }
+                    {
+                      label: generatedPages.length > 0
+                        ? `✨ Hasil (${generatedPages.length})`
+                        : "✨ Hasil",
+                      value: "result"
+                    }
                   ]}
                   value={activeTab === "result" ? "result" : "editor"}
                   onChange={(val: string) => setActiveTab(val as any)}
@@ -4688,20 +4812,28 @@ export default function Home() {
               </div>
 
               {/* Mobile editor panel */}
-              {activeTab !== "result" && (
-                <div className="flex-1 flex flex-col overflow-hidden">
+              {(activeTab !== "result" || window.innerWidth >= 768) && (
+                <div className={`${typeof window !== 'undefined' && window.innerWidth >= 768 ? 'w-[340px] border-r' : 'flex-1'} flex flex-col overflow-hidden ${c.sidebar} ${c.divider}`}>
                   <div className="flex-1 flex flex-col overflow-y-auto p-4 pb-28 scrollbar-thin gap-3"
                     onScroll={(e) => {
                       const currentScrollY = e.currentTarget.scrollTop;
+
+                      // ── Auto-hide header saat scroll ke bawah ──
+                      if (currentScrollY > 80) {
+                        setHideHeader(currentScrollY > lastHeaderScrollRef.current);
+                      } else {
+                        setHideHeader(false);
+                      }
+                      lastHeaderScrollRef.current = currentScrollY;
+                      // ── End auto-hide header ──
+
                       if (!isAppleDevice) {
-                        // Fitur Auto-Hide Dock khusus non-Apple (Android/Tablet/Laptop L)
                         if (currentScrollY > lastScrollYRef.current && currentScrollY > 50) {
                           setHideMobileDock(true);
                         } else if (currentScrollY < lastScrollYRef.current) {
                           setHideMobileDock(false);
                         }
                       } else {
-                        // Apple Device selalu tampil
                         setHideMobileDock(false);
                       }
                       lastScrollYRef.current = currentScrollY;
@@ -4823,10 +4955,47 @@ export default function Home() {
                             const deltaX = e.changedTouches[0].clientX - swipeStartXRef.current;
                             const deltaY = e.changedTouches[0].clientY - (swipeStartYRef.current ?? 0);
                             if (Math.abs(deltaX) < Math.abs(deltaY) || Math.abs(deltaX) < 40) return;
-                            if (deltaX < 0) setActivePageIndex(i => Math.min(activePages.length - 1, i + 1)); // Swipe kiri
-                            else setActivePageIndex(i => Math.max(0, i - 1)); // Swipe kanan
-                            swipeStartXRef.current = null; swipeStartYRef.current = null;
+                            if (deltaX < 0) {
+                              setSwipeFeedback('left');
+                              setActivePageIndex(i => Math.min(activePages.length - 1, i + 1));
+                            } else {
+                              setSwipeFeedback('right');
+                              setActivePageIndex(i => Math.max(0, i - 1));
+                            }
+                            setTimeout(() => setSwipeFeedback(null), 300);
+                            swipeStartXRef.current = null;
+                            swipeStartYRef.current = null;
                           }}>
+
+                          <div className="relative" style={{ aspectRatio: '210/297' }}>
+                            <img
+                              src={activePages[activePageIndex]?.image}
+                              alt={`Halaman ${activePageIndex + 1}`}
+                              className="w-full h-full object-contain rounded-xl shadow-xl select-none"
+                              loading="lazy"
+                              decoding="async"
+                              onClick={() => mobileZoom === 100 && setFullscreenPage(activePages[activePageIndex])}
+                            />
+                            {/* Swipe feedback overlay */}
+                            <AnimatePresence>
+                              {swipeFeedback && (
+                                <motion.div
+                                  initial={{ opacity: 0.6 }}
+                                  animate={{ opacity: 0 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: 0.3 }}
+                                  className={`absolute inset-0 rounded-xl pointer-events-none flex items-center justify-center ${swipeFeedback === 'left' ? 'bg-gradient-to-l from-violet-500/20 to-transparent' : 'bg-gradient-to-r from-violet-500/20 to-transparent'}`}
+                                >
+                                  <div className={`${D ? "bg-black/50" : "bg-white/70"} backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-1.5`}>
+                                    <ChevronDown className={`w-4 h-4 text-violet-500 ${swipeFeedback === 'left' ? '-rotate-90' : 'rotate-90'}`} />
+                                    <span className={`text-[11px] font-bold ${D ? "text-white" : "text-violet-700"}`}>
+                                      Hal. {swipeFeedback === 'left' ? activePageIndex + 1 : activePageIndex + 1}
+                                    </span>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
 
                           {/* PERF: aspect-ratio mencegah CLS + lazy loading */}
                           <div style={{ aspectRatio: '210/297' }}>
@@ -4871,6 +5040,19 @@ export default function Home() {
                       )}`}>
                         <p className={`text-sm ${c.ts}`}>Klik Generate untuk mulai</p>
                       </div>
+                    )}
+
+                    {/* Scroll to Top — muncul setelah scroll 200px */}
+                    {activePages.length > 2 && activePageIndex > 0 && (
+                      <motion.button
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        onClick={() => setActivePageIndex(0)}
+                        className={`fixed right-4 z-[55] w-10 h-10 rounded-full flex items-center justify-center shadow-lg border transition-colors ${D ? "bg-black/80 backdrop-blur-xl border-white/15 text-white/70" : "bg-white/90 backdrop-blur-xl border-violet-200 text-violet-600"}`}
+                        style={{ bottom: "calc(5rem + env(safe-area-inset-bottom))" }}>
+                        <ChevronDown className="w-5 h-5 rotate-180" />
+                      </motion.button>
                     )}
 
                     {/* ── MOBILE FLOATING DYNAMIC ISLAND (MORPHING) ── */}
@@ -4953,104 +5135,110 @@ export default function Home() {
                 );
               })()}
             </div>
-          </div>
+          </div >
 
           {/* ── EXPORT DROPDOWN PORTAL — fixed di atas semua layer ── */}
           <AnimatePresence>
-            {showExportDropdown && exportDropdownPos && (
-              <>
-                <div className="fixed inset-0 z-[90]" onClick={() => setShowExportDropdown(false)} />
-                <motion.div
-                  ref={exportDropdownRef}
-                  // Animasi menyesuaikan arah buka (dari bawah atau dari atas)
-                  initial={{ opacity: 0, y: exportDropdownPos.top > (typeof window !== 'undefined' ? window.innerHeight : 800) / 2 ? 10 : -10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: exportDropdownPos.top > (typeof window !== 'undefined' ? window.innerHeight : 800) / 2 ? 10 : -10, scale: 0.95 }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                  style={{
-                    position: "fixed",
-                    left: Math.min(exportDropdownPos.left - 120, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 200),
-                    ...(typeof window !== 'undefined' && exportDropdownPos.top > window.innerHeight / 2
-                      ? { bottom: window.innerHeight - exportDropdownPos.top + 16 }
-                      : { top: exportDropdownPos.top + exportDropdownPos.height + 16 }),
-                    zIndex: 9999,
-                  }}
-                  className={`w-48 rounded-2xl border shadow-2xl overflow-hidden backdrop-blur-xl ${D
-                    ? "bg-[#0d0d14]/95 border-[#ffffff10] shadow-[0_16px_48px_rgba(0,0,0,0.7)]"
-                    : "bg-white/98 border-violet-200 shadow-[0_16px_48px_rgba(139,92,246,0.2)]"}`}>
-                  <div className="p-1">
-                    <button onClick={() => { handleDownloadAllPng(); setShowExportDropdown(false); }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm}`}>
-                      <div className="w-6 h-6 rounded-md flex items-center justify-center bg-violet-500/15">
-                        <Download className="w-3.5 h-3.5 text-violet-500" />
-                      </div>Semua JPG
-                    </button>
-                    <button onClick={() => { handleDownloadZip(); setShowExportDropdown(false); }}
-                      disabled={isDownloadingZip}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm} ${isDownloadingZip ? "opacity-50" : ""}`}>
-                      <div className="w-6 h-6 rounded-md flex items-center justify-center bg-emerald-500/15">
-                        {isDownloadingZip ? <Loader2 className="w-3.5 h-3.5 text-emerald-500 animate-spin" /> : <Package className="w-3.5 h-3.5 text-emerald-500" />}
-                      </div>ZIP Archive
-                    </button>
-                    <div className={`my-1 h-px ${D ? "bg-white/8" : "bg-gray-100"}`} />
-                    <button onClick={() => { handleExportPdf("high"); setShowExportDropdown(false); }}
-                      disabled={isExportingPdf}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm} ${isExportingPdf ? "opacity-50" : ""}`}>
-                      <div className="w-6 h-6 rounded-md flex items-center justify-center bg-amber-500/15">
-                        {isExportingPdf ? <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin" /> : <FileDown className="w-3.5 h-3.5 text-amber-500" />}
-                      </div>PDF (Resolusi Tinggi / Cetak)
-                    </button>
-                    <button onClick={() => { handleExportPdf("low"); setShowExportDropdown(false); }}
-                      disabled={isExportingPdf}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm} ${isExportingPdf ? "opacity-50" : ""}`}>
-                      <div className="w-6 h-6 rounded-md flex items-center justify-center bg-rose-500/15">
-                        {isExportingPdf ? <Loader2 className="w-3.5 h-3.5 text-rose-500 animate-spin" /> : <FileDown className="w-3.5 h-3.5 text-rose-500" />}
-                      </div>PDF (Hemat Kuota / WA)
-                    </button>
-                    <button onClick={async () => {
-                      setShowExportDropdown(false);
-                      const tid = toast.loading("Membuat PNG transparan...");
-                      try {
-                        const res = await fetch(`${API_URL}/api/download/transparent`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ imageData: generatedPages[activePageIndex].image })
-                        });
-                        if (!res.ok) throw new Error();
-                        const blob = await res.blob();
-                        const { saveAs } = await import("file-saver");
-                        saveAs(blob, `tulisan_transparan_hal${activePageIndex + 1}.png`);
-                        toast.success("PNG transparan berhasil!", { id: tid });
-                      } catch { toast.error("Gagal export", { id: tid }); }
+            {
+              showExportDropdown && exportDropdownPos && (
+                <>
+                  <div className="fixed inset-0 z-[90]" onClick={() => setShowExportDropdown(false)} />
+                  <motion.div
+                    ref={exportDropdownRef}
+                    // Animasi menyesuaikan arah buka (dari bawah atau dari atas)
+                    initial={{ opacity: 0, y: exportDropdownPos.top > (typeof window !== 'undefined' ? window.innerHeight : 800) / 2 ? 10 : -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: exportDropdownPos.top > (typeof window !== 'undefined' ? window.innerHeight : 800) / 2 ? 10 : -10, scale: 0.95 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    style={{
+                      position: "fixed",
+                      left: Math.min(
+                        exportDropdownPos.left - 120,
+                        (typeof window !== 'undefined' ? window.innerWidth : 1200) - 220
+                      ),
+                      ...(typeof window !== 'undefined' && exportDropdownPos.top > window.innerHeight / 2
+                        ? { bottom: window.innerHeight - exportDropdownPos.top + 16 }
+                        : { top: exportDropdownPos.top + exportDropdownPos.height + 16 }),
+                      zIndex: 9999,
                     }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm}`}>
-                      <div className="w-6 h-6 rounded-md flex items-center justify-center bg-purple-500/15">
-                        <ImageIcon className="w-3.5 h-3.5 text-purple-500" />
-                      </div>PNG Transparan
-                    </button>
-                    <button onClick={() => { handleExportDocx(); setShowExportDropdown(false); }}
-                      disabled={isExportingDocx}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm} ${isExportingDocx ? "opacity-50" : ""}`}>
-                      <div className="w-6 h-6 rounded-md flex items-center justify-center bg-blue-500/15">
-                        {isExportingDocx ? <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" /> : <FileText className="w-3.5 h-3.5 text-blue-500" />}
-                      </div>Word (.docx)
-                    </button>
-                  </div>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
+                    className={`w-48 rounded-2xl border shadow-2xl overflow-hidden backdrop-blur-xl ${D
+                      ? "bg-[#0d0d14]/95 border-[#ffffff10] shadow-[0_16px_48px_rgba(0,0,0,0.7)]"
+                      : "bg-white/98 border-violet-200 shadow-[0_16px_48px_rgba(139,92,246,0.2)]"}`}>
+                    <div className="p-1">
+                      <button onClick={() => { handleDownloadAllPng(); setShowExportDropdown(false); }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm}`}>
+                        <div className="w-6 h-6 rounded-md flex items-center justify-center bg-violet-500/15">
+                          <Download className="w-3.5 h-3.5 text-violet-500" />
+                        </div>Semua JPG
+                      </button>
+                      <button onClick={() => { handleDownloadZip(); setShowExportDropdown(false); }}
+                        disabled={isDownloadingZip}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm} ${isDownloadingZip ? "opacity-50" : ""}`}>
+                        <div className="w-6 h-6 rounded-md flex items-center justify-center bg-emerald-500/15">
+                          {isDownloadingZip ? <Loader2 className="w-3.5 h-3.5 text-emerald-500 animate-spin" /> : <Package className="w-3.5 h-3.5 text-emerald-500" />}
+                        </div>ZIP Archive
+                      </button>
+                      <div className={`my-1 h-px ${D ? "bg-white/8" : "bg-gray-100"}`} />
+                      <button onClick={() => { handleExportPdf("high"); setShowExportDropdown(false); }}
+                        disabled={isExportingPdf}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm} ${isExportingPdf ? "opacity-50" : ""}`}>
+                        <div className="w-6 h-6 rounded-md flex items-center justify-center bg-amber-500/15">
+                          {isExportingPdf ? <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin" /> : <FileDown className="w-3.5 h-3.5 text-amber-500" />}
+                        </div>PDF (Resolusi Tinggi / Cetak)
+                      </button>
+                      <button onClick={() => { handleExportPdf("low"); setShowExportDropdown(false); }}
+                        disabled={isExportingPdf}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm} ${isExportingPdf ? "opacity-50" : ""}`}>
+                        <div className="w-6 h-6 rounded-md flex items-center justify-center bg-rose-500/15">
+                          {isExportingPdf ? <Loader2 className="w-3.5 h-3.5 text-rose-500 animate-spin" /> : <FileDown className="w-3.5 h-3.5 text-rose-500" />}
+                        </div>PDF (Hemat Kuota / WA)
+                      </button>
+                      <button onClick={async () => {
+                        setShowExportDropdown(false);
+                        const tid = toast.loading("Membuat PNG transparan...");
+                        try {
+                          const res = await fetch(`${API_URL}/api/download/transparent`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ imageData: generatedPages[activePageIndex].image })
+                          });
+                          if (!res.ok) throw new Error();
+                          const blob = await res.blob();
+                          const { saveAs } = await import("file-saver");
+                          saveAs(blob, `tulisan_transparan_hal${activePageIndex + 1}.png`);
+                          toast.success("PNG transparan berhasil!", { id: tid });
+                        } catch { toast.error("Gagal export", { id: tid }); }
+                      }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm}`}>
+                        <div className="w-6 h-6 rounded-md flex items-center justify-center bg-purple-500/15">
+                          <ImageIcon className="w-3.5 h-3.5 text-purple-500" />
+                        </div>PNG Transparan
+                      </button>
+                      <button onClick={() => { handleExportDocx(); setShowExportDropdown(false); }}
+                        disabled={isExportingDocx}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm} ${isExportingDocx ? "opacity-50" : ""}`}>
+                        <div className="w-6 h-6 rounded-md flex items-center justify-center bg-blue-500/15">
+                          {isExportingDocx ? <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" /> : <FileText className="w-3.5 h-3.5 text-blue-500" />}
+                        </div>Word (.docx)
+                      </button>
+                    </div>
+                  </motion.div>
+                </>
+              )
+            }
+          </AnimatePresence >
 
           {/* ── MOBILE BOTTOM BAR (Modern Floating Dock) ── */}
-          <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden pointer-events-none px-3 sm:px-4 safe-area-pb flex justify-center">
+          < div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden pointer-events-none px-3 sm:px-4 safe-area-pb flex justify-center" >
 
             {/* Dock Kaca (Glassmorphism) */}
-            <div className={`w-full max-w-sm flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-2xl pointer-events-auto transition-[transform,opacity] duration-500 ease-in-out ${activeTab === "result" || hideMobileDock ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"} ${isAppleDevice ? (D ? "liquid-glass shadow-2xl" : "glass-panel") : (D ? "bg-[#2c2c35] border border-[#ffffff10] shadow-2xl" : "bg-white border border-gray-200 shadow-xl")}`}>
+            < div className={`w-full flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-2xl pointer-events-auto transition-[transform,opacity] duration-500 ease-in-out ${activeTab === "result" || hideMobileDock ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"} ${isAppleDevice ? (D ? "liquid-glass shadow-2xl" : "glass-panel") : (D ? "bg-[#2c2c35] border border-[#ffffff10] shadow-2xl" : "bg-white border border-gray-200 shadow-xl")}`
+            }>
               {/* Ubah md:hidden menjadi lg:hidden di bawah ini */}
-              <button onClick={() => setMobileSidebarOpen(true)}
+              < button onClick={() => setMobileSidebarOpen(true)}
                 className={`flex lg:hidden w-8 h-8 rounded-lg items-center justify-center transition-colors ${c.btn}`}>
                 <Menu className="w-3.5 h-3.5" />
-              </button>
+              </button >
 
               <div className="flex-1 min-w-0 pl-1 relative">
                 {currentFont ? (
@@ -5070,18 +5258,20 @@ export default function Home() {
                 )}
               </div>
 
-              {generatedPages.length > 0 && typeof navigator !== "undefined" && !!navigator.share && (
-                <button
-                  onClick={() => handleSharePage(generatedPages[activePageIndex])}
-                  className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 transition-colors ${c.btn}`}
-                  title="Bagikan ke WA/Telegram"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                  </svg>
-                </button>
-              )}
+              {
+                generatedPages.length > 0 && typeof navigator !== "undefined" && !!navigator.share && (
+                  <button
+                    onClick={() => handleSharePage(generatedPages[activePageIndex])}
+                    className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 transition-colors ${c.btn}`}
+                    title="Bagikan ke WA/Telegram"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                  </button>
+                )
+              }
 
               <button onClick={handleGenerate} disabled={isGenerating || !text.trim() || !selectedFolio}
                 className={`btn-ripple flex items-center gap-1.5 px-5 py-3 rounded-xl font-bold text-sm transition-colors flex-shrink-0 shadow-lg ${isGenerating || !text.trim() || !selectedFolio
@@ -5090,8 +5280,8 @@ export default function Home() {
                   }`}>
                 {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mx-3" /> : <><Sparkles className="w-4 h-4" /><span>Generate</span></>}
               </button>
-            </div>
-          </div>
+            </div >
+          </div >
         </>
       )}
     </div >

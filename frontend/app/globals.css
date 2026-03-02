@@ -1,3 +1,18 @@
+/* ── FONT VARIABLE FALLBACKS ─────────────────────────
+   Next.js inject var() ini lewat className di layout.tsx,
+   tapi kita definisikan fallback eksplisit agar Android
+   Chrome lama tidak render blank saat font gagal load.
+─────────────────────────────────────────────────────── */
+:root {
+  --font-virgil: 'Virgil', 'Caveat', cursive;
+  --font-kalam: 'Kalam', cursive;
+  --font-patrick-hand: 'Patrick Hand', cursive;
+  --font-indie-flower: 'Indie Flower', cursive;
+  --font-architects-daughter: 'Architects Daughter', cursive;
+  --font-gochi-hand: 'Gochi Hand', cursive;
+  --font-caveat: 'Caveat', cursive;
+  --font-dm-sans: 'DM Sans', system-ui, sans-serif;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -1447,6 +1462,17 @@ textarea, input {
 
 /* ── MOBILE SCROLL IMPROVEMENTS ──────────────────────── */
 
+/* Cegah konflik scroll FlipBook vs body scroll di Android */
+.stf__parent {
+  touch-action: pan-y !important;
+}
+
+/* Fix: Pinch zoom tidak memicu back gesture di Android Chrome */
+.mobile-result-page {
+  touch-action: pan-y pinch-zoom;
+  overscroll-behavior: contain;
+}
+
 /* Scroll snap untuk swipe halaman di mobile */
 .mobile-result-scroll {
   overscroll-behavior-x: contain;
@@ -1470,6 +1496,7 @@ textarea, input {
 /* ── THEME TOGGLE BUTTON — Instant & Snappy ─────────── */
 
 .theme-toggle-btn {
+  contain: layout style;
   /* Tombol sendiri tetap smooth tapi cepat */
   transition: border-color 150ms ease, box-shadow 150ms ease;
   /* Touch feedback instant */
@@ -1608,4 +1635,121 @@ textarea, input {
 
 .dark .drag-handle {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── GPU ACCELERATION HINTS ───────────────────────── */
+.theme-icon,
+.toggle-premium-thumb,
+.toggle-cyber-thumb {
+  will-change: transform, opacity;
+  transform: translateZ(0); /* Force GPU layer */
+}
+
+/* Cegah layout thrash saat animasi parallax 3D */
+[data-hologram] {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* ── FLOATING PARTICLES LANDING ─────────────────────── */
+.aurora-bg-dark::before,
+.aurora-bg-light::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(circle at 20% 30%, rgba(139,92,246,0.08) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(99,102,241,0.08) 0%, transparent 40%);
+  animation: aurora-shift 8s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes aurora-shift {
+  0%   { transform: scale(1) translateY(0px); }
+  100% { transform: scale(1.05) translateY(-20px); }
+}
+
+/* ── SIDEBAR SCROLL FADE INDICATOR ──────────────────── */
+.sidebar-scroll-container {
+  -webkit-mask-image: linear-gradient(
+    to bottom, 
+    black calc(100% - 48px), 
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom, 
+    black calc(100% - 48px), 
+    transparent 100%
+  );
+}
+
+/* ── SKELETON SYSTEM ─────────────────────────────────── */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 40%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.06) 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.8s ease-in-out infinite;
+}
+
+.light .skeleton::after,
+html:not(.dark) .skeleton::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(139, 92, 246, 0.06) 40%,
+    rgba(139, 92, 246, 0.12) 50%,
+    rgba(139, 92, 246, 0.06) 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+}
+
+@keyframes skeleton-sweep {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── GENERATE BUTTON READY STATE ────────────────────── */
+.btn-generate-idle {
+  position: relative;
+}
+
+.btn-generate-idle::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  opacity: 0;
+  animation: generate-ready 2.5s ease-in-out infinite;
+  z-index: -1;
+  filter: blur(6px);
+}
+
+@keyframes generate-ready {
+  0%, 100% { opacity: 0; transform: scale(0.95); }
+  50%       { opacity: 0.4; transform: scale(1.02); }
+}
+
+/* Matikan pulse saat sedang generating */
+.btn-generate-active::before {
+  animation: none;
+  opacity: 0;
 }
