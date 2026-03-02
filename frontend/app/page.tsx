@@ -914,6 +914,7 @@ export default function Home() {
   const [swipeFeedback, setSwipeFeedback] = useState<'left' | 'right' | null>(null);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [generateSuccess, setGenerateSuccess] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [contextMenuPage, setContextMenuPage] = useState<GeneratedPage | null>(null);
   const [targetUserEmail, setTargetUserEmail] = useState("");
@@ -947,6 +948,8 @@ export default function Home() {
   const resultRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bookRef = useRef<any>(null);
+  const sidebarScrollRef = useRef<HTMLDivElement>(null);
+  const sidebarScrollPosRef = useRef<number>(0);
 
   // ── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => { setSeed(Date.now()); }, []);
@@ -1529,8 +1532,11 @@ export default function Home() {
     } catch (e: unknown) {
       if (e instanceof Error && e.name === "AbortError") {
         toast("Proses dibatalkan.", { id: tid, icon: "🛑" });
+        setGenerateError(null);
       } else {
-        toast.error(e instanceof Error ? e.message : "Gagal generate", { id: tid, duration: 4000 });
+        const errMsg = e instanceof Error ? e.message : "Gagal generate";
+        toast.error(errMsg, { id: tid, duration: 4000 });
+        setGenerateError(errMsg);
       }
     } finally {
       setIsGenerating(false);
@@ -2681,6 +2687,7 @@ export default function Home() {
   // Memoize FlipBook ditaruh di level paling atas agar tidak melanggar Rules of Hooks
 
   const activePagesMemo = generatedPages.length > 0 ? generatedPages : streamedPages;
+  const PRELOAD_RANGE = 2;
   const memoizedFlipBook = React.useMemo(() => {
     if (activePagesMemo.length === 0) return null;
     return (
@@ -2699,29 +2706,38 @@ export default function Home() {
         className="shadow-2xl rounded-sm"
         onFlip={(e: any) => setActivePageIndex(e.data)}
       >
-        {activePagesMemo.map((p, idx) => (
-          <div key={p.page} className="bg-white overflow-hidden" style={{ boxShadow: "inset 0 0 20px rgba(0,0,0,0.05)" }}>
-            <motion.img
-              key={`page-${p.page}`}
-              src={p.image}
-              alt={`Hal ${p.page}`}
-              className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
-              loading="lazy"
-              decoding="async"
-              initial={{ opacity: 0.7 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              onDoubleClick={() => generatedPages.length > 0 && setFullscreenPage(p)}
-              onTouchStart={() => handleLongPressStart(p)}
-              onTouchEnd={handleLongPressEnd}
-              onTouchCancel={handleLongPressEnd}
-              onMouseLeave={handleLongPressEnd}
-            />
-          </div>
-        ))}
+        {activePagesMemo.map((p, idx) => {
+          const isNear = Math.abs(idx - activePageIndex) <= PRELOAD_RANGE;
+          return (
+            <div key={p.page} className="bg-white overflow-hidden" style={{ boxShadow: "inset 0 0 20px rgba(0,0,0,0.05)" }}>
+              {isNear ? (
+                <motion.img
+                  key={`page-${p.page}`}
+                  src={p.image}
+                  alt={`Hal ${p.page}`}
+                  className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
+                  loading="lazy"
+                  decoding="async"
+                  initial={{ opacity: 0.7 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  onDoubleClick={() => generatedPages.length > 0 && setFullscreenPage(p)}
+                  onTouchStart={() => handleLongPressStart(p)}
+                  onTouchEnd={handleLongPressEnd}
+                  onTouchCancel={handleLongPressEnd}
+                  onMouseLeave={handleLongPressEnd}
+                />
+              ) : (
+                <div className={`w-full h-full flex items-center justify-center ${D ? "bg-white/5" : "bg-gray-50"}`}>
+                  <Loader2 className="w-6 h-6 text-violet-400/30 animate-spin" />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </FlipBook>
     );
-  }, [activePagesMemo, generatedPages.length]);
+  }, [activePagesMemo, activePageIndex, generatedPages.length, D]);
 
   // PERF FIX LCP: isAuthChecking TIDAK memblokir render lagi.
   // Landing page tetap tampil (!showEditor && !user) selama auth check berjalan.
@@ -3136,6 +3152,7 @@ export default function Home() {
                         setIsAiDrafting(false);
                       }
                     }}
+                    autoFocus
                     className={`w-full mt-4 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r ${c.accent} text-white transition-colors flex justify-center items-center gap-2 ${isAiDrafting ? "opacity-70" : "hover:scale-[1.02] active:scale-95"}`}>
                     {isAiDrafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                     {isAiDrafting ? "AI Sedang Menulis..." : "Buat Teks"}
@@ -3166,6 +3183,10 @@ export default function Home() {
                   transition={{ type: "spring", damping: 28, stiffness: 300 }}
                   className={`fixed top-0 left-0 bottom-0 w-[300px] md:w-[320px] max-w-[85vw] z-[70] overflow-y-auto border-r ${isAppleDevice ? (isDark ? "bg-black/70 backdrop-blur-3xl border-[#ffffff10]" : "liquid-glass-light") : (isDark ? "bg-[#18181b] border-[#ffffff10]" : "bg-white border-gray-200")}`}
                 >
+                  {/* Drag handle visual */}
+                  <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+                    <div className={`w-10 h-1 rounded-full ${D ? "bg-white/20" : "bg-gray-300"}`} />
+                  </div>
                   <div className={`sticky top-0 flex items-center justify-between px-4 h-14 border-b ${c.divider} ${isAppleDevice ? (D ? "bg-black/70 backdrop-blur-3xl" : "liquid-glass-light") : (D ? "bg-[#18181b]" : "bg-white")} z-[80]`}>
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-lg flex items-center justify-center">
@@ -3821,14 +3842,27 @@ export default function Home() {
                     <span className="sm:hidden">MGR</span>
                   </button>
                 ) : (
-                  <button onClick={() => setShowQrisModal(true)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-colors ${energy < estimatedPages
-                      ? "bg-rose-500/10 text-rose-500 border-rose-500/30 animate-pulse"
-                      : D ? "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20" : "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
-                      }`}>
-                    <Zap className={`w-3.5 h-3.5 ${energy < estimatedPages ? "text-rose-500" : "text-amber-500"}`} fill="currentColor" />
-                    <span>{energy}</span>
-                  </button>
+                  <div className="relative group">
+                    <button onClick={() => setShowQrisModal(true)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-colors ${energy < estimatedPages
+                        ? "bg-rose-500/10 text-rose-500 border-rose-500/30 animate-pulse"
+                        : D ? "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20" : "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
+                        }`}>
+                      <Zap className={`w-3.5 h-3.5 ${energy < estimatedPages ? "text-rose-500" : "text-amber-500"}`} fill="currentColor" />
+                      <span>{energy}</span>
+                    </button>
+                    {/* Tooltip */}
+                    <div className={`absolute top-full right-0 mt-2 w-48 px-3 py-2.5 rounded-xl border shadow-xl text-[11px] leading-relaxed pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[100] ${D ? "bg-[#18181b] border-[#ffffff14] text-white/80" : "bg-white border-gray-200 text-gray-600"}`}>
+                      <p className="font-bold mb-1">⚡ Energi Kamu</p>
+                      <p>1 energi = 1 halaman generate.</p>
+                      <p className="mt-1">Klik untuk Top Up lebih banyak energi.</p>
+                      {energy < estimatedPages && (
+                        <p className={`mt-1.5 font-semibold ${D ? "text-rose-400" : "text-rose-500"}`}>
+                          Tidak cukup untuk {estimatedPages} halaman!
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 )}
                 <button
                   onClick={() => setShowShortcuts(true)}
@@ -3884,7 +3918,9 @@ export default function Home() {
                   x: sidebarOpen ? 0 : -20
                 }}
                 transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                ref={sidebarScrollRef}
                 className="sidebar-scroll-container flex-1 overflow-y-auto pb-8 scrollbar-thin w-[288px] 2xl:w-[320px] 3xl:w-[380px] 4xl:w-[440px]"
+                onScroll={(e) => { sidebarScrollPosRef.current = e.currentTarget.scrollTop; }}
               >
                 {renderSidebarContent()}
               </motion.div>
@@ -4080,6 +4116,29 @@ export default function Home() {
                                 }`}>
                               <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
                               <span>Hapus</span>
+                            </button>
+                          </MagneticHover>
+
+                          {/* Copy Semua Teks */}
+                          <MagneticHover isApple={isAppleDevice} className="flex-shrink-0">
+                            <button
+                              onClick={() => {
+                                if (!text.trim()) return;
+                                navigator.clipboard.writeText(text).then(() => {
+                                  toast.success("Semua teks berhasil disalin! 📋");
+                                }).catch(() => {
+                                  toast.error("Gagal menyalin teks");
+                                });
+                              }}
+                              disabled={!text.trim()}
+                              className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap ${!text.trim()
+                                ? "opacity-35 cursor-not-allowed " + c.btn
+                                : D
+                                  ? "bg-sky-500/10 text-sky-400 border-sky-500/30 hover:bg-sky-500/20"
+                                  : "bg-sky-50 text-sky-600 border-sky-200 hover:bg-sky-100"
+                                }`}>
+                              <Copy className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>Salin Teks</span>
                             </button>
                           </MagneticHover>
 
@@ -4729,6 +4788,39 @@ export default function Home() {
                                 {/* Render Buku 3D dari hasil Memo yang legal di atas */}
                                 {memoizedFlipBook}
                               </motion.div>
+                            </motion.div>
+                          );
+                        }
+
+                        // STATE ERROR
+                        if (generateError && generatedPages.length === 0) {
+                          return (
+                            <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                              className="flex items-center justify-center min-h-full p-8 py-16">
+                              <div className="text-center max-w-sm">
+                                <div className={`w-16 h-16 mx-auto mb-5 rounded-2xl flex items-center justify-center ${D ? "bg-red-500/15" : "bg-red-50"}`}>
+                                  <span className="text-3xl">⚠️</span>
+                                </div>
+                                <p className={`text-base font-bold mb-2 ${D ? "text-red-400" : "text-red-600"}`}>
+                                  Generate Gagal
+                                </p>
+                                <p className={`text-[12px] leading-relaxed mb-6 px-4 ${D ? "text-white/50" : "text-gray-500"}`}>
+                                  {generateError}
+                                </p>
+                                <div className="flex flex-col gap-2">
+                                  <button
+                                    onClick={() => { setGenerateError(null); handleGenerate(); }}
+                                    className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r ${c.accent} text-white hover:opacity-90 active:scale-95 transition-all`}>
+                                    <RefreshCw className="w-4 h-4" />
+                                    Coba Lagi
+                                  </button>
+                                  <button
+                                    onClick={() => setGenerateError(null)}
+                                    className={`px-6 py-2 rounded-xl text-xs font-medium border transition-colors ${c.btn}`}>
+                                    Tutup
+                                  </button>
+                                </div>
+                              </div>
                             </motion.div>
                           );
                         }
