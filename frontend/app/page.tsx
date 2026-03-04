@@ -5066,7 +5066,7 @@ export default function Home() {
                     placeholder="Ketik atau paste teks di sini..."
                     className={`flex-1 w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-colors duration-300 outline-none border ${D
                       ? "bg-[#0f0f1a] border-[#ffffff12] text-white placeholder-white/25 caret-violet-400 focus:border-violet-500/50 focus:bg-[#13131f]"
-                      : "bg-white/70 border-violet-200 text-gray-900 placeholder-violet-300/60 caret-violet-500 focus:border-violet-400 focus:bg-white/90"
+                      : "bg-violet-50 border-violet-200 text-gray-900 placeholder-violet-300/60 caret-violet-500 focus:border-violet-400 focus:bg-white focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
                       }`}
                     style={{
                       minHeight: "280px",
