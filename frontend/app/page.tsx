@@ -914,6 +914,7 @@ export default function Home() {
   const [swipeFeedback, setSwipeFeedback] = useState<'left' | 'right' | null>(null);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [generateSuccess, setGenerateSuccess] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [contextMenuPage, setContextMenuPage] = useState<GeneratedPage | null>(null);
@@ -1011,6 +1012,8 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (!text.trim()) return;
+    setAutoSaveStatus('saving');
     const timer = setTimeout(async () => {
       // 1. Simpan di penyimpanan lokal browser
       localStorage.setItem("hw_draft_text", text);
@@ -1028,7 +1031,9 @@ export default function Home() {
           console.warn("Gagal auto-save ke cloud", err);
         }
       }
-    }, 1500); // Jeda 1.5 detik setelah berhenti mengetik agar tidak spam database
+      setAutoSaveStatus('saved');
+      setTimeout(() => setAutoSaveStatus('idle'), 2000);
+    }, 1500);
 
     return () => clearTimeout(timer);
   }, [text, user]);
@@ -3915,50 +3920,68 @@ export default function Home() {
                       <span className={`font-semibold ${D ? "text-indigo-400" : "text-indigo-600"}`}>{wordCount.toLocaleString()}</span> kata
                     </span>
 
-                    <motion.button
-                      id="generate-btn"
-                      onClick={handleGenerate}
-                      disabled={isGenerating || !text.trim() || !selectedFolio}
-                      whileHover={!(isGenerating || !text.trim() || !selectedFolio) ? { y: -1 } : {}}
-                      whileTap={!(isGenerating || !text.trim() || !selectedFolio) ? { scale: 0.97 } : {}}
-                      className={`btn-ripple relative flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl font-bold text-xs min-w-[110px] overflow-hidden ${isGenerating || !text.trim() || !selectedFolio
-                        ? D ? "bg-[#ffffff05] text-white/30 cursor-not-allowed border border-[#ffffff0a]" : "bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-200"
-                        : generateSuccess
-                          ? "bg-emerald-500 text-white shadow-emerald-500/30 shadow-lg"
-                          : `bg-gradient-to-r ${c.accent} text-white btn-generate-idle btn-generate-pulse`
-                        } ${isGenerating ? 'btn-generate-active' : ''}`}>
+                    <div className="relative group">
+                      <motion.button
+                        id="generate-btn"
+                        onClick={handleGenerate}
+                        disabled={isGenerating || !text.trim() || !selectedFolio}
+                        whileHover={!(isGenerating || !text.trim() || !selectedFolio) ? { y: -1 } : {}}
+                        whileTap={!(isGenerating || !text.trim() || !selectedFolio) ? { scale: 0.97 } : {}}
+                        className={`btn-ripple relative flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl font-bold text-xs min-w-[110px] overflow-hidden ${isGenerating || !text.trim() || !selectedFolio
+                          ? D ? "bg-[#ffffff05] text-white/30 cursor-not-allowed border border-[#ffffff0a]" : "bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-200"
+                          : generateSuccess
+                            ? "bg-emerald-500 text-white shadow-emerald-500/30 shadow-lg"
+                            : `bg-gradient-to-r ${c.accent} text-white btn-generate-idle btn-generate-pulse`
+                          } ${isGenerating ? 'btn-generate-active' : ''}`}>
+                        {/* Progress fill background */}
+                        {isGenerating && (
+                          <div
+                            className="absolute inset-0 bg-white/15 transition-[width] duration-300 ease-out"
+                            style={{ width: `${generateProgress}%` }}
+                          />
+                        )}
 
-                      <div className="relative z-10 flex items-center gap-1.5">
-                        {isGenerating ? (
-                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="2.5" />
-                            <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="2.5"
-                              strokeDasharray={`${2 * Math.PI * 10}`}
-                              strokeDashoffset={`${2 * Math.PI * 10 * (1 - generateProgress / 100)}`}
-                              strokeLinecap="round"
-                              style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', transition: 'stroke-dashoffset 0.4s ease' }}
-                            />
-                          </svg>
-                        ) : generateSuccess ? (
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        ) : (
-                          <Sparkles className="w-3.5 h-3.5" />
-                        )}
-                        <span>
-                          {isGenerating
-                            ? `${Math.round(generateProgress)}%`
-                            : generateSuccess
-                              ? 'Selesai!'
-                              : 'Generate'
-                          }
-                        </span>
-                        {!isGenerating && estimatedPages > 1 && (
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${D ? "bg-black/20" : "bg-white/25"}`}>{estimatedPages}</span>
-                        )}
+                        <div className="relative z-10 flex items-center gap-1.5">
+                          {isGenerating ? (
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+                              <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="2.5" />
+                              <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="2.5"
+                                strokeDasharray={`${2 * Math.PI * 10}`}
+                                strokeDashoffset={`${2 * Math.PI * 10 * (1 - generateProgress / 100)}`}
+                                strokeLinecap="round"
+                                style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', transition: 'stroke-dashoffset 0.4s ease' }}
+                              />
+                            </svg>
+                          ) : generateSuccess ? (
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : (
+                            <Sparkles className="w-3.5 h-3.5" />
+                          )}
+                          <span>
+                            {isGenerating
+                              ? `${Math.round(generateProgress)}%`
+                              : generateSuccess
+                                ? 'Selesai!'
+                                : 'Generate'
+                            }
+                          </span>
+                          {!isGenerating && estimatedPages > 1 && (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${D ? "bg-black/20" : "bg-white/25"}`}>{estimatedPages}</span>
+                          )}
+                        </div>
+                      </motion.button>
+                      {/* Tooltip shortcut */}
+                      <div className={`absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap
+    opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50
+    flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-medium border shadow-lg
+    ${D ? "bg-[#09090b] border-white/10 text-white/50" : "bg-white border-gray-200 text-gray-500 shadow-md"}`}>
+                        <kbd className={`px-1 rounded text-[8px] font-mono ${D ? "bg-white/8" : "bg-gray-100"}`}>Ctrl</kbd>
+                        <span>+</span>
+                        <kbd className={`px-1 rounded text-[8px] font-mono ${D ? "bg-white/8" : "bg-gray-100"}`}>↵</kbd>
                       </div>
-                    </motion.button>
+                    </div>
                   </div>
                 </div>
 
@@ -4132,6 +4155,36 @@ export default function Home() {
 
                         </div>
                       </div>
+
+                      {/* Auto-save indicator */}
+                      <AnimatePresence>
+                        {autoSaveStatus !== 'idle' && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -6 }}
+                            transition={{ duration: 0.2 }}
+                            className="flex items-center justify-end px-1"
+                          >
+                            <div className={`flex items-center gap-1.5 text-[10px] font-medium transition-colors ${autoSaveStatus === 'saving'
+                              ? c.ts
+                              : D ? 'text-emerald-400' : 'text-emerald-600'
+                              }`}>
+                              {autoSaveStatus === 'saving' ? (
+                                <>
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                  <span>Menyimpan...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>Tersimpan</span>
+                                </>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
 
                       {/* Baris 2: Counter karakter + estimasi halaman */}
                       <div className={`flex items-center justify-between px-1`}>
@@ -4767,12 +4820,43 @@ export default function Home() {
                           <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             className="flex items-center justify-center min-h-full p-8 py-16">
                             <div className="text-center max-w-sm m-auto">
-                              <div className="relative w-24 h-24 mx-auto mb-8 mt-6 flex items-center justify-center">
+                              <div className="relative w-32 h-32 mx-auto mb-8 mt-6 flex items-center justify-center">
+                                {/* Glow background */}
                                 <div className={`absolute inset-0 rounded-3xl ${D ? "bg-gradient-to-br from-violet-900/40 to-indigo-900/40" : "bg-gradient-to-br from-violet-100 to-indigo-100"}`} />
-                                <PenTool
-                                  className={`relative z-10 w-10 h-10 ${D ? "text-violet-400/70" : "text-violet-500"}`}
-                                  style={{ animation: "bounce 2s ease-in-out infinite" }}
-                                />
+
+                                {/* SVG animasi menulis */}
+                                <svg viewBox="0 0 80 80" className="relative z-10 w-20 h-20">
+                                  {/* Kertas */}
+                                  <rect x="15" y="10" width="42" height="55" rx="4"
+                                    className={D ? "fill-white/8 stroke-white/20" : "fill-violet-50 stroke-violet-200"}
+                                    strokeWidth="1.5"
+                                  />
+                                  {/* Garis-garis teks yang "menulis sendiri" */}
+                                  {[20, 27, 34, 41, 48].map((y, i) => (
+                                    <line
+                                      key={i}
+                                      x1="22" y1={y} x2="50" y2={y}
+                                      className={D ? "stroke-violet-400/60" : "stroke-violet-400"}
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      style={{
+                                        strokeDasharray: 28,
+                                        strokeDashoffset: 28,
+                                        animation: `drawLine 0.4s ease-out ${0.3 + i * 0.15}s forwards, linePulse 2s ease-in-out ${1.5 + i * 0.15}s infinite`
+                                      }}
+                                    />
+                                  ))}
+                                  {/* Pena */}
+                                  <g style={{ animation: 'penMove 2s ease-in-out 0.2s infinite' }}>
+                                    <line x1="52" y1="18" x2="44" y2="52"
+                                      className={D ? "stroke-violet-400" : "stroke-violet-500"}
+                                      strokeWidth="2.5" strokeLinecap="round"
+                                    />
+                                    <polygon points="44,52 42,58 48,54"
+                                      className={D ? "fill-violet-400" : "fill-violet-500"}
+                                    />
+                                  </g>
+                                </svg>
                               </div>
 
                               <p className={`text-base font-bold mb-2 ${D ? "text-white/70" : "text-gray-700"}`}>
