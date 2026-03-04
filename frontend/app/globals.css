@@ -255,20 +255,6 @@ html:not(.dark) .bg-white {
   background-color: rgba(253, 252, 255, 0.95);
 }
 
-/* Input & textarea di light mode — bukan putih mentah */
-html:not(.dark) input:not([type="color"]):not([type="radio"]):not([type="checkbox"]),
-html:not(.dark) textarea {
-  background-color: rgba(250, 248, 255, 0.9) !important;
-  border-color: rgba(167, 139, 250, 0.3) !important;
-}
-
-html:not(.dark) input:not([type="color"]):focus,
-html:not(.dark) textarea:focus {
-  background-color: rgba(255, 255, 255, 0.98) !important;
-  border-color: rgba(139, 92, 246, 0.5) !important;
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.08) !important;
-}
-
 /* Dropdown dan modal di light mode */
 html:not(.dark) .bg-white.border-violet-200,
 html:not(.dark) [class*="bg-white"][class*="border-gray-200"] {
