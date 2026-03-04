@@ -988,48 +988,6 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!selectedFolio || !selectedFont) return;
-    if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
-    previewDebounceRef.current = setTimeout(async () => {
-      // Skip request jika parameter sama persis dengan preview sebelumnya
-      const previewHash = `${selectedFont}-${selectedFolio}-${config.color}-${config.fontSize}-${config.wordSpacing}-${slantAngle}-${writeSpeed}`;
-      if (previewHash === lastPreviewHashRef.current) return;
-      lastPreviewHashRef.current = previewHash;
-
-      setIsLoadingPreview(true);
-      try {
-        const res = await fetch(`${API_URL}/api/preview`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fontId: selectedFont,
-            folioId: selectedFolio,
-            text: text.slice(0, 60) || "Contoh tulisan tangan...",
-            fontSize: config.fontSize,
-            color: config.color,
-            wordSpacing: config.wordSpacing,
-            slantAngle,
-            writeSpeed,
-          }),
-        });
-
-        // Mencegah parsing JSON jika response error (seperti 400 Bad Request)
-        if (!res.ok) {
-          console.warn("Backend belum siap merender preview (Folio/Font belum tersedia).");
-          setIsLoadingPreview(false);
-          return;
-        }
-
-        const data = await res.json();
-        if (data.image) setLivePreviewUrl(data.image);
-      } catch (err) {
-        console.warn("Gagal terhubung ke API Preview.");
-      }
-      finally { setIsLoadingPreview(false); }
-    }, 800);
-  }, [selectedFont, selectedFolio, config.color, config.fontSize, config.wordSpacing, slantAngle, writeSpeed]);
-
-  useEffect(() => {
     const savedText = localStorage.getItem("hw_draft_text");
     if (savedText) {
       // Auto-trim draft jika terlalu panjang (> 30.000 karakter) agar localStorage tidak penuh
@@ -4394,27 +4352,6 @@ export default function Home() {
                     style={{ width: `${Math.min(100, (estimatedPages / 10) * 100)}%` }}
                   />
                 </div>
-                {/* Live Preview Strip */}
-                {livePreviewUrl && (
-                  <div className={`relative rounded-xl overflow-hidden border mx-3 mb-3 ${c.pillBorder} ${isLoadingPreview ? "opacity-50" : "opacity-100"} transition-opacity duration-300`}>
-                    <img src={livePreviewUrl} alt="Preview" className="w-full h-24 lg:h-32 xl:h-40 2xl:h-48 3xl:h-56 object-cover object-top" />
-                    <div className={`absolute top-1.5 right-1.5 flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] ${D ? "bg-black/70 text-white/60" : "bg-white/85 text-gray-500"}`}>
-                      {isLoadingPreview && <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse inline-block" />}
-                      Live Preview
-                    </div>
-                    {isLoadingPreview && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[1px]">
-                        <Loader2 className="w-4 h-4 animate-spin text-violet-400" />
-                      </div>
-                    )}
-                    {currentFont && (
-                      <div className={`absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-[9px] font-medium ${D ? "bg-black/70 text-violet-300" : "bg-white/85 text-violet-600"}`}
-                        style={{ fontFamily: FONT_FAMILY_MAP[currentFont.name] || 'cursive' }}>
-                        {currentFont.name}
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
 
               {/* ══ PANEL 3: OUTPUT VIEWER ══ */}
@@ -5127,13 +5064,10 @@ export default function Home() {
                       setText(val);
                     }}
                     placeholder="Ketik atau paste teks di sini..."
-                    className={`flex-1 w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-colors duration-300 outline-none border ${isAppleDevice ? (D
-                      ? "bg-black/50 backdrop-blur-3xl border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50 shadow-inner"
-                      : "bg-white/40 backdrop-blur-3xl border-white/60 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400 shadow-[0_4px_24px_rgba(0,0,0,0.04)]"
-                    ) : (D
-                      ? "bg-black/50 border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50"
-                      : "bg-gray-50/50 border-gray-200/80 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400"
-                    )}`}
+                    className={`flex-1 w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-colors duration-300 outline-none border ${D
+                      ? "bg-[#0f0f1a] border-[#ffffff12] text-white placeholder-white/25 caret-violet-400 focus:border-violet-500/50 focus:bg-[#13131f]"
+                      : "bg-white border-violet-200 text-gray-900 placeholder-violet-300/60 caret-violet-500 focus:border-violet-400 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
+                      }`}
                     style={{
                       minHeight: "280px",
                       fontFamily: currentFont ? (FONT_FAMILY_MAP[currentFont.name] || currentFont.name) : "inherit"
