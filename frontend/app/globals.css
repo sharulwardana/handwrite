@@ -197,21 +197,92 @@ input[type="color"]::-webkit-color-swatch {
   border-radius: 6px;
 }
 
-/* ── SAFE AREA UNTUK MOBILE (iOS) ── */
+/* ── SAFE AREA UNTUK MOBILE (iOS 26 / Dynamic Island / Notch) ── */
+
+/* html/body mengisi SELURUH layar termasuk area poni & bawah */
+html {
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .safe-area-pb {
-    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  /* Fixed bottom dock di atas home indicator */
+  .mobile-bottom-dock {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
 }
 
 /* Textarea visibility di light mode */
 .light-textarea {
   color: #1a1a1a;
-  background-color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .dark .light-textarea {
   color: #e5e7eb;
   background-color: transparent;
+}
+
+/* ── LIGHT MODE WORKSPACE BACKGROUNDS ─────────────────────────────────
+   Mengganti putih polos dengan gradient violet/indigo yang lembut
+   untuk semua ukuran layar (S, M, L, Tablet, Laptop, Laptop L, 4K)
+   ─────────────────────────────────────────────────────────────────── */
+
+/* Panel sidebar di light mode — bukan putih polos */
+html:not(.dark) .bg-\[#FAFAFB\]\/60,
+html:not(.dark) [class*="bg-\[#FAFAFB\]"] {
+  background-color: rgba(245, 243, 255, 0.7) !important;
+}
+
+/* Output viewer workspace di light mode — latar kerja yang nyaman */
+html:not(.dark) .bg-gradient-to-br.from-sky-100\/80 {
+  background: linear-gradient(
+    135deg,
+    rgba(224, 231, 255, 0.7) 0%,
+    rgba(237, 233, 254, 0.6) 35%,
+    rgba(221, 214, 254, 0.5) 65%,
+    rgba(196, 181, 253, 0.4) 100%
+  ) !important;
+}
+
+/* Card/panel backgrounds di light mode — hangat, tidak "RS" */
+html:not(.dark) .bg-white {
+  background-color: rgba(253, 252, 255, 0.95);
+}
+
+/* Input & textarea di light mode — bukan putih mentah */
+html:not(.dark) input:not([type="color"]):not([type="radio"]):not([type="checkbox"]),
+html:not(.dark) textarea {
+  background-color: rgba(250, 248, 255, 0.9) !important;
+  border-color: rgba(167, 139, 250, 0.3) !important;
+}
+
+html:not(.dark) input:not([type="color"]):focus,
+html:not(.dark) textarea:focus {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  border-color: rgba(139, 92, 246, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.08) !important;
+}
+
+/* Dropdown dan modal di light mode */
+html:not(.dark) .bg-white.border-violet-200,
+html:not(.dark) [class*="bg-white"][class*="border-gray-200"] {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(250, 247, 255, 0.96) 100%
+  );
+}
+
+/* Header di light mode — subtle violet tint */
+html:not(.dark) header {
+  background: rgba(250, 248, 255, 0.85) !important;
+  border-bottom-color: rgba(167, 139, 250, 0.2) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1654,7 +1725,7 @@ textarea, input {
   backface-visibility: hidden;
 }
 
-/* ── FLOATING PARTICLES LANDING ─────────────────────── */
+/* ── AURORA BACKGROUND LANDING ─────────────────────────── */
 .aurora-bg-dark::before,
 .aurora-bg-light::before {
   content: '';
@@ -1754,4 +1825,128 @@ html:not(.dark) .skeleton::after {
 .btn-generate-active::before {
   animation: none;
   opacity: 0;
+}
+/* ═══════════════════════════════════════════════════════════════════
+   iOS 26 / iPhone — FULL BLEED (Poni, Dynamic Island, Home Indicator)
+   Pastikan app mengisi seluruh layar fisik termasuk zona notch & bawah
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Seluruh halaman mulai dari tepi fisik layar, bukan dari bawah status bar */
+@supports (padding: max(0px)) {
+  body {
+    /* Reset padding body agar tidak double dengan komponen */
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Header sticky harus "naik" ke zona status bar (poni / Dynamic Island) */
+  header.sticky {
+    padding-top: env(safe-area-inset-top, 0px);
+    /* Tinggi total header = 56px konten + tinggi status bar */
+    min-height: calc(56px + env(safe-area-inset-top, 0px));
+  }
+
+  /* Isi header (flex row) tetap di bawah zona aman */
+  header.sticky > div {
+    margin-top: 0;
+  }
+
+  /* Fixed bottom elements (dock, floating island) harus di atas home indicator */
+  .fixed.bottom-0,
+  [class*="fixed"][class*="bottom-0"],
+  [class*="fixed"][class*="bottom-8"] {
+    padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Background full-bleed iOS — warna meluas ke zona status bar */
+  .min-h-screen,
+  .min-h-\[100dvh\] {
+    min-height: 100dvh;
+  }
+
+  /* Landing page — full bleed ke poni */
+  .relative.min-h-\[100dvh\] {
+    min-height: 100dvh;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+/* ── Khusus iPhone: Background app meluas ke Dynamic Island zone ── */
+@media only screen and (max-width: 430px) {
+  /* Root app container fill penuh */
+  #__next, [id="__next"] {
+    min-height: 100dvh;
+  }
+
+  /* Panel layout (editor + output) — kurangi tinggi dengan safe area */
+  .flex.overflow-hidden[style*="height: calc(100dvh"] {
+    height: calc(100dvh - 56px - env(safe-area-inset-top, 0px)) !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LIGHT MODE — Background Input & Output (bukan putih polos)
+   Berlaku untuk semua ukuran: S, M, L, Tablet, Laptop, Laptop L, 4K
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Page background light mode — violet misty, bukan #FAFAFB flat */
+html:not(.dark) body {
+  background: linear-gradient(
+    160deg,
+    #f5f3ff 0%,
+    #eef2ff 30%,
+    #f0f4ff 60%,
+    #faf5ff 100%
+  ) fixed;
+}
+
+/* Workspace output viewer (area hasil) — bukan putih/abu-abu datar */
+html:not(.dark) .bg-\[#060610\] {
+  background: linear-gradient(
+    135deg,
+    #ede9fe 0%,
+    #e0e7ff 40%,
+    #ddd6fe 70%,
+    #c4b5fd 100%
+  ) !important;
+}
+
+/* Panel editor (panel 2) di light mode — warm cream-violet */
+html:not(.dark) .bg-\[#FAFAFB\]\/60 {
+  background: rgba(245, 243, 255, 0.75) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Sidebar light mode — violet tint halus */
+html:not(.dark) aside {
+  background: rgba(243, 240, 255, 0.8) !important;
+}
+
+/* Card section di sidebar light mode */
+html:not(.dark) .bg-white\/60 {
+  background: rgba(250, 248, 255, 0.8) !important;
+}
+
+/* Stats bar bawah editor */
+html:not(.dark) .bg-gradient-to-b.from-violet-50 {
+  background: linear-gradient(
+    to bottom,
+    rgba(237, 233, 254, 0.9),
+    rgba(224, 231, 255, 0.95)
+  ) !important;
+}
+
+/* Mobile result area di light mode */
+@media (max-width: 1023px) {
+  html:not(.dark) .flex-1.overflow-y-auto.pb-24 {
+    background: linear-gradient(
+      160deg,
+      #e8e4fd 0%,
+      #e0e7ff 50%,
+      #ddd6fe 100%
+    ) !important;
+  }
 }
