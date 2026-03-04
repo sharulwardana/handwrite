@@ -14,6 +14,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { useDropzone } from "react-dropzone";
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
 import dynamic from "next/dynamic";
+import confetti from "canvas-confetti";
 import { Caveat } from "next/font/google";
 import "react-image-crop/dist/ReactCrop.css";
 import type { Crop, PixelCrop } from "react-image-crop";
@@ -193,6 +194,45 @@ function SidebarSection({
   );
 }
 
+/* ─── TYPEWRITER TEXT COMPONENT ─────────────────────── */
+function TypewriterText({ texts, isDark }: { texts: string[]; isDark: boolean }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [displayed, setDisplayed] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const current = texts[currentIndex];
+    let timeout: ReturnType<typeof setTimeout>;
+
+    if (!isDeleting && displayed.length < current.length) {
+      timeout = setTimeout(() => {
+        setDisplayed(current.slice(0, displayed.length + 1));
+      }, 45);
+    } else if (!isDeleting && displayed.length === current.length) {
+      timeout = setTimeout(() => setIsDeleting(true), 1800);
+    } else if (isDeleting && displayed.length > 0) {
+      timeout = setTimeout(() => {
+        setDisplayed(current.slice(0, displayed.length - 1));
+      }, 25);
+    } else if (isDeleting && displayed.length === 0) {
+      setIsDeleting(false);
+      setCurrentIndex((i) => (i + 1) % texts.length);
+    }
+
+    return () => clearTimeout(timeout);
+  }, [displayed, isDeleting, currentIndex, texts]);
+
+  return (
+    <p className={`text-sm font-bold ${isDark ? "text-white/90" : "text-gray-800"}`}>
+      {displayed}
+      <motion.span
+        animate={{ opacity: [1, 0] }}
+        transition={{ duration: 0.5, repeat: Infinity, repeatType: "reverse" }}
+        className={isDark ? "text-violet-400" : "text-violet-500"}
+      >|</motion.span>
+    </p>
+  );
+}
 
 /* ─── MAIN ───────────────────────────────────────────── */
 // Perbaikan: Memastikan API_URL selalu memiliki protokol yang benar
@@ -816,6 +856,7 @@ export default function Home() {
   const [showKeyboardHint, setShowKeyboardHint] = useState(false);
   const [activePageIndex, setActivePageIndex] = useState(0);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [showMobileExportSheet, setShowMobileExportSheet] = useState(false);
   const exportDropdownRef = useRef<HTMLDivElement>(null);
   const exportBtnRef = useRef<HTMLButtonElement>(null);
   const [exportDropdownPos, setExportDropdownPos] = useState<{ top: number; left: number; height: number; width: number } | null>(null);
@@ -878,23 +919,66 @@ export default function Home() {
   const swipeStartXRef = useRef<number | null>(null);
   // Helper: navigasi halaman yang aman — priority: FlipBook API → setState fallback
   const navigateToPage = useCallback((index: number) => {
-    const clampedIndex = Math.max(0, Math.min((generatedPages.length || streamedPages.length) - 1, index));
+    const clampedIndex = Math.max(0, Math.min(
+      (generatedPages.length || streamedPages.length) - 1, index
+    ));
+    if (clampedIndex === activePageIndex) return;
 
-    // Audio feedback saat ganti halaman (Apple only, sangat halus)
-    if (isAppleDevice && typeof AudioContext !== 'undefined' && clampedIndex !== activePageIndex) {
+    // ── PAPER SOUND EFFECT (Web Audio API — no library needed) ──
+    if (typeof AudioContext !== 'undefined' || typeof (window as any).webkitAudioContext !== 'undefined') {
       try {
-        const ctx = new AudioContext();
-        const oscillator = ctx.createOscillator();
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AudioCtx();
+
+        // Buffer noise putih pendek — simulasi suara kertas
+        const bufferSize = ctx.sampleRate * 0.06; // 60ms
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+
+        for (let i = 0; i < bufferSize; i++) {
+          // White noise yang makin pelan di akhir (fade out)
+          const envelope = 1 - (i / bufferSize);
+          data[i] = (Math.random() * 2 - 1) * envelope * envelope;
+        }
+
+        // Source node
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+
+        // Filter — potong frekuensi rendah, sisakan "kertas"
+        const highpass = ctx.createBiquadFilter();
+        highpass.type = 'highpass';
+        highpass.frequency.value = 2000;
+
+        const bandpass = ctx.createBiquadFilter();
+        bandpass.type = 'bandpass';
+        bandpass.frequency.value = 4000;
+        bandpass.Q.value = 0.8;
+
+        // Gain — sangat pelan agar tidak mengganggu
         const gainNode = ctx.createGain();
-        oscillator.connect(gainNode);
+        gainNode.gain.setValueAtTime(0.04, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+
+        // Hubungkan: source → highpass → bandpass → gain → output
+        source.connect(highpass);
+        highpass.connect(bandpass);
+        bandpass.connect(gainNode);
         gainNode.connect(ctx.destination);
-        oscillator.frequency.setValueAtTime(800, ctx.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.08);
-        gainNode.gain.setValueAtTime(0.03, ctx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
-        oscillator.start(ctx.currentTime);
-        oscillator.stop(ctx.currentTime + 0.08);
-      } catch { }
+
+        source.start(ctx.currentTime);
+        source.stop(ctx.currentTime + 0.06);
+
+        // Cleanup context setelah selesai
+        source.onended = () => ctx.close();
+      } catch {
+        // Silent fail — audio tidak wajib
+      }
+    }
+
+    // Haptic feedback di mobile
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(5);
     }
 
     setActivePageIndex(clampedIndex);
@@ -906,12 +990,15 @@ export default function Home() {
         flip.flip(clampedIndex);
       }
     } catch { }
-  }, [generatedPages.length, streamedPages.length, isAppleDevice, activePageIndex]);
+  }, [generatedPages.length, streamedPages.length, activePageIndex]);
   const swipeStartYRef = useRef<number | null>(null);
   const pinchStartDistRef = useRef<number | null>(null);
   const pinchStartZoomRef = useRef<number>(100);
   const [mobileZoom, setMobileZoom] = useState(100);
   const [swipeFeedback, setSwipeFeedback] = useState<'left' | 'right' | null>(null);
+  const [rubberBandOffset, setRubberBandOffset] = useState(0);
+  const [isRubberBanding, setIsRubberBanding] = useState(false);
+  const [themeTransitioning, setThemeTransitioning] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [generateSuccess, setGenerateSuccess] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -1432,6 +1519,7 @@ export default function Home() {
 
               toast.success(`✅ ${collectedPages.length} halaman selesai!`, { duration: 3000 });
               setGenerateSuccess(true);
+              fireConfetti();
               setTimeout(() => setGenerateSuccess(false), 2000);
               // Tampilkan keyboard hint sekali saja
               if (!localStorage.getItem("hw_kb_hint_shown") && !isMobileView) {
@@ -1980,6 +2068,46 @@ export default function Home() {
       setLongPressTimer(null);
     }
   };
+
+  const fireConfetti = useCallback(() => {
+    // Tembakan pertama — dari kiri
+    confetti({
+      particleCount: 60,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0, y: 0.7 },
+      colors: ["#7c3aed", "#6366f1", "#8b5cf6", "#a78bfa", "#c4b5fd", "#ffffff"],
+      ticks: 200,
+      gravity: 0.8,
+      scalar: 0.9,
+    });
+
+    // Tembakan kedua — dari kanan
+    confetti({
+      particleCount: 60,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1, y: 0.7 },
+      colors: ["#7c3aed", "#6366f1", "#818cf8", "#a5b4fc", "#e0e7ff", "#ffffff"],
+      ticks: 200,
+      gravity: 0.8,
+      scalar: 0.9,
+    });
+
+    // Tembakan ketiga — dari tengah, lebih kecil
+    setTimeout(() => {
+      confetti({
+        particleCount: 30,
+        angle: 90,
+        spread: 70,
+        origin: { x: 0.5, y: 0.6 },
+        colors: ["#fbbf24", "#f59e0b", "#fcd34d", "#ffffff"],
+        ticks: 150,
+        gravity: 1,
+        scalar: 0.7,
+      });
+    }, 300);
+  }, []);
 
   const handleCopySeed = () => {
     navigator.clipboard.writeText(String(seed)).then(() => {
@@ -2712,6 +2840,26 @@ export default function Home() {
 
   return (
     <div className={`min-h-screen ${c.page} ${platformTheme}`} style={{ fontFamily: "'DM Sans', system-ui, sans-serif", contain: "layout style" }} suppressHydrationWarning>
+
+      {/* ── CINEMATIC THEME TRANSITION OVERLAY ── */}
+      <AnimatePresence>
+        {themeTransitioning && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.08 }}
+            className="fixed inset-0 z-[999] pointer-events-none"
+            style={{
+              background: isDark
+                ? "rgba(255, 255, 255, 0.12)"
+                : "rgba(0, 0, 0, 0.15)",
+              backdropFilter: "blur(2px)",
+              WebkitBackdropFilter: "blur(2px)",
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── TOASTER ── */}
       <Toaster
@@ -3560,6 +3708,126 @@ export default function Home() {
             )}
           </AnimatePresence>
 
+          {/* ── MOBILE EXPORT BOTTOM SHEET ── */}
+          <AnimatePresence>
+            {showMobileExportSheet && (
+              <div className="fixed inset-0 z-[180] lg:hidden">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                  onClick={() => setShowMobileExportSheet(false)}
+                />
+                <motion.div
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                  drag="y"
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  dragElastic={{ top: 0, bottom: 0.4 }}
+                  onDragEnd={(_, info) => {
+                    if (info.offset.y > 80) setShowMobileExportSheet(false);
+                  }}
+                  className={`absolute bottom-0 left-0 right-0 rounded-t-[2rem] border-t shadow-2xl ${isAppleDevice
+                    ? D ? "bg-[#1c1c1e]/95 backdrop-blur-3xl border-white/10" : "bg-white/95 backdrop-blur-3xl border-black/5"
+                    : D ? "bg-[#18181b] border-[#ffffff12]" : "bg-white border-gray-200"
+                    }`}
+                  style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
+                >
+                  {/* Handle */}
+                  <div className="flex justify-center pt-3 pb-1">
+                    <div className={`w-10 h-1 rounded-full ${D ? "bg-white/20" : "bg-gray-300"}`} />
+                  </div>
+
+                  {/* Title */}
+                  <div className="px-5 py-4">
+                    <h3 className={`text-base font-bold ${c.tp}`}>Export Hasil</h3>
+                    <p className={`text-[11px] mt-0.5 ${c.ts}`}>{generatedPages.length} halaman siap diexport</p>
+                  </div>
+
+                  {/* Options */}
+                  <div className="px-4 space-y-2 pb-2">
+                    {[
+                      {
+                        icon: <Download className="w-5 h-5" />,
+                        label: "Download JPG",
+                        desc: "Halaman aktif saja",
+                        color: "violet",
+                        action: () => { handleDownloadSingle(generatedPages[activePageIndex]); setShowMobileExportSheet(false); }
+                      },
+                      {
+                        icon: <Package className="w-5 h-5" />,
+                        label: "Download ZIP",
+                        desc: "Semua halaman dalam satu file",
+                        color: "emerald",
+                        action: () => { handleDownloadZip(); setShowMobileExportSheet(false); }
+                      },
+                      {
+                        icon: <FileDown className="w-5 h-5" />,
+                        label: "Export PDF",
+                        desc: "Siap print & kirim via WA",
+                        color: "amber",
+                        action: () => { handleExportPdf("high"); setShowMobileExportSheet(false); }
+                      },
+                      {
+                        icon: <FileDown className="w-5 h-5" />,
+                        label: "PDF Hemat Kuota",
+                        desc: "Ukuran kecil untuk WhatsApp",
+                        color: "rose",
+                        action: () => { handleExportPdf("low"); setShowMobileExportSheet(false); }
+                      },
+                      {
+                        icon: <FileText className="w-5 h-5" />,
+                        label: "Export Word (.docx)",
+                        desc: "Buka di Microsoft Word",
+                        color: "blue",
+                        action: () => { handleExportDocx(); setShowMobileExportSheet(false); }
+                      },
+                    ].map((item, i) => {
+                      const colorMap: Record<string, string> = {
+                        violet: D ? "bg-violet-500/15 text-violet-400" : "bg-violet-100 text-violet-600",
+                        emerald: D ? "bg-emerald-500/15 text-emerald-400" : "bg-emerald-100 text-emerald-600",
+                        amber: D ? "bg-amber-500/15 text-amber-400" : "bg-amber-100 text-amber-600",
+                        rose: D ? "bg-rose-500/15 text-rose-400" : "bg-rose-100 text-rose-600",
+                        blue: D ? "bg-blue-500/15 text-blue-400" : "bg-blue-100 text-blue-600",
+                      };
+                      return (
+                        <button
+                          key={i}
+                          onClick={item.action}
+                          className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border transition-all active:scale-[0.98] ${D ? "border-[#ffffff08] hover:bg-white/5" : "border-gray-100 hover:bg-gray-50"
+                            }`}
+                        >
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${colorMap[item.color]}`}>
+                            {item.icon}
+                          </div>
+                          <div className="text-left">
+                            <p className={`text-sm font-semibold ${c.tp}`}>{item.label}</p>
+                            <p className={`text-[11px] ${c.ts}`}>{item.desc}</p>
+                          </div>
+                          <ChevronDown className={`w-4 h-4 -rotate-90 ml-auto flex-shrink-0 ${c.ts}`} />
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Cancel */}
+                  <div className="px-4 pt-2">
+                    <button
+                      onClick={() => setShowMobileExportSheet(false)}
+                      className={`w-full py-3.5 rounded-2xl text-sm font-bold transition-colors ${D ? "bg-white/8 text-white hover:bg-white/12" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                    >
+                      Batal
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
           {/* ── APPLE LONG PRESS CONTEXT MENU ── */}
           <AnimatePresence>
             {contextMenuPage && (
@@ -3834,7 +4102,13 @@ export default function Home() {
                   ?
                 </button>
                 <button
-                  onClick={() => setIsDark(!isDark)}
+                  onClick={() => {
+                    setThemeTransitioning(true);
+                    setTimeout(() => {
+                      setIsDark(!isDark);
+                      setTimeout(() => setThemeTransitioning(false), 150);
+                    }, 80);
+                  }}
                   className={`relative w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden border theme-toggle-btn ${isDark
                     ? "bg-[#18181b] border-[#ffffff1a]"
                     : "bg-gradient-to-br from-sky-50 to-amber-50 border-amber-200/50"
@@ -3935,9 +4209,15 @@ export default function Home() {
                           } ${isGenerating ? 'btn-generate-active' : ''}`}>
                         {/* Progress fill background */}
                         {isGenerating && (
-                          <div
-                            className="absolute inset-0 bg-white/15 transition-[width] duration-300 ease-out"
-                            style={{ width: `${generateProgress}%` }}
+                          <motion.div
+                            className="absolute inset-0 rounded-xl"
+                            style={{
+                              background: D
+                                ? "linear-gradient(90deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%)"
+                                : "linear-gradient(90deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.15) 100%)",
+                              width: `${generateProgress}%`,
+                              transition: "width 0.4s ease-out",
+                            }}
                           />
                         )}
 
@@ -3963,7 +4243,7 @@ export default function Home() {
                             {isGenerating
                               ? `${Math.round(generateProgress)}%`
                               : generateSuccess
-                                ? 'Selesai!'
+                                ? '✓ Selesai!'
                                 : 'Generate'
                             }
                           </span>
@@ -4587,22 +4867,56 @@ export default function Home() {
                   {/* Thumbnail Strip Vertikal */}
                   {(generatedPages.length > 1 || isGenerating) && activeTab === "result" && (
                     <div className={`hidden lg:flex flex-col gap-2 p-2 w-[72px] 2xl:w-[88px] 3xl:w-[100px] flex-shrink-0 overflow-y-auto border-r scrollbar-thin ${c.divider} ${D ? "bg-[#09090b]" : "bg-violet-50/80"}`}>
+
+                      {/* Thumbnail halaman yang sudah selesai */}
                       {generatedPages.map((p, idx) => (
-                        <button
-                          key={p.page}
-                          onClick={() => navigateToPage(idx)}
-                          className={`flex-shrink-0 w-full rounded-lg overflow-hidden border-2 transition-colors ${idx === activePageIndex
-                            ? "border-violet-500 shadow-lg shadow-violet-500/25 scale-[1.03]"
-                            : D ? "border-[#ffffff10] hover:border-violet-500/40" : "border-gray-200 hover:border-violet-300"
-                            }`}
-                        >
-                          <img src={p.image} alt={`Hal ${p.page}`} className="w-full object-cover object-top" style={{ aspectRatio: "210/297" }} />
-                          <div className={`text-[8px] text-center py-1 font-mono font-bold transition-colors ${idx === activePageIndex
-                            ? D ? "bg-violet-500/20 text-violet-300" : "bg-violet-100 text-violet-600"
-                            : c.ts}`}>
-                            {idx === activePageIndex ? `● ${p.page}` : p.page}
+                        <div key={p.page} className="relative group/thumb flex-shrink-0 w-full">
+
+                          {/* Tombol thumbnail */}
+                          <button
+                            onClick={() => navigateToPage(idx)}
+                            className={`w-full rounded-lg overflow-hidden border-2 transition-all duration-200 ${idx === activePageIndex
+                              ? "border-violet-500 shadow-lg shadow-violet-500/25 scale-[1.03]"
+                              : D ? "border-[#ffffff10] hover:border-violet-500/40" : "border-gray-200 hover:border-violet-300"
+                              }`}
+                          >
+                            <img
+                              src={p.image}
+                              alt={`Hal ${p.page}`}
+                              className="w-full object-cover object-top"
+                              style={{ aspectRatio: "210/297" }}
+                            />
+                            <div className={`text-[8px] text-center py-1 font-mono font-bold transition-colors ${idx === activePageIndex
+                              ? D ? "bg-violet-500/20 text-violet-300" : "bg-violet-100 text-violet-600"
+                              : c.ts
+                              }`}>
+                              {idx === activePageIndex ? `● ${p.page}` : p.page}
+                            </div>
+                          </button>
+
+                          {/* Hover Preview Popup */}
+                          <div className={`absolute left-full top-0 ml-3 w-[220px] rounded-2xl border shadow-2xl overflow-hidden
+          opacity-0 group-hover/thumb:opacity-100 pointer-events-none
+          transition-all duration-200 scale-95 group-hover/thumb:scale-100
+          z-[80] origin-left ${D
+                              ? "bg-[#13131f] border-[#ffffff14] shadow-[0_24px_48px_rgba(0,0,0,0.6)]"
+                              : "bg-white border-violet-100 shadow-[0_24px_48px_rgba(139,92,246,0.15)]"
+                            }`}>
+                            <img
+                              src={p.image}
+                              alt={`Preview Hal ${p.page}`}
+                              className="w-full object-cover object-top"
+                              style={{ aspectRatio: "210/297" }}
+                            />
+                            <div className={`px-3 py-2 border-t flex items-center justify-between ${D ? "border-[#ffffff08]" : "border-violet-50"}`}>
+                              <span className={`text-[10px] font-bold ${c.tp}`}>Halaman {p.page}</span>
+                              <span className={`text-[9px] px-2 py-0.5 rounded-full ${D ? "bg-violet-500/20 text-violet-400" : "bg-violet-100 text-violet-600"}`}>
+                                Klik untuk buka
+                              </span>
+                            </div>
                           </div>
-                        </button>
+
+                        </div>
                       ))}
 
                       {/* Skeleton halaman yang masih dalam proses generate */}
@@ -4611,13 +4925,17 @@ export default function Home() {
                       }).map((_, idx) => (
                         <div
                           key={`skeleton-${idx}`}
-                          className={`flex-shrink-0 w-full rounded-lg overflow-hidden border-2 ${D ? "border-[#ffffff08]" : "border-gray-100"}`}>
+                          className={`flex-shrink-0 w-full rounded-lg overflow-hidden border-2 ${D ? "border-[#ffffff08]" : "border-gray-100"}`}
+                        >
                           <div
                             className={`w-full relative overflow-hidden ${D ? "bg-white/4" : "bg-gray-50"}`}
-                            style={{ aspectRatio: "210/297" }}>
+                            style={{ aspectRatio: "210/297" }}
+                          >
                             {/* Shimmer sweep */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_1.8s_ease-in-out_infinite]"
-                              style={{ animationDelay: `${idx * 0.15}s` }} />
+                            <div
+                              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_1.8s_ease-in-out_infinite]"
+                              style={{ animationDelay: `${idx * 0.15}s` }}
+                            />
                             <div className="w-full h-full flex flex-col gap-2 p-2 pt-3">
                               {Array.from({ length: 10 }).map((_, i) => (
                                 <motion.div
@@ -4643,6 +4961,7 @@ export default function Home() {
                           </div>
                         </div>
                       ))}
+
                     </div>
                   )}
 
@@ -4669,39 +4988,69 @@ export default function Home() {
                           return (
                             <motion.div key="generating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                               className="flex items-center justify-center h-full min-h-[400px] w-full p-8">
+                              <div className={`relative w-full max-w-md p-8 rounded-2xl border backdrop-blur-sm shadow-2xl flex flex-col gap-5 overflow-hidden ${D ? "bg-[#13131f]/60 border-[#ffffff10]" : "bg-white/60 border-violet-100"}`}>
 
-                              <div className={`relative w-full max-w-md p-8 rounded-2xl border backdrop-blur-sm shadow-2xl flex flex-col gap-4 overflow-hidden ${D ? "bg-[#13131f]/60 border-[#ffffff10]" : "bg-white/60 border-violet-100"}`}>
-                                {/* Efek cahaya lewat di atas skeleton */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-violet-500/10 to-transparent w-[200%] animate-[shimmer_2s_infinite] -translate-x-full" />
+                                {/* Shimmer sweep */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-violet-500/10 to-transparent w-[200%] animate-[shimmer_2s_infinite] -translate-x-full pointer-events-none" />
 
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className="w-10 h-10 rounded-full bg-violet-500/20 flex items-center justify-center animate-pulse">
-                                    <PenTool className="w-5 h-5 text-violet-500" />
+                                {/* Header */}
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-full bg-violet-500/20 flex items-center justify-center">
+                                    <motion.div
+                                      animate={{ rotate: 360 }}
+                                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                    >
+                                      <PenTool className="w-5 h-5 text-violet-500" />
+                                    </motion.div>
                                   </div>
                                   <div>
-                                    <h3 className={`text-sm font-bold bg-gradient-to-r ${c.accent} bg-clip-text text-transparent`}>
-                                      AI Sedang Menulis...
-                                    </h3>
-                                    <p className={`text-[10px] ${c.ts} font-mono tracking-widest uppercase`}>{Math.round(generateProgress)}% Selesai</p>
+                                    <TypewriterText
+                                      texts={["AI Sedang Menulis...", "Meniru gaya tulisanmu...", "Menyesuaikan spasi...", "Hampir selesai..."]}
+                                      isDark={D}
+                                    />
+                                    <p className={`text-[10px] font-mono tracking-widest uppercase mt-0.5 ${c.ts}`}>
+                                      {Math.round(generateProgress)}% — Halaman {streamedPages.length}/{totalStreamPages || estimatedPages}
+                                    </p>
                                   </div>
                                 </div>
 
-                                {/* Skeleton Baris Tulisan */}
-                                <div className="space-y-3 mt-4">
-                                  {[85, 92, 78, 88, 60].map((width, i) => (
-                                    <div key={i} className="flex items-center gap-2">
-                                      {/* Baris utama */}
-                                      <motion.div
-                                        initial={{ width: 0, opacity: 0.3 }}
-                                        animate={{ width: `${width}%`, opacity: 1 }}
-                                        transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse", delay: i * 0.2 }}
-                                        className={`h-2 rounded-full ${D ? "bg-white/10" : "bg-violet-100"}`}
-                                      />
-                                    </div>
+                                {/* Progress bar */}
+                                <div className={`h-1.5 rounded-full overflow-hidden ${D ? "bg-white/8" : "bg-violet-100"}`}>
+                                  <motion.div
+                                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-400"
+                                    animate={{ width: `${generateProgress}%` }}
+                                    transition={{ duration: 0.4, ease: "easeOut" }}
+                                  />
+                                </div>
+
+                                {/* Skeleton baris tulisan tangan */}
+                                <div className="space-y-2.5 mt-2">
+                                  {[85, 92, 78, 88, 65, 72, 90].map((width, i) => (
+                                    <motion.div
+                                      key={i}
+                                      initial={{ width: 0, opacity: 0 }}
+                                      animate={{ width: `${width}%`, opacity: 1 }}
+                                      transition={{ duration: 0.6, delay: i * 0.08, ease: "easeOut" }}
+                                      className={`h-[6px] rounded-full ${D ? "bg-white/10" : "bg-violet-100"}`}
+                                      style={{
+                                        background: D
+                                          ? `linear-gradient(90deg, rgba(139,92,246,0.3) 0%, rgba(255,255,255,0.06) 100%)`
+                                          : `linear-gradient(90deg, rgba(139,92,246,0.25) 0%, rgba(139,92,246,0.05) 100%)`
+                                      }}
+                                    />
                                   ))}
                                 </div>
-                              </div>
 
+                                {/* Cancel button */}
+                                <button
+                                  onClick={() => abortController?.abort()}
+                                  className={`flex items-center justify-center gap-2 w-full py-2 rounded-xl border text-xs font-medium transition-colors mt-1 ${D ? "border-red-500/20 text-red-400 hover:bg-red-500/10" : "border-red-200 text-red-500 hover:bg-red-50"
+                                    }`}
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                  Batalkan Generate
+                                </button>
+                              </div>
                             </motion.div>
                           );
                         }
@@ -5239,27 +5588,72 @@ export default function Home() {
                             if (swipeStartXRef.current === null) return;
                             const deltaX = e.changedTouches[0].clientX - swipeStartXRef.current;
                             const deltaY = e.changedTouches[0].clientY - (swipeStartYRef.current ?? 0);
-                            if (Math.abs(deltaX) < Math.abs(deltaY) || Math.abs(deltaX) < 40) return;
-                            if (deltaX < 0) {
-                              setSwipeFeedback('left');
-                              setActivePageIndex(i => Math.min(activePages.length - 1, i + 1));
-                            } else {
-                              setSwipeFeedback('right');
-                              setActivePageIndex(i => Math.max(0, i - 1));
+
+                            if (Math.abs(deltaX) < Math.abs(deltaY) || Math.abs(deltaX) < 30) {
+                              swipeStartXRef.current = null;
+                              swipeStartYRef.current = null;
+                              return;
                             }
-                            setTimeout(() => setSwipeFeedback(null), 300);
+
+                            const isAtFirst = activePageIndex === 0;
+                            const isAtLast = activePageIndex === activePages.length - 1;
+                            const swipingLeft = deltaX < 0;
+                            const swipingRight = deltaX > 0;
+
+                            // Rubber band — sudah di batas tapi masih swipe
+                            if ((swipingLeft && isAtLast) || (swipingRight && isAtFirst)) {
+                              const bounceDir = swipingLeft ? -1 : 1;
+
+                              // Haptic feedback
+                              if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+                                navigator.vibrate(10);
+                              }
+
+                              setIsRubberBanding(true);
+                              setRubberBandOffset(bounceDir * 18);
+
+                              setTimeout(() => setRubberBandOffset(bounceDir * 8), 80);
+                              setTimeout(() => setRubberBandOffset(0), 200);
+                              setTimeout(() => setIsRubberBanding(false), 250);
+                            } else {
+                              // Swipe normal
+                              if (swipingLeft) {
+                                setSwipeFeedback('left');
+                                setActivePageIndex(i => Math.min(activePages.length - 1, i + 1));
+                              } else {
+                                setSwipeFeedback('right');
+                                setActivePageIndex(i => Math.max(0, i - 1));
+                              }
+                              setTimeout(() => setSwipeFeedback(null), 300);
+
+                              // Haptic feedback normal
+                              if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+                                navigator.vibrate(6);
+                              }
+                            }
+
                             swipeStartXRef.current = null;
                             swipeStartYRef.current = null;
                           }}>
 
                           <div className="relative" style={{ aspectRatio: '210/297' }}>
-                            <img
+                            <motion.img
                               src={activePages[activePageIndex]?.image}
                               alt={`Halaman ${activePageIndex + 1}`}
                               className="w-full h-full object-contain rounded-xl shadow-xl select-none"
                               loading="lazy"
                               decoding="async"
                               onClick={() => mobileZoom === 100 && setFullscreenPage(activePages[activePageIndex])}
+                              animate={{
+                                x: rubberBandOffset,
+                                scale: isRubberBanding ? 0.97 : 1,
+                              }}
+                              transition={{
+                                type: "spring",
+                                stiffness: 400,
+                                damping: 25,
+                                mass: 0.8,
+                              }}
                             />
                             {/* Swipe feedback overlay */}
                             <AnimatePresence>
@@ -5414,9 +5808,9 @@ export default function Home() {
                                       <Download className="w-4 h-4" /><span>JPG</span>
                                     </button>
                                     <button
-                                      onClick={() => handleDownloadPdf()}
+                                      onClick={() => setShowMobileExportSheet(true)}
                                       className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-[12px] font-bold active:scale-95 transition-all border ${D ? "bg-white/10 text-white border-white/20" : "bg-violet-50 text-violet-700 border-violet-200"}`}>
-                                      <FileDown className="w-4 h-4" /><span>PDF</span>
+                                      <ChevronDown className="w-4 h-4" /><span>Export</span>
                                     </button>
                                   </div>
                                 )}

@@ -52,7 +52,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 @media (min-width: 2560px) {
@@ -1723,6 +1723,78 @@ textarea, input {
   animation: aurora-shift 8s ease-in-out infinite alternate;
   pointer-events: none;
   z-index: 0;
+}
+
+/* ── ANIMATED GRADIENT BORDER (Sidebar Sections) ── */
+@property --border-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes borderRotate {
+  to { --border-angle: 360deg; }
+}
+
+.sidebar-section-glow {
+  position: relative;
+}
+
+.sidebar-section-glow::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--border-angle),
+    transparent 0%,
+    transparent 60%,
+    rgba(139, 92, 246, 0.6) 75%,
+    rgba(99, 102, 241, 0.8) 80%,
+    rgba(139, 92, 246, 0.6) 85%,
+    transparent 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.sidebar-section-glow:hover::before {
+  opacity: 1;
+  animation: borderRotate 3s linear infinite;
+}
+
+/* Dark mode — lebih terang bordernya */
+.dark .sidebar-section-glow::before {
+  background: conic-gradient(
+    from var(--border-angle),
+    transparent 0%,
+    transparent 55%,
+    rgba(139, 92, 246, 0.8) 70%,
+    rgba(167, 139, 250, 1) 78%,
+    rgba(99, 102, 241, 0.8) 85%,
+    transparent 100%
+  );
+}
+
+/* Light mode — lebih subtle */
+html:not(.dark) .sidebar-section-glow::before {
+  background: conic-gradient(
+    from var(--border-angle),
+    transparent 0%,
+    transparent 60%,
+    rgba(139, 92, 246, 0.4) 72%,
+    rgba(99, 102, 241, 0.6) 80%,
+    rgba(139, 92, 246, 0.4) 88%,
+    transparent 100%
+  );
 }
 
 /* ── EMPTY STATE ANIMATIONS ── */
