@@ -870,6 +870,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<"result" | "history" | "presets">("result");
   const [zenMode, setZenMode] = useState(false);
   const [selectedTextRange, setSelectedTextRange] = useState({ text: "", start: 0, end: 0 });
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
 
   const checkTextSelection = () => {
     if (!textareaRef.current) return;
@@ -4442,6 +4443,49 @@ export default function Home() {
                       </motion.div>
                     )}
                   </AnimatePresence>
+                  {/* ── SLASH COMMAND MENU (Notion Style) ── */}
+                  <AnimatePresence>
+                    {showSlashMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        className={`absolute left-1/2 -translate-x-1/2 bottom-24 lg:bottom-16 z-[75] flex flex-col gap-1 w-64 p-2 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] backdrop-blur-3xl border ${D ? "bg-[#18181b]/95 border-white/15" : "bg-white/95 border-gray-200"}`}
+                      >
+                        <div className="px-3 py-1.5 flex items-center justify-between">
+                          <span className={`text-[10px] font-bold uppercase tracking-widest ${c.ts}`}>Sihir AI & Alat 🪄</span>
+                          <kbd className={`text-[9px] px-1.5 py-0.5 rounded ${D ? "bg-white/10 text-white/50" : "bg-gray-100 text-gray-500"}`}>Bckspc</kbd>
+                        </div>
+
+                        <button onClick={() => {
+                          const newText = text.slice(0, -1); // Hapus '/'
+                          setInputText(newText); setText(newText);
+                          setShowSlashMenu(false); setShowAiModal(true);
+                        }} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left ${D ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${D ? "bg-indigo-500/20 text-indigo-400" : "bg-indigo-100 text-indigo-600"}`}><Bot className="w-4 h-4" /></div>
+                          <div><p className={`text-xs font-bold ${c.tp}`}>Tulis dengan AI</p><p className={`text-[10px] ${c.ts}`}>Buat draf otomatis</p></div>
+                        </button>
+
+                        <button onClick={() => {
+                          const newText = text.slice(0, -1); // Hapus '/'
+                          setInputText(newText); setText(newText);
+                          setShowSlashMenu(false); toggleListening();
+                        }} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left ${D ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${D ? "bg-red-500/20 text-red-400" : "bg-red-100 text-red-600"}`}><Mic className="w-4 h-4" /></div>
+                          <div><p className={`text-xs font-bold ${c.tp}`}>Dikte Suara</p><p className={`text-[10px] ${c.ts}`}>Ketik lewat ucapan</p></div>
+                        </button>
+
+                        <button onClick={() => {
+                          const newText = text.slice(0, -1) + " $\\frac{1}{2}p$ ";
+                          setInputText(newText); setText(newText); setShowSlashMenu(false);
+                          setTimeout(() => textareaRef.current?.focus(), 50);
+                        }} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left ${D ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${D ? "bg-amber-500/20 text-amber-400" : "bg-amber-100 text-amber-600"}`}><Sigma className="w-4 h-4" /></div>
+                          <div><p className={`text-xs font-bold ${c.tp}`}>Pecahan Matematika</p><p className={`text-[10px] ${c.ts}`}>Sisipkan rumus</p></div>
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                   <div className="p-4 flex flex-col gap-3">
 
                     {/* Toolbar — scrollable horizontal, rapi di semua ukuran */}
@@ -4694,7 +4738,15 @@ export default function Home() {
                       onKeyUp={checkTextSelection}
                       onChange={(val: string) => {
                         setInputText(val);
-                        // OPTIMISASI INP: Beri jeda agar React bisa me-render text di UI dulu tanpa tersendat kalkulasi pagination
+
+                        // KUNCI SLASH COMMAND: Deteksi ketikan "/"
+                        if (val.trim() === "/" || val.endsWith(" /") || val.endsWith("\n/")) {
+                          setShowSlashMenu(true);
+                        } else {
+                          setShowSlashMenu(false);
+                        }
+
+                        // OPTIMISASI INP
                         setTimeout(() => {
                           React.startTransition(() => {
                             setText(val);
@@ -4741,7 +4793,7 @@ export default function Home() {
                         }
                       }}
                       placeholder="Ketik atau paste teks di sini...&#10;&#10;Drag & drop file .txt atau .docx (Word) ⚡"
-                      className={`flex-1 w-full h-full min-h-[60vh] resize-none px-4 py-6 text-[16px] leading-loose transition-all duration-500 ease-out outline-none border-none bg-transparent ${D
+                      className={`flex-1 w-full h-full min-h-[60vh] resize-none px-4 pt-6 pb-[40vh] text-[16px] leading-loose transition-all duration-500 ease-out outline-none border-none bg-transparent ${D
                         ? "text-white/90 placeholder-white/20 caret-violet-400 focus:-translate-y-1 focus:shadow-[0_8px_30px_rgba(139,92,246,0.15)]"
                         : "text-gray-800 placeholder-gray-400/70 caret-violet-500 focus:-translate-y-1 focus:shadow-[0_8px_30px_rgba(139,92,246,0.15)]"
                         }`}
@@ -5967,9 +6019,15 @@ export default function Home() {
                     onChange={(val: string) => {
                       setInputText(val);
                       setText(val);
+                      // KUNCI SLASH COMMAND: Deteksi ketikan garis miring "/"
+                      if (val.trim() === "/" || val.endsWith(" /") || val.endsWith("\n/")) {
+                        setShowSlashMenu(true);
+                      } else {
+                        setShowSlashMenu(false);
+                      }
                     }}
                     placeholder="Ketik atau paste teks di sini..."
-                    className={`flex-1 w-full resize-none px-2 py-4 text-[16px] leading-loose transition-all duration-500 ease-out outline-none border-none bg-transparent ${D
+                    className={`flex-1 w-full resize-none px-2 pt-4 pb-[40vh] text-[16px] leading-loose transition-all duration-500 ease-out outline-none border-none bg-transparent ${D
                       ? "text-white/90 placeholder-white/20 caret-violet-400 focus:-translate-y-1 focus:shadow-[0_8px_30px_rgba(139,92,246,0.15)]"
                       : "text-gray-800 placeholder-gray-400/70 caret-violet-500 focus:-translate-y-1 focus:shadow-[0_8px_30px_rgba(139,92,246,0.15)]"
                       }`}
