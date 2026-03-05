@@ -868,6 +868,19 @@ export default function Home() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [fullscreenPage, setFullscreenPage] = useState<GeneratedPage | null>(null);
   const [activeTab, setActiveTab] = useState<"result" | "history" | "presets">("result");
+  const [zenMode, setZenMode] = useState(false);
+  const [selectedTextRange, setSelectedTextRange] = useState({ text: "", start: 0, end: 0 });
+
+  const checkTextSelection = () => {
+    if (!textareaRef.current) return;
+    const start = textareaRef.current.selectionStart;
+    const end = textareaRef.current.selectionEnd;
+    if (start !== end) {
+      setSelectedTextRange({ text: text.substring(start, end), start, end });
+    } else {
+      setSelectedTextRange({ text: "", start: 0, end: 0 });
+    }
+  };
   const [presetName, setPresetName] = useState("");
   const [config, setConfig] = useState(DEFAULT_CONFIG);
   const [configHistory, setConfigHistory] = useState<typeof DEFAULT_CONFIG[]>([DEFAULT_CONFIG]);
@@ -4068,7 +4081,7 @@ export default function Home() {
           )}
 
           {/* ── HEADER ── */}
-          <header className={`${c.header} border-b sticky top-0 z-50 transition-all duration-300 ${hideHeader && isMobileView ? "-translate-y-full" : "translate-y-0"} ${isAppleDevice ? 'liquid-glass-shimmer' : ''}`}>
+          <header className={`${c.header} border-b sticky top-0 z-50 transition-all duration-300 ${hideHeader && isMobileView ? "-translate-y-full" : "translate-y-0"} ${zenMode ? "hidden" : ""} ${isAppleDevice ? 'liquid-glass-shimmer' : ''}`}>
             {isGenerating && (
               <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-violet-500/10">
                 <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-[width] duration-500"
@@ -4250,7 +4263,7 @@ export default function Home() {
             {/* ══ PANEL 1: SIDEBAR SETTINGS — Desktop only ══ */}
             <motion.aside
               id="sidebar-settings"
-              className={`hidden lg:flex flex-col flex-shrink-0 border-r overflow-hidden ${c.sidebar}`}
+              className={`hidden lg:flex flex-col flex-shrink-0 border-r overflow-hidden ${c.sidebar} ${zenMode ? "!hidden" : ""}`}
               animate={{ width: sidebarOpen ? "auto" : 0 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
               style={{ height: "calc(100dvh - 56px)" }}
@@ -4274,10 +4287,12 @@ export default function Home() {
 
               {/* ══ PANEL 2: EDITOR ══ */}
               <div id="editor-panel"
-                className={`flex flex-col border-r flex-shrink-0 ${c.sidebar} ${sidebarOpen
-                  ? "lg:w-[340px] xl:w-[400px] 2xl:w-[440px] 3xl:w-[600px] 4xl:w-[700px]"
-                  : "lg:w-[380px] xl:w-[440px] 2xl:w-[520px] 3xl:w-[720px] 4xl:w-[850px]"
-                  } transition-[width] duration-300`}>
+                className={`flex flex-col border-r flex-shrink-0 ${c.sidebar} transition-[width] duration-300 ${zenMode
+                  ? "w-full lg:w-full border-r-0"
+                  : sidebarOpen
+                    ? "lg:w-[340px] xl:w-[400px] 2xl:w-[440px] 3xl:w-[600px] 4xl:w-[700px]"
+                    : "lg:w-[380px] xl:w-[440px] 2xl:w-[520px] 3xl:w-[720px] 4xl:w-[850px]"
+                  }`}>
 
                 {/* Editor header */}
                 <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} flex items-center justify-between ${D
@@ -4296,9 +4311,16 @@ export default function Home() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] ${c.ts}`}>
+                    <span className={`hidden sm:inline-block text-[10px] ${c.ts}`}>
                       <span className={`font-semibold ${D ? "text-indigo-400" : "text-indigo-600"}`}>{wordCount.toLocaleString()}</span> kata
                     </span>
+
+                    <button onClick={() => setZenMode(!zenMode)}
+                      className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-colors border ${zenMode ? "bg-violet-500/20 text-violet-400 border-violet-500/30" : D ? "hover:bg-white/5 text-gray-400 border-transparent" : "hover:bg-gray-100 text-gray-600 border-transparent"}`}
+                      title="Zen Mode (Fullscreen)">
+                      <Maximize2 className="w-3.5 h-3.5" />
+                      <span>{zenMode ? "Keluar Zen" : "Zen Mode"}</span>
+                    </button>
 
                     <div className="relative group">
                       <motion.button
@@ -4372,7 +4394,54 @@ export default function Home() {
                 </div>
 
                 {/* Textarea area - scrollable */}
-                <div className="flex-1 overflow-y-auto min-h-0 scrollbar-thin">
+                <div className="flex-1 relative overflow-y-auto min-h-0 scrollbar-thin">
+
+                  {/* ── FLOATING SELECTION MENU (Notion Style) ── */}
+                  <AnimatePresence>
+                    {selectedTextRange.text && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        className={`fixed left-1/2 -translate-x-1/2 bottom-32 lg:absolute lg:bottom-10 z-[70] flex items-center gap-1 p-1.5 rounded-2xl shadow-2xl backdrop-blur-2xl border ${D ? "bg-black/80 border-white/10" : "bg-white/95 border-gray-200"}`}
+                      >
+                        <span className={`px-2 text-[10px] font-semibold uppercase tracking-widest ${D ? "text-white/40" : "text-gray-400"}`}>Aksi:</span>
+
+                        <button onClick={async () => {
+                          const tid = toast.loading("Memoles teks pilihan...");
+                          try {
+                            const res = await fetch(`${API_URL}/api/ai-expand`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: selectedTextRange.text }) });
+                            const data = await res.json();
+                            if (data.success) {
+                              const newFullText = text.substring(0, selectedTextRange.start) + data.text.trim() + text.substring(selectedTextRange.end);
+                              setInputText(newFullText); setText(newFullText); setSelectedTextRange({ text: "", start: 0, end: 0 }); toast.success("Berhasil dipoles!", { id: tid });
+                            } else throw new Error();
+                          } catch { toast.error("Gagal memoles", { id: tid }); }
+                        }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-colors ${D ? "bg-violet-500/20 text-violet-300 hover:bg-violet-500/30" : "bg-violet-100 text-violet-700 hover:bg-violet-200"}`}>
+                          <Wand2 className="w-3.5 h-3.5" /> Poles AI
+                        </button>
+
+                        <button onClick={() => {
+                          navigator.clipboard.writeText(selectedTextRange.text);
+                          toast.success("Teks disalin!");
+                          setSelectedTextRange({ text: "", start: 0, end: 0 });
+                        }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-colors ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`}>
+                          <Copy className="w-3.5 h-3.5" /> Salin
+                        </button>
+
+                        <button onClick={() => {
+                          const newFullText = text.substring(0, selectedTextRange.start) + text.substring(selectedTextRange.end);
+                          setInputText(newFullText); setText(newFullText); setSelectedTextRange({ text: "", start: 0, end: 0 });
+                        }} className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-colors ${D ? "hover:bg-red-500/20 text-red-400" : "hover:bg-red-50 text-red-600"}`}>
+                          <Trash2 className="w-3.5 h-3.5" /> Hapus
+                        </button>
+
+                        <button onClick={() => setSelectedTextRange({ text: "", start: 0, end: 0 })} className={`ml-1 p-1.5 rounded-lg transition-colors ${D ? "text-white/30 hover:bg-white/10" : "text-gray-400 hover:bg-gray-100"}`}>
+                          <X className="w-4 h-4" />
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                   <div className="p-4 flex flex-col gap-3">
 
                     {/* Toolbar — scrollable horizontal, rapi di semua ukuran */}
@@ -4621,6 +4690,8 @@ export default function Home() {
                     <OptimizedTextarea
                       ref={textareaRef}
                       value={inputText}
+                      onMouseUp={checkTextSelection}
+                      onKeyUp={checkTextSelection}
                       onChange={(val: string) => {
                         setInputText(val);
                         // OPTIMISASI INP: Beri jeda agar React bisa me-render text di UI dulu tanpa tersendat kalkulasi pagination
@@ -4861,7 +4932,7 @@ export default function Home() {
               </div>
 
               {/* ══ PANEL 3: OUTPUT VIEWER ══ */}
-              <main className="flex flex-1 min-w-0 flex-col overflow-hidden">
+              <main className={`flex flex-1 min-w-0 flex-col overflow-hidden ${zenMode ? "hidden" : ""}`}>
 
                 {/* Output header — 2 baris agar tidak overflow di laptop kecil */}
                 <div className={`flex-shrink-0 border-b ${c.divider} ${D ? "bg-[#09090b]/80" : "bg-white/80"} backdrop-blur-sm`}>
@@ -5891,6 +5962,8 @@ export default function Home() {
                   <OptimizedTextarea
                     ref={textareaRef}
                     value={inputText}
+                    onMouseUp={checkTextSelection}
+                    onKeyUp={checkTextSelection}
                     onChange={(val: string) => {
                       setInputText(val);
                       setText(val);
