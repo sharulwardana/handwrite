@@ -5273,9 +5273,6 @@ export default function Home() {
                                     {memoizedFlipBook}
                                   </motion.div>
                                 </AnimatePresence>
-
-                                {/* Render Buku 3D dari hasil Memo yang legal di atas */}
-                                {memoizedFlipBook}
                               </motion.div>
                             </motion.div>
                           );
