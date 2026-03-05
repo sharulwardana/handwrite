@@ -5775,6 +5775,19 @@ export default function Home() {
                         className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${isListening ? "bg-red-500/15 text-red-400 border-red-500/30 animate-pulse" : c.btn}`}>
                         <Mic className="w-3.5 h-3.5" /><span>{isListening ? "Dengerin..." : "Dikte"}</span>
                       </button>
+                      <button
+                        id="generate-btn"
+                        onClick={handleGenerate}
+                        disabled={isGenerating || !text.trim() || !selectedFolio}
+                        className={`flex items-center gap-1.5 text-[11px] px-4 py-2 rounded-xl border flex-shrink-0 font-bold transition-colors ${isGenerating || !text.trim() || !selectedFolio
+                          ? "opacity-40 cursor-not-allowed " + c.btn
+                          : `bg-gradient-to-r ${c.accent} text-white border-transparent shadow-lg`
+                          }`}>
+                        {isGenerating
+                          ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span>{Math.round(generateProgress)}%</span></>
+                          : <><Sparkles className="w-3.5 h-3.5" /><span>Generate</span></>
+                        }
+                      </button>
                       <button onClick={() => { setInputText(""); setText(""); toast.success("Teks dihapus!"); }}
                         disabled={!text}
                         className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${!text ? "opacity-35 cursor-not-allowed " + c.btn : D ? "hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25 " + c.btn : "hover:bg-red-50 hover:text-red-600 hover:border-red-200 " + c.btn}`}>
@@ -6290,13 +6303,13 @@ export default function Home() {
           </AnimatePresence >
 
           {/* ── MOBILE BOTTOM BAR (Modern Floating Dock) ── */}
-          < div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden pointer-events-none px-3 sm:px-4 safe-area-pb flex justify-center" >
+          <div className="fixed bottom-0 left-0 right-0 z-50 hidden max-[767px]:flex pointer-events-none px-3 sm:px-4 safe-area-pb flex justify-center" >
 
             {/* Dock Kaca (Glassmorphism) */}
-            < div className={`w-full flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-2xl pointer-events-auto transition-[transform,opacity] duration-500 ease-in-out ${activeTab === "result" || hideMobileDock || activePagesMemo.length > 0 ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"} ${isAppleDevice ? (D ? "liquid-glass shadow-2xl" : "glass-panel") : (D ? "bg-[#2c2c35] border border-[#ffffff10] shadow-2xl" : "bg-white border border-gray-200 shadow-xl")}`
+            <div className={`w-full flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-2xl pointer-events-auto transition-[transform,opacity] duration-500 ease-in-out ${activeTab === "result" || hideMobileDock || activePagesMemo.length > 0 ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"} ${isAppleDevice ? (D ? "liquid-glass shadow-2xl" : "glass-panel") : (D ? "bg-[#2c2c35] border border-[#ffffff10] shadow-2xl" : "bg-white border border-gray-200 shadow-xl")}`
             }>
               {/* Ubah md:hidden menjadi lg:hidden di bawah ini */}
-              < button onClick={() => setMobileSidebarOpen(true)}
+              <button onClick={() => setMobileSidebarOpen(true)}
                 className={`flex lg:hidden w-8 h-8 rounded-lg items-center justify-center transition-colors ${c.btn}`}>
                 <Menu className="w-3.5 h-3.5" />
               </button >
