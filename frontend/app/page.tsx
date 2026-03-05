@@ -208,8 +208,10 @@ function OdometerNumber({
   const [direction, setDirection] = useState<'up' | 'down'>('up');
 
   useEffect(() => {
-    setDirection(value > displayValue ? 'up' : 'down');
-    setDisplayValue(value);
+    setDisplayValue((prev) => {
+      setDirection(value > prev ? 'up' : 'down');
+      return value;
+    });
   }, [value]);
 
   return (
@@ -894,10 +896,15 @@ export default function Home() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
   const sessionIdRef = useRef<string>("");
-  if (!sessionIdRef.current && typeof window !== "undefined") {
-    sessionIdRef.current = `hw_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  }
-  const sessionId = sessionIdRef.current || "hw_ssr";
+  const [sessionId, setSessionId] = useState("hw_ssr");
+
+  useEffect(() => {
+    if (!sessionIdRef.current) {
+      const newId = `hw_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      sessionIdRef.current = newId;
+      setSessionId(newId);
+    }
+  }, []);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const ONBOARDING_SPOTLIGHT = [
@@ -1414,19 +1421,18 @@ export default function Home() {
   }, [isDark]);
 
   // ── Computed ────────────────────────────────────────────────────────────────
+  const fontSizeCalc = config.fontSize || 25; // Tambahkan fallback
+  const effectiveWidth = (config.maxWidth || 1100) - (config.startX || 70) - (config.marginJitter ?? 6);
+  const charWidth = fontSizeCalc * 0.52;
+  const charsPerLine = Math.max(1, Math.floor(effectiveWidth / charWidth));
+
   const estimatedLines = text.split("\n").reduce((acc, line) => {
-    if (!line.trim()) return acc + 1; // baris kosong tetap dihitung
-    // Lebar efektif = maxWidth dikurangi startX, dengan margin jitter rata-rata
-    const effectiveWidth = config.maxWidth - config.startX - (config.marginJitter ?? 6);
-    // Estimasi lebar per karakter berdasarkan fontSize (empiris: ~0.52x fontSize)
-    const charWidth = config.fontSize * 0.52;
-    const charsPerLine = Math.max(1, Math.floor(effectiveWidth / charWidth));
+    if (!line.trim()) return acc + 1;
     return acc + Math.max(1, Math.ceil((line.length || 1) / charsPerLine));
   }, 0);
 
-  // Baris per halaman: dari startY ke pageBottom dibagi lineHeight
   const linesPerPage = Math.max(1, Math.floor(
-    (config.pageBottom - config.startY) / config.lineHeight
+    ((config.pageBottom || 1520) - (config.startY || 65)) / (config.lineHeight || 38)
   ));
   const estimatedPages = Math.max(1, Math.ceil(estimatedLines / linesPerPage));
   const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
@@ -4263,7 +4269,7 @@ export default function Home() {
             </motion.aside>
 
             {/* ══ BUNGKUS PANEL 2 & 3 ══ */}
-            <div className="hidden md:flex flex-1 overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
+            <div className="hidden lg:flex flex-1 overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
 
               {/* ══ PANEL 2: EDITOR ══ */}
               <div id="editor-panel"
@@ -5708,9 +5714,9 @@ export default function Home() {
             </div>
 
             {/* ══ MOBILE & TABLET: Editor + Output tabs (< lg) ══ */}
-            <div className="flex md:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
+            <div className="flex lg:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
               {/* Tab Switcher — sembunyikan di tablet karena layout split */}
-              <div className={`flex-shrink-0 px-4 py-3 border-b md:hidden ${c.divider} bg-transparent`}>
+              <div className={`flex-shrink-0 px-4 py-3 border-b lg:hidden ${c.divider} bg-transparent`}>
                 <DraggableLiquidTabs
                   options={[
                     { label: "✏️ Editor", value: "editor" },
@@ -5858,11 +5864,9 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Result panel — full di mobile, flex-1 di tablet */}
+              // Result panel — full di mobile, flex-1 di tablet
               {(activeTab === "result" || (typeof window !== 'undefined' && window.innerWidth >= 768)) && (() => {
-                // KODE BARU: Dukung Live Streaming di HP
-                const activePages = generatedPages.length > 0 ? generatedPages : streamedPages;
-
+                // Menggunakan activePagesMemo dari atas agar tidak duplikasi state
                 return (
                   <div
                     className={`flex-1 overflow-y-auto pb-24 scrollbar-thin ${isAppleDevice ? "bg-transparent" : (D ? "bg-black" : "bg-gray-100")}`}
@@ -5894,7 +5898,7 @@ export default function Home() {
                         </div>
                       </div>
                     )}
-                    {activePages.length > 0 ? (
+                    {activePagesMemo.length > 0 ? (
                       <div className="flex overflow-x-auto mobile-result-scroll">
 
                         {/* Thumbnail "Banyak Jendela" telah DIHAPUS agar layar HP lebih luas dan estetik */}
@@ -5937,7 +5941,7 @@ export default function Home() {
                             }
 
                             const isAtFirst = activePageIndex === 0;
-                            const isAtLast = activePageIndex === activePages.length - 1;
+                            const isAtLast = activePageIndex === activePagesMemo.length - 1;
                             const swipingLeft = deltaX < 0;
                             const swipingRight = deltaX > 0;
 
@@ -5952,7 +5956,7 @@ export default function Home() {
                             } else {
                               if (swipingLeft) {
                                 setSwipeFeedback('left');
-                                setActivePageIndex(i => Math.min(activePages.length - 1, i + 1));
+                                setActivePageIndex(i => Math.min(activePagesMemo.length - 1, i + 1));
                               } else {
                                 setSwipeFeedback('right');
                                 setActivePageIndex(i => Math.max(0, i - 1));
@@ -5979,7 +5983,7 @@ export default function Home() {
                             }
 
                             const isAtFirst = activePageIndex === 0;
-                            const isAtLast = activePageIndex === activePages.length - 1;
+                            const isAtLast = activePageIndex === activePagesMemo.length - 1;
                             const swipingLeft = deltaX < 0;
                             const swipingRight = deltaX > 0;
 
@@ -5992,7 +5996,7 @@ export default function Home() {
                             } else {
                               if (swipingLeft) {
                                 setSwipeFeedback('left');
-                                setActivePageIndex(i => Math.min(activePages.length - 1, i + 1));
+                                setActivePageIndex(i => Math.min(activePagesMemo.length - 1, i + 1));
                               } else {
                                 setSwipeFeedback('right');
                                 setActivePageIndex(i => Math.max(0, i - 1));
@@ -6005,12 +6009,12 @@ export default function Home() {
 
                           <div className="relative" style={{ aspectRatio: '210/297' }}>
                             <motion.img
-                              src={activePages[activePageIndex]?.image}
+                              src={activePagesMemo[activePageIndex]?.image}
                               alt={`Halaman ${activePageIndex + 1}`}
                               className="w-full h-full object-contain rounded-xl shadow-xl select-none"
                               loading="lazy"
                               decoding="async"
-                              onClick={() => mobileZoom === 100 && setFullscreenPage(activePages[activePageIndex])}
+                              onClick={() => mobileZoom === 100 && setFullscreenPage(activePagesMemo[activePageIndex])}
                               animate={{
                                 x: rubberBandOffset,
                                 scale: isRubberBanding ? 0.97 : 1,
@@ -6043,7 +6047,7 @@ export default function Home() {
                             </AnimatePresence>
                           </div>
 
-                          {activePages.length > 1 && activePageIndex === 0 && (
+                          {activePagesMemo.length > 1 && activePageIndex === 0 && (
                             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-medium backdrop-blur-md border animate-pulse pointer-events-none"
                               style={{
                                 background: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
@@ -6057,10 +6061,10 @@ export default function Home() {
                           )}
 
                           {/* Indikator Halaman Minimalis ala Instagram */}
-                          {activePages.length > 1 && (
+                          {activePagesMemo.length > 1 && (
                             <div className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-[11px] font-bold backdrop-blur-md shadow-sm border ${isDark ? "bg-black/60 text-white/90 border-white/10" : "bg-white/80 text-gray-800 border-gray-200"
                               }`}>
-                              {activePageIndex + 1} / {activePages.length}
+                              {activePageIndex + 1} / {activePagesMemo.length}
                             </div>
                           )}
                         </div>
@@ -6090,7 +6094,7 @@ export default function Home() {
                     )}
 
                     {/* Scroll to Top — muncul setelah scroll 200px */}
-                    {activePages.length > 2 && activePageIndex > 0 && (
+                    {activePagesMemo.length > 2 && activePageIndex > 0 && (
                       <motion.button
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -6103,7 +6107,7 @@ export default function Home() {
                     )}
 
                     {/* ── MOBILE FLOATING DYNAMIC ISLAND (MORPHING) ── */}
-                    {(activePages.length > 0 || isGenerating) && (
+                    {(activePagesMemo.length > 0 || isGenerating) && (
                       <div className="fixed bottom-8 left-0 right-0 z-[60] flex justify-center px-4 pointer-events-none">
                         <motion.div
                           layout
@@ -6147,7 +6151,7 @@ export default function Home() {
 
                               <div className={`w-px h-6 mx-1.5 ${D ? "bg-white/20" : "bg-gray-300"}`} />
 
-                              {activePages.length > 0 && (
+                              {activePagesMemo.length > 0 && (
                                 <>
                                   <button onClick={() => setActivePageIndex(i => Math.max(0, i - 1))} disabled={activePageIndex === 0} className={`w-8 h-10 flex items-center justify-center transition-colors active:scale-95 ${activePageIndex === 0 ? "opacity-30" : "text-violet-500"}`}>
                                     <ChevronDown className="w-5 h-5 rotate-90" />
@@ -6157,8 +6161,8 @@ export default function Home() {
                                     <span className="opacity-40">/</span>
                                     <OdometerNumber value={Math.max(1, activePagesMemo.length)} isDark={D} />
                                   </span>
-                                  {/* Disabled disesuaikan dengan activePages.length */}
-                                  <button onClick={() => setActivePageIndex(i => Math.min(activePages.length - 1, i + 1))} disabled={activePageIndex === activePages.length - 1 || activePages.length <= 1} className={`w-8 h-10 flex items-center justify-center transition-colors active:scale-95 ${activePageIndex === activePages.length - 1 || activePages.length <= 1 ? "opacity-30" : "text-violet-500"}`}>
+                                  {/* Disabled disesuaikan dengan activePagesMemo.length */}
+                                  <button onClick={() => setActivePageIndex(i => Math.min(activePagesMemo.length - 1, i + 1))} disabled={activePageIndex === activePagesMemo.length - 1 || activePagesMemo.length <= 1} className={`w-8 h-10 flex items-center justify-center transition-colors active:scale-95 ${activePageIndex === activePagesMemo.length - 1 || activePagesMemo.length <= 1 ? "opacity-30" : "text-violet-500"}`}>
                                     <ChevronDown className="w-5 h-5 -rotate-90" />
                                   </button>
                                   <div className={`w-px h-6 mx-1.5 ${D ? "bg-white/20" : "bg-gray-300"}`} />
@@ -6173,7 +6177,7 @@ export default function Home() {
                                 ) : (
                                   <div className="flex items-center gap-1">
                                     <button
-                                      onClick={() => handleDownloadSingle(activePages[activePageIndex])}
+                                      onClick={() => handleDownloadSingle(activePagesMemo[activePageIndex])}
                                       className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-[12px] font-bold text-white shadow-lg active:scale-95 transition-all hover:opacity-90 bg-gradient-to-r ${D ? "from-violet-600 to-indigo-600" : "from-violet-500 to-indigo-500"}`}>
                                       <Download className="w-4 h-4" /><span>JPG</span>
                                     </button>

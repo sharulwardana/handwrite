@@ -2026,3 +2026,39 @@ html:not(.dark) .bg-gradient-to-b.from-violet-50 {
     ) !important;
   }
 }
+
+/* =====================================================================
+   HOTFIX: RESPONSIVE UX PATCH (MOBILE L, TABLET, LANDSCAPE)
+   ===================================================================== */
+
+/* Memperbaiki tab switcher di Mobile supaya target tap lebih besar (Standar HIG Apple 44px) */
+@media (max-width: 1023px) {
+  .mobile-tab-switcher button {
+    min-height: 44px;
+    font-size: 14px;
+  }
+  
+  /* Pastikan area hasil di tablet tidak terpotong (Landscape / iPad Mode) */
+  .mobile-result-section {
+    min-height: 60vh; 
+  }
+}
+
+/* Penanganan layar super lebar (4K) agar font tidak terlihat sekecil semut */
+@media (min-width: 2560px) {
+  .sidebar-section-glow span.text-\\[10px\\] {
+    font-size: 13px !important;
+  }
+  .sidebar-section-glow p.text-\\[11px\\] {
+    font-size: 14px !important;
+  }
+  .liquid-glass-slider, .liquid-glass-toggle {
+    transform: scale(1.2);
+    transform-origin: left center;
+  }
+}
+
+/* Memastikan overlay mobile sheet (saat tombol Export dipencet) mulus di Tablet */
+.sheet-overlay {
+  transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1); /* apple-ease */
+}
