@@ -4578,36 +4578,6 @@ export default function Home() {
                         )}
                       </div>
 
-                      {/* Auto-save indicator */}
-                      <AnimatePresence>
-                        {autoSaveStatus !== 'idle' && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -6 }}
-                            transition={{ duration: 0.2 }}
-                            className="flex items-center justify-end px-1"
-                          >
-                            <div className={`flex items-center gap-1.5 text-[10px] font-medium transition-colors ${autoSaveStatus === 'saving'
-                              ? c.ts
-                              : D ? 'text-emerald-400' : 'text-emerald-600'
-                              }`}>
-                              {autoSaveStatus === 'saving' ? (
-                                <>
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                  <span>Menyimpan...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle2 className="w-3 h-3" />
-                                  <span>Tersimpan</span>
-                                </>
-                              )}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
                       {/* Baris 2: Counter karakter + estimasi halaman */}
                       <div className={`flex items-center justify-between px-1`}>
                         <div className="flex items-center gap-2">
@@ -4623,16 +4593,26 @@ export default function Home() {
                             {wordCount.toLocaleString()} kata
                           </span>
                         </div>
-                        <span className={`text-[11px] font-bold tabular-nums px-2 py-0.5 rounded-lg border transition-colors ${text.length > 45000
-                          ? "bg-red-500/10 text-red-400 border-red-500/20"
-                          : text.length > 30000
-                            ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                            : D
-                              ? "bg-violet-500/10 text-violet-400 border-violet-500/20"
-                              : "bg-violet-50 text-violet-600 border-violet-200"
-                          }`}>
-                          ~{estimatedPages} hal
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {autoSaveStatus !== 'idle' && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
+                              className={`flex items-center gap-1 text-[10px] font-medium ${autoSaveStatus === 'saving' ? c.ts : D ? 'text-emerald-400' : 'text-emerald-600'}`}
+                            >
+                              {autoSaveStatus === 'saving' ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                            </motion.div>
+                          )}
+                          <span className={`text-[11px] font-bold tabular-nums px-2 py-0.5 rounded-lg border transition-colors ${text.length > 45000
+                            ? "bg-red-500/10 text-red-400 border-red-500/20"
+                            : text.length > 30000
+                              ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                              : D
+                                ? "bg-violet-500/10 text-violet-400 border-violet-500/20"
+                                : "bg-violet-50 text-violet-600 border-violet-200"
+                            }`}>
+                            ~{estimatedPages} hal
+                          </span>
+                        </div>
                       </div>
 
                     </div>
@@ -4690,9 +4670,9 @@ export default function Home() {
                         }
                       }}
                       placeholder="Ketik atau paste teks di sini...&#10;&#10;Drag & drop file .txt atau .docx (Word) ⚡"
-                      className={`flex-1 w-full h-full min-h-[60vh] resize-none px-4 py-6 text-[16px] leading-loose transition-all duration-300 outline-none border-none bg-transparent ${D
-                        ? "text-white/90 placeholder-white/20 caret-violet-400"
-                        : "text-gray-800 placeholder-gray-400/70 caret-violet-500"
+                      className={`flex-1 w-full h-full min-h-[60vh] resize-none px-4 py-6 text-[16px] leading-loose transition-all duration-500 ease-out outline-none border-none bg-transparent ${D
+                        ? "text-white/90 placeholder-white/20 caret-violet-400 focus:-translate-y-1 focus:shadow-[0_8px_30px_rgba(139,92,246,0.15)]"
+                        : "text-gray-800 placeholder-gray-400/70 caret-violet-500 focus:-translate-y-1 focus:shadow-[0_8px_30px_rgba(139,92,246,0.15)]"
                         }`}
                       style={{
                         minHeight: "200px",
@@ -5847,8 +5827,8 @@ export default function Home() {
                   }}
                 >
 
-                  {/* Mobile toolbar — Sleek Icon Dock */}
-                  <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 flex-shrink-0">
+                  {/* Mobile toolbar — STICKY Glass horizontal */}
+                  <div className={`sticky top-[-16px] z-20 pt-4 pb-2 overflow-x-auto scrollbar-hide -mx-4 px-4 flex-shrink-0 backdrop-blur-xl border-b transition-all duration-300 ${D ? "bg-[#0f0f1a]/80 border-[#ffffff10]" : "bg-violet-50/80 border-violet-200/50"}`}>
                     <div className="flex items-center gap-2.5 flex-nowrap min-w-max pb-2">
 
                       {/* Tempel */}
@@ -5916,9 +5896,9 @@ export default function Home() {
                       setText(val);
                     }}
                     placeholder="Ketik atau paste teks di sini..."
-                    className={`flex-1 w-full resize-none px-2 py-4 text-[16px] leading-loose transition-all duration-300 outline-none border-none bg-transparent ${D
-                      ? "text-white/90 placeholder-white/20 caret-violet-400"
-                      : "text-gray-800 placeholder-gray-400/70 caret-violet-500"
+                    className={`flex-1 w-full resize-none px-2 py-4 text-[16px] leading-loose transition-all duration-500 ease-out outline-none border-none bg-transparent ${D
+                      ? "text-white/90 placeholder-white/20 caret-violet-400 focus:-translate-y-1 focus:shadow-[0_8px_30px_rgba(139,92,246,0.15)]"
+                      : "text-gray-800 placeholder-gray-400/70 caret-violet-500 focus:-translate-y-1 focus:shadow-[0_8px_30px_rgba(139,92,246,0.15)]"
                       }`}
                     style={{
                       minHeight: "280px",
