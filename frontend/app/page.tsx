@@ -4843,7 +4843,7 @@ export default function Home() {
                       )}
 
                       {/* Page navigation */}
-                      {generatedPages.length > 0 && (
+                      {activePagesMemo.length > 0 && (
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => navigateToPage(activePageIndex - 1)}
@@ -4859,7 +4859,7 @@ export default function Home() {
                           </span>
                           <button
                             onClick={() => navigateToPage(activePageIndex + 1)}
-                            disabled={activePageIndex === generatedPages.length - 1}
+                            disabled={activePageIndex === activePagesMemo.length - 1}
                             className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm border transition-colors ${activePageIndex === generatedPages.length - 1
                               ? D ? "border-[#ffffff05] text-white/10 cursor-not-allowed" : "border-gray-100 text-gray-200 cursor-not-allowed"
                               : c.btn
@@ -4991,7 +4991,7 @@ export default function Home() {
                         <span className={`text-xs font-bold px-1.5 flex items-center gap-0.5 ${D ? "text-gray-300" : "text-gray-700"}`}>
                           <OdometerNumber value={activePageIndex + 1} isDark={D} />
                           <span className="opacity-40">/</span>
-                          <OdometerNumber value={generatedPages.length} isDark={D} />
+                          <OdometerNumber value={Math.max(1, activePagesMemo.length)} isDark={D} />
                         </span>
                         <button onClick={() => navigateToPage(activePageIndex + 1)} disabled={activePageIndex === generatedPages.length - 1} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${activePageIndex === generatedPages.length - 1 ? "opacity-30 cursor-not-allowed" : D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`} title="Halaman Selanjutnya">
                           <ChevronDown className="w-4 h-4 -rotate-90" />
@@ -5037,7 +5037,7 @@ export default function Home() {
                     <div className={`hidden lg:flex flex-col gap-2 p-2 w-[72px] 2xl:w-[88px] 3xl:w-[100px] flex-shrink-0 overflow-y-auto border-r scrollbar-thin ${c.divider} ${D ? "bg-[#09090b]" : "bg-violet-50/80"}`}>
 
                       {/* Thumbnail halaman yang sudah selesai */}
-                      {generatedPages.map((p, idx) => (
+                      {activePagesMemo.map((p, idx) => (
                         <div key={p.page} className="relative group/thumb flex-shrink-0 w-full">
 
                           {/* Tombol thumbnail */}
@@ -5089,7 +5089,7 @@ export default function Home() {
 
                       {/* Skeleton halaman yang masih dalam proses generate */}
                       {isGenerating && Array.from({
-                        length: Math.max(0, (totalStreamPages ?? 0) - generatedPages.length)
+                        length: Math.max(0, (totalStreamPages ?? 0) - activePagesMemo.length)
                       }).map((_, idx) => (
                         <div
                           key={`skeleton-${idx}`}
@@ -5255,7 +5255,7 @@ export default function Home() {
                                     animate={{ opacity: activePageIndex === generatedPages.length - 1 ? 0 : 1, x: 0 }}
                                     className={`absolute right-4 xl:right-12 top-1/2 -translate-y-1/2 z-[60] w-12 h-12 rounded-full flex items-center justify-center border shadow-xl backdrop-blur-md transition-all ${activePageIndex === generatedPages.length - 1 ? "pointer-events-none" : D ? "bg-black/50 border-white/10 text-white/80 hover:bg-black/80 hover:text-white hover:scale-110" : "bg-white/70 border-gray-200 text-gray-700 hover:bg-white hover:text-violet-600 hover:scale-110"}`}
                                     onClick={(e) => { e.stopPropagation(); navigateToPage(activePageIndex + 1); }}
-                                    disabled={activePageIndex === generatedPages.length - 1}
+                                    disabled={activePageIndex === activePagesMemo.length - 1}
                                   >
                                     <ChevronDown className="w-6 h-6 -rotate-90" />
                                   </motion.button>
@@ -5745,40 +5745,7 @@ export default function Home() {
                         ))}
                       </div>
                     </div>
-                  )}{/* Quick Insert Mobile */}
-                  {!text.trim() && (
-                    <div className="flex flex-col gap-2 pt-1">
-                      <p className={`text-[10px] font-semibold uppercase tracking-widest ${c.ts}`}>
-                        ✨ Mulai dengan...
-                      </p>
-                      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
-                        {[
-                          "Pada suatu hari,",
-                          "Berdasarkan penelitian,",
-                          "Menurut pendapat saya,",
-                          "Di era globalisasi ini,",
-                          "Seiring perkembangan zaman,",
-                        ].map((starter) => (
-                          <button
-                            key={starter}
-                            onClick={() => {
-                              const newText = starter + " ";
-                              setInputText(newText);
-                              setText(newText);
-                              setTimeout(() => textareaRef.current?.focus(), 50);
-                            }}
-                            className={`flex-shrink-0 text-[11px] px-3 py-1.5 rounded-full border whitespace-nowrap transition-colors ${D
-                              ? "bg-[#ffffff06] border-[#ffffff10] text-white/50 hover:bg-violet-500/12 hover:text-violet-300"
-                              : "bg-white border-violet-200 text-violet-600 shadow-sm"
-                              }`}
-                          >
-                            "{starter}"
-                          </button>
-                        ))}
-                      </div>
-                    </div>
                   )}
-
                 </div>
               </div>
 
@@ -6079,7 +6046,7 @@ export default function Home() {
                                   <span className={`text-[13px] font-bold flex items-center gap-0.5 px-0.5 ${D ? "text-white" : "text-gray-900"}`}>
                                     <OdometerNumber value={activePageIndex + 1} isDark={D} />
                                     <span className="opacity-40">/</span>
-                                    <OdometerNumber value={activePages.length} isDark={D} />
+                                    <OdometerNumber value={Math.max(1, activePagesMemo.length)} isDark={D} />
                                   </span>
                                   {/* Disabled disesuaikan dengan activePages.length */}
                                   <button onClick={() => setActivePageIndex(i => Math.min(activePages.length - 1, i + 1))} disabled={activePageIndex === activePages.length - 1 || activePages.length <= 1} className={`w-8 h-10 flex items-center justify-center transition-colors active:scale-95 ${activePageIndex === activePages.length - 1 || activePages.length <= 1 ? "opacity-30" : "text-violet-500"}`}>
