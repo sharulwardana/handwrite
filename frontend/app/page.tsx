@@ -917,6 +917,7 @@ export default function Home() {
   const [showSeedCopied, setShowSeedCopied] = useState(false);
   const [showKeyboardHint, setShowKeyboardHint] = useState(false);
   const [activePageIndex, setActivePageIndex] = useState(0);
+  const [viewMode, setViewMode] = useState<'book' | 'grid'>('book');
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [showMobileExportSheet, setShowMobileExportSheet] = useState(false);
   const exportDropdownRef = useRef<HTMLDivElement>(null);
@@ -4689,9 +4690,9 @@ export default function Home() {
                         }
                       }}
                       placeholder="Ketik atau paste teks di sini...&#10;&#10;Drag & drop file .txt atau .docx (Word) ⚡"
-                      className={`light-textarea w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-colors duration-300 outline-none border transform-gpu ${isAppleDevice ? 'liquid-glass-input' : ''} ${D
-                        ? "bg-black/50 backdrop-blur-3xl border-[#ffffff10] text-white placeholder-white/20 caret-violet-400 focus:border-violet-500/50 focus:bg-black shadow-inner"
-                        : "bg-gray-50/50 hover:bg-white border-gray-200/80 text-gray-900 placeholder-gray-400 caret-violet-500 focus:border-violet-400 focus:bg-white focus:shadow-[0_4px_24px_rgba(0,0,0,0.04)]"
+                      className={`flex-1 w-full h-full min-h-[60vh] resize-none px-4 py-6 text-[16px] leading-loose transition-all duration-300 outline-none border-none bg-transparent ${D
+                        ? "text-white/90 placeholder-white/20 caret-violet-400"
+                        : "text-gray-800 placeholder-gray-400/70 caret-violet-500"
                         }`}
                       style={{
                         minHeight: "200px",
@@ -4911,6 +4912,27 @@ export default function Home() {
 
                     {/* Riwayat & Preset — selalu visible di kanan */}
                     <div className="flex items-center gap-1 flex-shrink-0">
+
+                      {/* ── Togle View Mode (Buku vs Scroll Vertikal) ── */}
+                      {generatedPages.length > 0 && activeTab === "result" && (
+                        <div className={`hidden sm:flex items-center p-0.5 rounded-lg border mr-2 ${D ? "bg-black/40 border-white/10" : "bg-gray-100/80 border-gray-200"}`}>
+                          <button
+                            onClick={() => setViewMode('book')}
+                            className={`p-1.5 rounded-md transition-colors ${viewMode === 'book' ? (D ? "bg-[#18181b] text-violet-400 shadow-sm" : "bg-white text-violet-600 shadow-sm") : (D ? "text-white/40 hover:text-white/80" : "text-gray-400 hover:text-gray-700")}`}
+                            title="Mode Buku (3D)">
+                            <BookOpen className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setViewMode('grid')}
+                            className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? (D ? "bg-[#18181b] text-violet-400 shadow-sm" : "bg-white text-violet-600 shadow-sm") : (D ? "text-white/40 hover:text-white/80" : "text-gray-400 hover:text-gray-700")}`}
+                            title="Mode Scroll Vertikal">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+
                       <button
                         onClick={() => setActiveTab(activeTab === "history" ? "result" : "history")}
                         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${activeTab === "history" ? c.btnActive : c.btn}`}
@@ -5436,16 +5458,58 @@ export default function Home() {
                                 )}
 
                                 <AnimatePresence mode="wait">
-                                  <motion.div
-                                    key="flipbook-container"
-                                    initial={{ opacity: 0, scale: 0.98 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.98 }}
-                                    transition={{ duration: 0.2, ease: "easeOut" }}
-                                    style={{ width: "100%", display: "flex", justifyContent: "center" }}
-                                  >
-                                    {memoizedFlipBook}
-                                  </motion.div>
+                                  {viewMode === 'book' ? (
+                                    <motion.div
+                                      key="flipbook-container"
+                                      initial={{ opacity: 0, scale: 0.98 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      exit={{ opacity: 0, scale: 0.98 }}
+                                      transition={{ duration: 0.2, ease: "easeOut" }}
+                                      style={{ width: "100%", display: "flex", justifyContent: "center" }}
+                                    >
+                                      {memoizedFlipBook}
+                                    </motion.div>
+                                  ) : (
+                                    <motion.div
+                                      key="grid-container"
+                                      initial={{ opacity: 0, y: 20 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={{ opacity: 0, y: -20 }}
+                                      transition={{ duration: 0.2, ease: "easeOut" }}
+                                      className="w-full flex flex-col items-center gap-8 pb-12 pt-4"
+                                    >
+                                      {activePagesMemo.map((p, idx) => (
+                                        <motion.div
+                                          key={p.page}
+                                          initial={{ opacity: 0, y: 50, scale: 0.98 }}
+                                          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                                          viewport={{ once: true, margin: "-40px" }}
+                                          transition={{ duration: 0.6, ease: [0.25, 1.15, 0.4, 1], delay: 0.1 }}
+                                          className="relative group w-full flex justify-center"
+                                        >
+                                          <div className="relative shadow-2xl rounded-sm overflow-hidden border border-black/5" style={{ width: "min(100%, 700px)" }}>
+                                            <img
+                                              src={p.image}
+                                              alt={`Hal ${p.page}`}
+                                              className="w-full h-auto object-cover"
+                                              loading="lazy"
+                                            />
+                                            {/* Nomor Halaman & Tombol Download per Halaman */}
+                                            <div className={`absolute top-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300`}>
+                                              <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-black/60 text-white backdrop-blur-md shadow-lg">
+                                                Hal {p.page}
+                                              </span>
+                                              <button
+                                                onClick={() => handleDownloadSingle(p)}
+                                                className="w-8 h-8 rounded-full flex items-center justify-center bg-violet-600 text-white shadow-lg hover:scale-110 transition-transform">
+                                                <Download className="w-4 h-4" />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </motion.div>
+                                      ))}
+                                    </motion.div>
+                                  )}
                                 </AnimatePresence>
                               </motion.div>
                             </motion.div>
@@ -5783,61 +5847,60 @@ export default function Home() {
                   }}
                 >
 
-                  {/* Mobile toolbar — scroll horizontal */}
+                  {/* Mobile toolbar — Sleek Icon Dock */}
                   <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 flex-shrink-0">
-                    <div className="flex items-center gap-2 flex-nowrap min-w-max pb-1">
+                    <div className="flex items-center gap-2.5 flex-nowrap min-w-max pb-2">
+
+                      {/* Tempel */}
                       <button onClick={async () => {
                         try { const t = await navigator.clipboard.readText(); setInputText(t); setText(t); toast.success("Ditempel!"); }
                         catch { toast.error("Gagal akses clipboard"); }
-                      }} className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${c.btn}`}>
-                        <Clipboard className="w-3.5 h-3.5" /><span>Tempel</span>
+                      }} className={`w-10 h-10 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${D ? "bg-[#ffffff08] border-[#ffffff10] text-white/70" : "bg-white border-gray-200 text-gray-600 shadow-sm"}`} title="Tempel Teks">
+                        <Clipboard className="w-4 h-4" />
                       </button>
+
+                      {/* Tulis AI */}
                       <button onClick={() => setShowAiModal(true)}
-                        className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${D ? "bg-indigo-500/8 text-indigo-400 border-indigo-500/20" : "bg-indigo-50 text-indigo-600 border-indigo-200"}`}>
-                        <Bot className="w-3.5 h-3.5" /><span>Tulis AI</span>
+                        className={`w-10 h-10 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${D ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-400" : "bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm"}`} title="Tulis dengan AI">
+                        <Bot className="w-4 h-4" />
                       </button>
-                      {/* Poles AI Mobile */}
+
+                      {/* Poles AI */}
                       <button onClick={handleAiExpand} disabled={!text.trim() || isAiExpanding}
-                        className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${!text.trim() ? "opacity-35 cursor-not-allowed " + c.btn : D ? "bg-purple-500/10 text-purple-400 border-purple-500/30" : "bg-purple-50 text-purple-600 border-purple-200"}`}>
-                        {isAiExpanding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
-                        <span>Poles AI</span>
+                        className={`w-10 h-10 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${!text.trim() ? "opacity-35 cursor-not-allowed" : D ? "bg-purple-500/10 border-purple-500/20 text-purple-400" : "bg-purple-50 border-purple-200 text-purple-600 shadow-sm"}`} title="Poles Teks AI">
+                        {isAiExpanding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
                       </button>
+
+                      {/* Dikte */}
                       <button onClick={toggleListening}
-                        className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${isListening ? "bg-red-500/15 text-red-400 border-red-500/30 animate-pulse" : c.btn}`}>
-                        <Mic className="w-3.5 h-3.5" /><span>{isListening ? "Dengerin..." : "Dikte"}</span>
+                        className={`w-10 h-10 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${isListening ? "bg-red-500/20 border-red-500/30 text-red-400 animate-pulse" : D ? "bg-[#ffffff08] border-[#ffffff10] text-white/70" : "bg-white border-gray-200 text-gray-600 shadow-sm"}`} title="Dikte Suara">
+                        <Mic className="w-4 h-4" />
                       </button>
-                      <button
-                        id="generate-btn-mobile"
-                        onClick={handleGenerate}
-                        disabled={isGenerating || !text.trim() || !selectedFolio}
-                        className={`md:hidden flex items-center gap-1.5 text-[11px] px-4 py-2 rounded-xl border flex-shrink-0 font-bold transition-colors ${isGenerating || !text.trim() || !selectedFolio
-                          ? "opacity-40 cursor-not-allowed " + c.btn
-                          : `bg-gradient-to-r ${c.accent} text-white border-transparent shadow-lg`
-                          }`}>
-                        {isGenerating
-                          ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span>{Math.round(generateProgress)}%</span></>
-                          : <><Sparkles className="w-3.5 h-3.5" /><span>Generate</span></>
-                        }
-                      </button>
+
+                      {/* Hapus */}
                       <button onClick={() => { setInputText(""); setText(""); toast.success("Teks dihapus!"); }}
                         disabled={!text}
-                        className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${!text ? "opacity-35 cursor-not-allowed " + c.btn : D ? "hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25 " + c.btn : "hover:bg-red-50 hover:text-red-600 hover:border-red-200 " + c.btn}`}>
-                        <Trash2 className="w-3.5 h-3.5" /><span>Hapus</span>
+                        className={`w-10 h-10 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${!text ? "opacity-35 cursor-not-allowed" : D ? "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20" : "bg-red-50 border-red-200 text-red-600 shadow-sm"}`} title="Hapus Semua">
+                        <Trash2 className="w-4 h-4" />
                       </button>
+
+                      {/* Pecahan */}
                       <button onClick={() => {
                         const latex = " $\\frac{1}{2}p$ ";
                         setInputText(prev => prev + latex);
                         setText(prev => prev + latex);
                         setTimeout(() => textareaRef.current?.focus(), 50);
                       }}
-                        className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${D ? "bg-amber-500/10 text-amber-400 border-amber-500/30" : "bg-amber-50 text-amber-600 border-amber-200"}`}>
-                        <Sigma className="w-3.5 h-3.5" /><span>Pecahan</span>
+                        className={`w-10 h-10 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${D ? "bg-amber-500/10 border-amber-500/20 text-amber-400" : "bg-amber-50 border-amber-200 text-amber-600 shadow-sm"}`} title="Sisipkan Pecahan">
+                        <Sigma className="w-4 h-4" />
                       </button>
+
+                      {/* Badge Folio */}
                       {currentFolio && (
                         <>
-                          <div className={`w-px h-5 flex-shrink-0 ${D ? "bg-white/10" : "bg-gray-200"}`} />
-                          <span className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${c.tag}`}>
-                            <span>📄</span><span className="max-w-[70px] truncate">{currentFolio.name}</span>
+                          <div className={`w-px h-6 flex-shrink-0 mx-1 ${D ? "bg-white/10" : "bg-gray-200"}`} />
+                          <span className={`flex items-center gap-1.5 text-[11px] px-3.5 h-10 rounded-full border flex-shrink-0 ${D ? "bg-white/5 border-white/10 text-white/80" : "bg-white border-gray-200 text-gray-700 shadow-sm"}`}>
+                            <span>📄</span><span className="max-w-[70px] truncate font-medium">{currentFolio.name}</span>
                           </span>
                         </>
                       )}
@@ -5853,9 +5916,9 @@ export default function Home() {
                       setText(val);
                     }}
                     placeholder="Ketik atau paste teks di sini..."
-                    className={`flex-1 w-full resize-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed transition-colors duration-300 outline-none border ${D
-                      ? "bg-[#0f0f1a] border-[#ffffff12] text-white placeholder-white/25 caret-violet-400 focus:border-violet-500/50 focus:bg-[#13131f]"
-                      : "bg-violet-50 border-violet-200 text-gray-900 placeholder-violet-300/60 caret-violet-500 focus:border-violet-400 focus:bg-white focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)]"
+                    className={`flex-1 w-full resize-none px-2 py-4 text-[16px] leading-loose transition-all duration-300 outline-none border-none bg-transparent ${D
+                      ? "text-white/90 placeholder-white/20 caret-violet-400"
+                      : "text-gray-800 placeholder-gray-400/70 caret-violet-500"
                       }`}
                     style={{
                       minHeight: "280px",
