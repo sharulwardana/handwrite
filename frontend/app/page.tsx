@@ -5043,29 +5043,6 @@ export default function Home() {
                               {idx === activePageIndex ? `● ${p.page}` : p.page}
                             </div>
                           </button>
-
-                          {/* Hover Preview Popup */}
-                          <div className={`absolute left-full top-0 ml-3 w-[220px] rounded-2xl border shadow-2xl overflow-hidden
-          opacity-0 group-hover/thumb:opacity-100 pointer-events-none
-          transition-all duration-200 scale-95 group-hover/thumb:scale-100
-          z-[80] origin-left ${D
-                              ? "bg-[#13131f] border-[#ffffff14] shadow-[0_24px_48px_rgba(0,0,0,0.6)]"
-                              : "bg-white border-violet-100 shadow-[0_24px_48px_rgba(139,92,246,0.15)]"
-                            }`}>
-                            <img
-                              src={p.image}
-                              alt={`Preview Hal ${p.page}`}
-                              className="w-full object-cover object-top"
-                              style={{ aspectRatio: "210/297" }}
-                            />
-                            <div className={`px-3 py-2 border-t flex items-center justify-between ${D ? "border-[#ffffff08]" : "border-violet-50"}`}>
-                              <span className={`text-[10px] font-bold ${c.tp}`}>Halaman {p.page}</span>
-                              <span className={`text-[9px] px-2 py-0.5 rounded-full ${D ? "bg-violet-500/20 text-violet-400" : "bg-violet-100 text-violet-600"}`}>
-                                Klik untuk buka
-                              </span>
-                            </div>
-                          </div>
-
                         </div>
                       ))}
 
