@@ -1037,13 +1037,17 @@ export default function Home() {
 
     setActivePageIndex(clampedIndex);
     try {
-      const flip = bookRef.current?.pageFlip?.();
+      // Ambil instance langsung dari buku
+      const flip = flipInstance.current || bookRef.current?.pageFlip?.();
+
       if (flip && typeof flip.turnToPage === 'function') {
         flip.turnToPage(clampedIndex);
       } else if (flip && typeof flip.flip === 'function') {
         flip.flip(clampedIndex);
       }
-    } catch { }
+    } catch (e) {
+      console.error("Gagal membalik halaman:", e);
+    }
   }, [generatedPages.length, streamedPages.length, activePageIndex]);
   const swipeStartYRef = useRef<number | null>(null);
   const pinchStartDistRef = useRef<number | null>(null);
@@ -1090,6 +1094,7 @@ export default function Home() {
   const resultRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bookRef = useRef<any>(null);
+  const flipInstance = useRef<any>(null);
   const sidebarScrollRef = useRef<HTMLDivElement>(null);
   const sidebarScrollPosRef = useRef<number>(0);
 
@@ -2850,6 +2855,8 @@ export default function Home() {
         mobileScrollSupport={true}
         className="shadow-2xl rounded-sm"
         onFlip={(e: any) => setActivePageIndex(e.data)}
+        // TAMBAHKAN BARIS INI:
+        onInit={(e: any) => { flipInstance.current = e.object; }}
       >
         {activePagesMemo.map((p, idx) => {
           const isNear = Math.abs(idx - activePageIndex) <= PRELOAD_RANGE;
@@ -4841,31 +4848,6 @@ export default function Home() {
                       ) : (
                         <span className={`text-[11px] font-semibold uppercase tracking-widest ${c.label}`}>Output Viewer</span>
                       )}
-
-                      {/* Page navigation */}
-                      {activePagesMemo.length > 0 && (
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => navigateToPage(activePageIndex - 1)}
-                            disabled={activePageIndex === 0}
-                            className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm border transition-colors ${activePageIndex === 0
-                              ? D ? "border-[#ffffff05] text-white/10 cursor-not-allowed" : "border-gray-100 text-gray-200 cursor-not-allowed"
-                              : c.btn
-                              }`}>←</button>
-                          <span className={`text-[11px] font-semibold flex items-center gap-0.5 min-w-[44px] justify-center ${c.tp}`}>
-                            <OdometerNumber value={activePageIndex + 1} isDark={D} />
-                            <span className={c.ts}>/</span>
-                            <OdometerNumber value={activePagesMemo.length} isDark={D} />
-                          </span>
-                          <button
-                            onClick={() => navigateToPage(activePageIndex + 1)}
-                            disabled={activePageIndex === activePagesMemo.length - 1}
-                            className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm border transition-colors ${activePageIndex === generatedPages.length - 1
-                              ? D ? "border-[#ffffff05] text-white/10 cursor-not-allowed" : "border-gray-100 text-gray-200 cursor-not-allowed"
-                              : c.btn
-                              }`}>→</button>
-                        </div>
-                      )}
                     </div>
 
                     {/* Riwayat & Preset — selalu visible di kanan */}
@@ -5237,30 +5219,6 @@ export default function Home() {
                               className="p-4 lg:p-8 flex items-center justify-center min-h-full w-full relative"
                               style={{ perspective: enableHolo3D ? "2000px" : "none" }}
                             >
-                              {/* TOMBOL NAVIGASI KIRI KANAN FLOATING UNTUK DESKTOP */}
-                              {!isMobileView && activePagesMemo.length > 1 && (
-                                <>
-                                  <motion.button
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: activePageIndex === 0 ? 0 : 1, x: 0 }}
-                                    className={`absolute left-4 xl:left-12 top-1/2 -translate-y-1/2 z-[60] w-12 h-12 rounded-full flex items-center justify-center border shadow-xl backdrop-blur-md transition-all ${activePageIndex === 0 ? "pointer-events-none" : D ? "bg-black/50 border-white/10 text-white/80 hover:bg-black/80 hover:text-white hover:scale-110" : "bg-white/70 border-gray-200 text-gray-700 hover:bg-white hover:text-violet-600 hover:scale-110"}`}
-                                    onClick={(e) => { e.stopPropagation(); navigateToPage(activePageIndex - 1); }}
-                                    disabled={activePageIndex === 0}
-                                  >
-                                    <ChevronDown className="w-6 h-6 rotate-90" />
-                                  </motion.button>
-
-                                  <motion.button
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: activePageIndex === generatedPages.length - 1 ? 0 : 1, x: 0 }}
-                                    className={`absolute right-4 xl:right-12 top-1/2 -translate-y-1/2 z-[60] w-12 h-12 rounded-full flex items-center justify-center border shadow-xl backdrop-blur-md transition-all ${activePageIndex === generatedPages.length - 1 ? "pointer-events-none" : D ? "bg-black/50 border-white/10 text-white/80 hover:bg-black/80 hover:text-white hover:scale-110" : "bg-white/70 border-gray-200 text-gray-700 hover:bg-white hover:text-violet-600 hover:scale-110"}`}
-                                    onClick={(e) => { e.stopPropagation(); navigateToPage(activePageIndex + 1); }}
-                                    disabled={activePageIndex === activePagesMemo.length - 1}
-                                  >
-                                    <ChevronDown className="w-6 h-6 -rotate-90" />
-                                  </motion.button>
-                                </>
-                              )}
 
                               <motion.div
                                 className="relative group"

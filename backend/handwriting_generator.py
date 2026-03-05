@@ -354,6 +354,15 @@ class HandwritingGenerator:
         self._word_size_jitter = random.uniform(0.97, 1.03)
 
         for tok_type, char in tokens:
+            # FIX BUG PECAHAN: Pindahkan kalkulasi Jitter Y & X ke PALING ATAS 
+            # agar saat token "math" masuk, koordinat Y sudah tersedia!
+            speed = self.write_speed
+            progress = max(0.0, (cursor_x - x) / max(1, available_width))
+            wave_offset = math.sin(progress * math.pi * 2) * baseline_wobble
+            jitter_y = (random.uniform(-0.1 * (1 + speed), 0.1 * (1 + speed)) + wave_offset)
+            jitter_x = random.uniform(-1.2 * (1 + speed), 1.2 * (1 + speed))
+            pen_pressure = 0  # default tekanan pena
+
             if tok_type == "math":
                 # 1. Tentukan warna tinta
                 ink_color = self.ink_vary(pressure_delta=-5)
@@ -361,7 +370,7 @@ class HandwritingGenerator:
                 # 2. Ubah string LaTeX menjadi gambar
                 math_img = self.render_latex_to_image(char, ink_color)
 
-                # 3. Hitung posisi Y (sesuaikan angka 0.2 atau 0.3 jika rumus terlalu atas/bawah)
+                # 3. Hitung posisi Y menggunakan jitter_y yang sudah aman
                 paste_y = int(y + self.config["fontSize"] * 0.2) + int(jitter_y)
 
                 # 4. Tempel gambar ke folio
