@@ -6,7 +6,7 @@ import {
   PanelLeftClose, PanelLeftOpen, Maximize2, FileDown,
   Clock, Trash2, CheckCircle2, Loader2, PenTool, Save, Copy,
   Link, Clipboard, Wifi, WifiOff, Menu, Bot, Mic, LogIn, LogOut,
-  Zap, MessageCircle, BookOpen, Wand2
+  Zap, MessageCircle, BookOpen, Wand2, Sigma
 } from "lucide-react";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 import toast, { Toaster } from "react-hot-toast";
@@ -189,6 +189,60 @@ function SidebarSection({
             <div className="p-3.5 space-y-3">{children}</div>
           </motion.div>
         )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ─── ODOMETER NUMBER COMPONENT ─────────────────────── */
+function OdometerNumber({
+  value,
+  isDark,
+  className = ""
+}: {
+  value: number;
+  isDark: boolean;
+  className?: string;
+}) {
+  const [displayValue, setDisplayValue] = useState(value);
+  const [direction, setDirection] = useState<'up' | 'down'>('up');
+
+  useEffect(() => {
+    setDirection(value > displayValue ? 'up' : 'down');
+    setDisplayValue(value);
+  }, [value]);
+
+  return (
+    <div className={`relative overflow-hidden inline-flex items-center justify-center ${className}`}
+      style={{ minWidth: `${String(value).length * 0.7}em` }}>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={value}
+          initial={{
+            y: direction === 'up' ? 16 : -16,
+            opacity: 0,
+            filter: "blur(4px)"
+          }}
+          animate={{
+            y: 0,
+            opacity: 1,
+            filter: "blur(0px)"
+          }}
+          exit={{
+            y: direction === 'up' ? -16 : 16,
+            opacity: 0,
+            filter: "blur(4px)"
+          }}
+          transition={{
+            type: "spring",
+            stiffness: 400,
+            damping: 30,
+            mass: 0.6
+          }}
+          className="inline-block tabular-nums"
+        >
+          {value}
+        </motion.span>
       </AnimatePresence>
     </div>
   );
@@ -4420,6 +4474,26 @@ export default function Home() {
                             </button>
                           </MagneticHover>
 
+                          {/* Sisipkan Pecahan LaTeX */}
+                          <MagneticHover isApple={isAppleDevice} className="flex-shrink-0">
+                            <button
+                              onClick={() => {
+                                const latex = " $\\frac{1}{2}p$ ";
+                                setInputText(prev => prev + latex);
+                                setText(prev => prev + latex);
+                                setTimeout(() => textareaRef.current?.focus(), 50);
+                              }}
+                              className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${D
+                                ? "bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20"
+                                : "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
+                                }`}
+                              title="Sisipkan format rumus pecahan"
+                            >
+                              <Sigma className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>Pecahan</span>
+                            </button>
+                          </MagneticHover>
+
                           {/* Divider */}
                           {currentFolio && (
                             <div className={`w-px h-5 flex-shrink-0 mx-0.5 ${D ? "bg-white/10" : "bg-gray-200"}`} />
@@ -4573,6 +4647,57 @@ export default function Home() {
                         <kbd className={`px-1.5 py-0.5 rounded border font-mono text-[9px] ${D ? "bg-white/5 border-white/10" : "bg-gray-100 border-gray-200"}`}>Ctrl+Enter</kbd>
                         <span>Generate</span>
                       </div>
+                      {/* ── AI QUICK INSERT CHIPS ── */}
+                      {!text.trim() && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 8 }}
+                          transition={{ duration: 0.3, delay: 0.2 }}
+                          className="flex flex-col gap-2"
+                        >
+                          <p className={`text-[10px] font-semibold uppercase tracking-widest px-1 ${c.ts}`}>
+                            ✨ Mulai dengan...
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {[
+                              "Pada suatu hari yang cerah,",
+                              "Berdasarkan hasil penelitian,",
+                              "Menurut pendapat saya,",
+                              "Di era globalisasi ini,",
+                              "Seiring perkembangan zaman,",
+                              "Dalam kehidupan sehari-hari,",
+                              "Pendidikan merupakan hal penting",
+                              "Indonesia adalah negara yang",
+                            ].map((starter) => (
+                              <motion.button
+                                key={starter}
+                                whileHover={{ scale: 1.03 }}
+                                whileTap={{ scale: 0.97 }}
+                                onClick={() => {
+                                  const newText = starter + " ";
+                                  setInputText(newText);
+                                  setText(newText);
+                                  setTimeout(() => {
+                                    textareaRef.current?.focus();
+                                    const len = newText.length;
+                                    textareaRef.current?.setSelectionRange(len, len);
+                                  }, 50);
+                                }}
+                                className={`flex items-center gap-1 text-[11px] px-3 py-1.5 rounded-full border transition-all ${D
+                                  ? "bg-[#ffffff06] border-[#ffffff10] text-white/50 hover:bg-violet-500/12 hover:border-violet-500/30 hover:text-violet-300"
+                                  : "bg-white border-violet-200 text-violet-600 hover:bg-violet-50 hover:border-violet-300 shadow-sm"
+                                  }`}
+                              >
+                                <span>"{starter}"</span>
+                              </motion.button>
+                            ))}
+                          </div>
+                          <p className={`text-[9px] px-1 ${c.ts} opacity-60`}>
+                            Klik untuk langsung mulai menulis
+                          </p>
+                        </motion.div>
+                      )}
                       <div className={`w-px h-3 ${D ? "bg-white/10" : "bg-gray-200"}`} />
                       <div className="flex items-center gap-1">
                         <span>Drag & drop</span>
@@ -4726,8 +4851,10 @@ export default function Home() {
                               ? D ? "border-[#ffffff05] text-white/10 cursor-not-allowed" : "border-gray-100 text-gray-200 cursor-not-allowed"
                               : c.btn
                               }`}>←</button>
-                          <span className={`text-[11px] font-semibold tabular-nums min-w-[44px] text-center ${c.tp}`}>
-                            {activePageIndex + 1}/{generatedPages.length}
+                          <span className={`text-[11px] font-semibold flex items-center gap-0.5 min-w-[44px] justify-center ${c.tp}`}>
+                            <OdometerNumber value={activePageIndex + 1} isDark={D} />
+                            <span className={c.ts}>/</span>
+                            <OdometerNumber value={generatedPages.length} isDark={D} />
                           </span>
                           <button
                             onClick={() => navigateToPage(activePageIndex + 1)}
@@ -4768,6 +4895,29 @@ export default function Home() {
                 {isGenerating && (
                   <div className={`h-1 w-full relative overflow-hidden ${D ? "bg-[#ffffff08]" : "bg-gray-100"}`}>
                     <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-[width] duration-300" style={{ width: `${generateProgress}%` }} />
+                  </div>
+                )}
+
+                {/* ── READING PROGRESS BAR ── */}
+                {generatedPages.length > 1 && !isGenerating && (
+                  <div className={`h-[2px] w-full relative overflow-hidden ${D ? "bg-white/5" : "bg-violet-100"}`}>
+                    <motion.div
+                      className="absolute top-0 left-0 h-full bg-gradient-to-r from-violet-500 via-indigo-400 to-cyan-400"
+                      initial={{ width: 0 }}
+                      animate={{
+                        width: `${((activePageIndex + 1) / generatedPages.length) * 100}%`
+                      }}
+                      transition={{ type: "spring", stiffness: 200, damping: 30 }}
+                    />
+                    {/* Glow di ujung bar */}
+                    <motion.div
+                      className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-violet-400 shadow-[0_0_6px_rgba(139,92,246,0.8)]"
+                      initial={{ left: 0 }}
+                      animate={{
+                        left: `calc(${((activePageIndex + 1) / generatedPages.length) * 100}% - 4px)`
+                      }}
+                      transition={{ type: "spring", stiffness: 200, damping: 30 }}
+                    />
                   </div>
                 )}
 
@@ -5477,6 +5627,15 @@ export default function Home() {
                         className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${!text ? "opacity-35 cursor-not-allowed " + c.btn : D ? "hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25 " + c.btn : "hover:bg-red-50 hover:text-red-600 hover:border-red-200 " + c.btn}`}>
                         <Trash2 className="w-3.5 h-3.5" /><span>Hapus</span>
                       </button>
+                      <button onClick={() => {
+                        const latex = " $\\frac{1}{2}p$ ";
+                        setInputText(prev => prev + latex);
+                        setText(prev => prev + latex);
+                        setTimeout(() => textareaRef.current?.focus(), 50);
+                      }}
+                        className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border flex-shrink-0 ${D ? "bg-amber-500/10 text-amber-400 border-amber-500/30" : "bg-amber-50 text-amber-600 border-amber-200"}`}>
+                        <Sigma className="w-3.5 h-3.5" /><span>Pecahan</span>
+                      </button>
                       {currentFolio && (
                         <>
                           <div className={`w-px h-5 flex-shrink-0 ${D ? "bg-white/10" : "bg-gray-200"}`} />
@@ -5512,6 +5671,71 @@ export default function Home() {
                     <div className={`h-1 flex-shrink-0 rounded-full overflow-hidden ${D ? "bg-[#ffffff08]" : "bg-gray-200"}`}>
                       <div className={`h-full rounded-full ${text.length > 45000 ? "bg-red-500" : D ? "bg-emerald-500" : "bg-emerald-600"}`}
                         style={{ width: `${Math.min(100, (text.length / 50000) * 100)}%` }} />
+                    </div>
+                  )}
+                  {/* Quick Insert Mobile */}
+                  {!text.trim() && (
+                    <div className="flex flex-col gap-2 pt-1">
+                      <p className={`text-[10px] font-semibold uppercase tracking-widest ${c.ts}`}>
+                        ✨ Mulai dengan...
+                      </p>
+                      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
+                        {[
+                          "Pada suatu hari,",
+                          "Berdasarkan penelitian,",
+                          "Menurut pendapat saya,",
+                          "Di era globalisasi ini,",
+                          "Seiring perkembangan zaman,",
+                        ].map((starter) => (
+                          <button
+                            key={starter}
+                            onClick={() => {
+                              const newText = starter + " ";
+                              setInputText(newText);
+                              setText(newText);
+                              setTimeout(() => textareaRef.current?.focus(), 50);
+                            }}
+                            className={`flex-shrink-0 text-[11px] px-3 py-1.5 rounded-full border whitespace-nowrap transition-colors ${D
+                              ? "bg-[#ffffff06] border-[#ffffff10] text-white/50 hover:bg-violet-500/12 hover:text-violet-300"
+                              : "bg-white border-violet-200 text-violet-600 shadow-sm"
+                              }`}
+                          >
+                            "{starter}"
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}{/* Quick Insert Mobile */}
+                  {!text.trim() && (
+                    <div className="flex flex-col gap-2 pt-1">
+                      <p className={`text-[10px] font-semibold uppercase tracking-widest ${c.ts}`}>
+                        ✨ Mulai dengan...
+                      </p>
+                      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
+                        {[
+                          "Pada suatu hari,",
+                          "Berdasarkan penelitian,",
+                          "Menurut pendapat saya,",
+                          "Di era globalisasi ini,",
+                          "Seiring perkembangan zaman,",
+                        ].map((starter) => (
+                          <button
+                            key={starter}
+                            onClick={() => {
+                              const newText = starter + " ";
+                              setInputText(newText);
+                              setText(newText);
+                              setTimeout(() => textareaRef.current?.focus(), 50);
+                            }}
+                            className={`flex-shrink-0 text-[11px] px-3 py-1.5 rounded-full border whitespace-nowrap transition-colors ${D
+                              ? "bg-[#ffffff06] border-[#ffffff10] text-white/50 hover:bg-violet-500/12 hover:text-violet-300"
+                              : "bg-white border-violet-200 text-violet-600 shadow-sm"
+                              }`}
+                          >
+                            "{starter}"
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
 
@@ -5785,8 +6009,10 @@ export default function Home() {
                                   <button onClick={() => setActivePageIndex(i => Math.max(0, i - 1))} disabled={activePageIndex === 0} className={`w-8 h-10 flex items-center justify-center transition-colors active:scale-95 ${activePageIndex === 0 ? "opacity-30" : "text-violet-500"}`}>
                                     <ChevronDown className="w-5 h-5 rotate-90" />
                                   </button>
-                                  <span className={`text-[13px] font-bold font-mono px-0.5 ${D ? "text-white" : "text-gray-900"}`}>
-                                    {activePageIndex + 1}/{activePages.length}
+                                  <span className={`text-[13px] font-bold flex items-center gap-0.5 px-0.5 ${D ? "text-white" : "text-gray-900"}`}>
+                                    <OdometerNumber value={activePageIndex + 1} isDark={D} />
+                                    <span className="opacity-40">/</span>
+                                    <OdometerNumber value={activePages.length} isDark={D} />
                                   </span>
                                   <button onClick={() => setActivePageIndex(i => Math.min(activePages.length - 1, i + 1))} disabled={activePageIndex === activePages.length - 1} className={`w-8 h-10 flex items-center justify-center transition-colors active:scale-95 ${activePageIndex === activePages.length - 1 ? "opacity-30" : "text-violet-500"}`}>
                                     <ChevronDown className="w-5 h-5 -rotate-90" />

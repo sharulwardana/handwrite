@@ -10,6 +10,10 @@ import pyphen
 # Inisialisasi kamus pemisah suku kata bahasa Indonesia
 dic_id = pyphen.Pyphen(lang='id_ID')
 from PIL import Image, ImageDraw, ImageFont
+import re
+import io
+from matplotlib import mathtext
+from PIL import ImageOps
 
 
 def hex_to_rgb(hex_color):
@@ -194,6 +198,29 @@ class HandwritingGenerator:
             max(0, min(255, int(b + jitter))),
         )
 
+    def render_latex_to_image(self, latex_str, color_rgb):
+        """Merender blok LaTeX menjadi gambar RGBA transparan sesuai warna tinta"""
+        buf = io.BytesIO()
+        # Matplotlib merender rumus (hilangkan tanda $ di awal dan akhir untuk mathtext)
+        clean_latex = latex_str.strip("$")
+        # Format mathtext butuh r"$...$"
+        mathtext.math_to_image(f"${clean_latex}$", buf, dpi=300, format='png', transparent=True)
+        buf.seek(0)
+
+        img = Image.open(buf).convert("RGBA")
+        alpha = img.split()[3]
+
+        r, g, b = color_rgb[:3]
+        colored_img = Image.new("RGBA", img.size, (r, g, b, 255))
+        colored_img.putalpha(alpha)
+
+        # Sesuaikan tinggi equation dengan font
+        target_height = int(self.config["fontSize"] * 1.5) 
+        ratio = target_height / float(img.height)
+        new_width = int(img.width * ratio)
+
+        return colored_img.resize((new_width, target_height), Image.Resampling.LANCZOS)
+
     def draw_heavy_strikethrough(self, draw, x_start, x_end, y, font_size):
         """
         Coretan tebal berlapis yang MENUTUPI kata typo.
@@ -301,10 +328,17 @@ class HandwritingGenerator:
         _drop_cap_done = False
 
         tokens = []
-        for word in text.split(" "):
-            for ch in word:
-                tokens.append(("char", ch))
+        words_with_math = re.findall(r'\$.*?\$|\S+', text)
+
+        for word in words_with_math:
+            if word.startswith('$') and word.endswith('$'):
+                # Masukkan blok LaTeX sebagai satu kesatuan
+                tokens.append(("math", word))
+            else:
+                for ch in word:
+                    tokens.append(("char", ch))
             tokens.append(("space", " "))
+
         if tokens and tokens[-1][1] == " ":
             tokens.pop()
 
@@ -317,6 +351,25 @@ class HandwritingGenerator:
         self._word_size_jitter = random.uniform(0.97, 1.03)
 
         for tok_type, char in tokens:
+            if tok_type == "math":
+                # 1. Tentukan warna tinta
+                ink_color = self.ink_vary(pressure_delta=-5)
+
+                # 2. Ubah string LaTeX menjadi gambar
+                math_img = self.render_latex_to_image(char, ink_color)
+
+                # 3. Hitung posisi Y (sesuaikan angka 0.2 atau 0.3 jika rumus terlalu atas/bawah)
+                paste_y = int(y + self.config["fontSize"] * 0.2) + int(jitter_y)
+
+                # 4. Tempel gambar ke folio
+                text_layer.paste(math_img, (int(cursor_x), paste_y), math_img)
+
+                # 5. Geser kursor X ke kanan sesuai lebar rumus
+                cursor_x += math_img.width + random.uniform(2.0, 5.0)
+
+                # Lanjut ke token berikutnya
+                continue
+
             if tok_type == "space":
                 word_char_idx = 0
                 word_count_seen += 1
@@ -609,8 +662,9 @@ class HandwritingGenerator:
             margin_jitter = 0
             current_line = ""
 
-            for word in paragraph.split(" "):
-                # FIX AKURASI: Cek lebar murni kata TANPA spasi gaib di akhir.
+            # Gunakan Regex agar blok LaTeX yang diapit $...$ tidak terpisah oleh spasi
+            words_with_math = re.findall(r'\$.*?\$|\S+', paragraph)
+            for word in words_with_math:
                 # Ini mencegah kata dipotong hanya karena spasi setelahnya menabrak margin.
                 test_line_exact = current_line + word
                 
