@@ -2860,6 +2860,7 @@ export default function Home() {
                   key={`page-${p.page}`}
                   src={p.image}
                   alt={`Hal ${p.page}`}
+                  draggable={false}
                   className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
                   loading="lazy"
                   decoding="async"
@@ -4982,6 +4983,23 @@ export default function Home() {
 
                       <div className={`w-px h-6 mx-1 ${D ? "bg-white/10" : "bg-gray-300"}`} />
 
+                      {/* ── TAMBAHAN KODE: NAVIGASI DESKTOP / LAPTOP ── */}
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => navigateToPage(activePageIndex - 1)} disabled={activePageIndex === 0} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${activePageIndex === 0 ? "opacity-30 cursor-not-allowed" : D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`} title="Halaman Sebelumnya">
+                          <ChevronDown className="w-4 h-4 rotate-90" />
+                        </button>
+                        <span className={`text-xs font-bold px-1.5 flex items-center gap-0.5 ${D ? "text-gray-300" : "text-gray-700"}`}>
+                          <OdometerNumber value={activePageIndex + 1} isDark={D} />
+                          <span className="opacity-40">/</span>
+                          <OdometerNumber value={generatedPages.length} isDark={D} />
+                        </span>
+                        <button onClick={() => navigateToPage(activePageIndex + 1)} disabled={activePageIndex === generatedPages.length - 1} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${activePageIndex === generatedPages.length - 1 ? "opacity-30 cursor-not-allowed" : D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`} title="Halaman Selanjutnya">
+                          <ChevronDown className="w-4 h-4 -rotate-90" />
+                        </button>
+                      </div>
+
+                      <div className={`w-px h-6 mx-1 ${D ? "bg-white/10" : "bg-gray-300"}`} />
+
                       <button onClick={() => setFullscreenPage(generatedPages[activePageIndex])} className={`hidden sm:flex w-10 h-10 rounded-xl items-center justify-center transition-colors ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`} title="Fullscreen">
                         <Maximize2 className="w-[18px] h-[18px]" />
                       </button>
@@ -5216,9 +5234,34 @@ export default function Home() {
                               key="book-viewer"
                               initial={{ opacity: 0, scale: 0.95 }}
                               animate={{ opacity: 1, scale: 1 }}
-                              className="p-4 lg:p-8 flex items-center justify-center min-h-full w-full"
+                              className="p-4 lg:p-8 flex items-center justify-center min-h-full w-full relative"
                               style={{ perspective: enableHolo3D ? "2000px" : "none" }}
                             >
+                              {/* TOMBOL NAVIGASI KIRI KANAN FLOATING UNTUK DESKTOP */}
+                              {!isMobileView && generatedPages.length > 1 && (
+                                <>
+                                  <motion.button
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: activePageIndex === 0 ? 0 : 1, x: 0 }}
+                                    className={`absolute left-4 xl:left-12 top-1/2 -translate-y-1/2 z-[60] w-12 h-12 rounded-full flex items-center justify-center border shadow-xl backdrop-blur-md transition-all ${activePageIndex === 0 ? "pointer-events-none" : D ? "bg-black/50 border-white/10 text-white/80 hover:bg-black/80 hover:text-white hover:scale-110" : "bg-white/70 border-gray-200 text-gray-700 hover:bg-white hover:text-violet-600 hover:scale-110"}`}
+                                    onClick={(e) => { e.stopPropagation(); navigateToPage(activePageIndex - 1); }}
+                                    disabled={activePageIndex === 0}
+                                  >
+                                    <ChevronDown className="w-6 h-6 rotate-90" />
+                                  </motion.button>
+
+                                  <motion.button
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: activePageIndex === generatedPages.length - 1 ? 0 : 1, x: 0 }}
+                                    className={`absolute right-4 xl:right-12 top-1/2 -translate-y-1/2 z-[60] w-12 h-12 rounded-full flex items-center justify-center border shadow-xl backdrop-blur-md transition-all ${activePageIndex === generatedPages.length - 1 ? "pointer-events-none" : D ? "bg-black/50 border-white/10 text-white/80 hover:bg-black/80 hover:text-white hover:scale-110" : "bg-white/70 border-gray-200 text-gray-700 hover:bg-white hover:text-violet-600 hover:scale-110"}`}
+                                    onClick={(e) => { e.stopPropagation(); navigateToPage(activePageIndex + 1); }}
+                                    disabled={activePageIndex === generatedPages.length - 1}
+                                  >
+                                    <ChevronDown className="w-6 h-6 -rotate-90" />
+                                  </motion.button>
+                                </>
+                              )}
+
                               <motion.div
                                 className="relative group"
                                 data-hologram="true"
@@ -5810,7 +5853,8 @@ export default function Home() {
                             const deltaX = e.changedTouches[0].clientX - swipeStartXRef.current;
                             const deltaY = e.changedTouches[0].clientY - (swipeStartYRef.current ?? 0);
 
-                            if (Math.abs(deltaX) < Math.abs(deltaY) || Math.abs(deltaX) < 30) {
+                            // PERBAIKAN: Beri kelonggaran toleransi swipe agar tidak mudah batal
+                            if (Math.abs(deltaY) > Math.abs(deltaX) * 1.5 || Math.abs(deltaX) < 35) {
                               swipeStartXRef.current = null;
                               swipeStartYRef.current = null;
                               return;
@@ -5821,23 +5865,15 @@ export default function Home() {
                             const swipingLeft = deltaX < 0;
                             const swipingRight = deltaX > 0;
 
-                            // Rubber band — sudah di batas tapi masih swipe
                             if ((swipingLeft && isAtLast) || (swipingRight && isAtFirst)) {
                               const bounceDir = swipingLeft ? -1 : 1;
-
-                              // Haptic feedback
-                              if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-                                navigator.vibrate(10);
-                              }
-
+                              if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10);
                               setIsRubberBanding(true);
                               setRubberBandOffset(bounceDir * 18);
-
                               setTimeout(() => setRubberBandOffset(bounceDir * 8), 80);
                               setTimeout(() => setRubberBandOffset(0), 200);
                               setTimeout(() => setIsRubberBanding(false), 250);
                             } else {
-                              // Swipe normal
                               if (swipingLeft) {
                                 setSwipeFeedback('left');
                                 setActivePageIndex(i => Math.min(activePages.length - 1, i + 1));
@@ -5846,16 +5882,50 @@ export default function Home() {
                                 setActivePageIndex(i => Math.max(0, i - 1));
                               }
                               setTimeout(() => setSwipeFeedback(null), 300);
-
-                              // Haptic feedback normal
-                              if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-                                navigator.vibrate(6);
-                              }
+                              if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(6);
                             }
-
                             swipeStartXRef.current = null;
                             swipeStartYRef.current = null;
-                          }}>
+                          }}
+                          // PERBAIKAN: Dukungan drag pakai Mouse saat testing Responsive di Desktop
+                          onMouseDown={(e) => {
+                            if (e.button !== 0) return;
+                            swipeStartXRef.current = e.clientX;
+                            swipeStartYRef.current = e.clientY;
+                          }}
+                          onMouseUp={(e) => {
+                            if (swipeStartXRef.current === null) return;
+                            const deltaX = e.clientX - swipeStartXRef.current;
+                            const deltaY = e.clientY - (swipeStartYRef.current ?? 0);
+
+                            if (Math.abs(deltaY) > Math.abs(deltaX) * 1.5 || Math.abs(deltaX) < 35) {
+                              swipeStartXRef.current = null; swipeStartYRef.current = null; return;
+                            }
+
+                            const isAtFirst = activePageIndex === 0;
+                            const isAtLast = activePageIndex === activePages.length - 1;
+                            const swipingLeft = deltaX < 0;
+                            const swipingRight = deltaX > 0;
+
+                            if ((swipingLeft && isAtLast) || (swipingRight && isAtFirst)) {
+                              const bounceDir = swipingLeft ? -1 : 1;
+                              setIsRubberBanding(true);
+                              setRubberBandOffset(bounceDir * 18);
+                              setTimeout(() => setRubberBandOffset(0), 200);
+                              setTimeout(() => setIsRubberBanding(false), 250);
+                            } else {
+                              if (swipingLeft) {
+                                setSwipeFeedback('left');
+                                setActivePageIndex(i => Math.min(activePages.length - 1, i + 1));
+                              } else {
+                                setSwipeFeedback('right');
+                                setActivePageIndex(i => Math.max(0, i - 1));
+                              }
+                              setTimeout(() => setSwipeFeedback(null), 300);
+                            }
+                            swipeStartXRef.current = null; swipeStartYRef.current = null;
+                          }}
+                        >
 
                           <div className="relative" style={{ aspectRatio: '210/297' }}>
                             <motion.img
@@ -6001,7 +6071,7 @@ export default function Home() {
 
                               <div className={`w-px h-6 mx-1.5 ${D ? "bg-white/20" : "bg-gray-300"}`} />
 
-                              {activePages.length > 1 && (
+                              {activePages.length > 0 && (
                                 <>
                                   <button onClick={() => setActivePageIndex(i => Math.max(0, i - 1))} disabled={activePageIndex === 0} className={`w-8 h-10 flex items-center justify-center transition-colors active:scale-95 ${activePageIndex === 0 ? "opacity-30" : "text-violet-500"}`}>
                                     <ChevronDown className="w-5 h-5 rotate-90" />
@@ -6011,7 +6081,8 @@ export default function Home() {
                                     <span className="opacity-40">/</span>
                                     <OdometerNumber value={activePages.length} isDark={D} />
                                   </span>
-                                  <button onClick={() => setActivePageIndex(i => Math.min(activePages.length - 1, i + 1))} disabled={activePageIndex === activePages.length - 1} className={`w-8 h-10 flex items-center justify-center transition-colors active:scale-95 ${activePageIndex === activePages.length - 1 ? "opacity-30" : "text-violet-500"}`}>
+                                  {/* Disabled disesuaikan dengan activePages.length */}
+                                  <button onClick={() => setActivePageIndex(i => Math.min(activePages.length - 1, i + 1))} disabled={activePageIndex === activePages.length - 1 || activePages.length <= 1} className={`w-8 h-10 flex items-center justify-center transition-colors active:scale-95 ${activePageIndex === activePages.length - 1 || activePages.length <= 1 ? "opacity-30" : "text-violet-500"}`}>
                                     <ChevronDown className="w-5 h-5 -rotate-90" />
                                   </button>
                                   <div className={`w-px h-6 mx-1.5 ${D ? "bg-white/20" : "bg-gray-300"}`} />
