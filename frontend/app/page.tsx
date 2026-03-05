@@ -885,7 +885,7 @@ export default function Home() {
   const [isMobileView, setIsMobileView] = useState(false);
 
   useEffect(() => {
-    const checkMobile = () => setIsMobileView(window.innerWidth < 1024);
+    const checkMobile = () => setIsMobileView(window.innerWidth < 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
@@ -4219,7 +4219,7 @@ export default function Home() {
             </motion.aside>
 
             {/* ══ BUNGKUS PANEL 2 & 3 ══ */}
-            <div className="hidden lg:flex flex-1 overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
+            <div className="hidden md:flex flex-1 overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
 
               {/* ══ PANEL 2: EDITOR ══ */}
               <div id="editor-panel"
@@ -4855,7 +4855,7 @@ export default function Home() {
                           <span className={`text-[11px] font-semibold flex items-center gap-0.5 min-w-[44px] justify-center ${c.tp}`}>
                             <OdometerNumber value={activePageIndex + 1} isDark={D} />
                             <span className={c.ts}>/</span>
-                            <OdometerNumber value={generatedPages.length} isDark={D} />
+                            <OdometerNumber value={activePagesMemo.length} isDark={D} />
                           </span>
                           <button
                             onClick={() => navigateToPage(activePageIndex + 1)}
@@ -4954,7 +4954,7 @@ export default function Home() {
                   )}
 
                   {/* === FLOATING TOOLBAR (Figma Style) === */}
-                  {generatedPages.length > 0 && activeTab === "result" && (
+                  {activePagesMemo.length > 0 && activeTab === "result" && (
                     <div className="absolute left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1.5 px-3 py-2.5 rounded-2xl shadow-2xl backdrop-blur-2xl border transition-colors animate-in slide-in-from-bottom-4 duration-500"
                       style={{
                         bottom: "max(2rem, calc(2rem + env(safe-area-inset-bottom)))",
@@ -5033,7 +5033,7 @@ export default function Home() {
                   )}
 
                   {/* Thumbnail Strip Vertikal */}
-                  {(generatedPages.length > 1 || isGenerating) && activeTab === "result" && (
+                  {(activePagesMemo.length > 0 || isGenerating) && activeTab === "result" && (
                     <div className={`hidden lg:flex flex-col gap-2 p-2 w-[72px] 2xl:w-[88px] 3xl:w-[100px] flex-shrink-0 overflow-y-auto border-r scrollbar-thin ${c.divider} ${D ? "bg-[#09090b]" : "bg-violet-50/80"}`}>
 
                       {/* Thumbnail halaman yang sudah selesai */}
@@ -5238,7 +5238,7 @@ export default function Home() {
                               style={{ perspective: enableHolo3D ? "2000px" : "none" }}
                             >
                               {/* TOMBOL NAVIGASI KIRI KANAN FLOATING UNTUK DESKTOP */}
-                              {!isMobileView && generatedPages.length > 1 && (
+                              {!isMobileView && activePagesMemo.length > 1 && (
                                 <>
                                   <motion.button
                                     initial={{ opacity: 0, x: -20 }}
@@ -5599,7 +5599,7 @@ export default function Home() {
             </div>
 
             {/* ══ MOBILE & TABLET: Editor + Output tabs (< lg) ══ */}
-            <div className="flex lg:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
+            <div className="flex md:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
               {/* Tab Switcher — sembunyikan di tablet karena layout split */}
               <div className={`flex-shrink-0 px-4 py-3 border-b md:hidden ${c.divider} bg-transparent`}>
                 <DraggableLiquidTabs
