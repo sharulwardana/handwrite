@@ -2851,25 +2851,38 @@ export default function Home() {
         className="shadow-2xl rounded-sm"
         onFlip={(e: any) => setActivePageIndex(e.data)}
       >
-        {activePagesMemo.map((p) => (
-          <div key={p.page} className="bg-white overflow-hidden" style={{ boxShadow: "inset 0 0 20px rgba(0,0,0,0.05)" }}>
-            <img
-              src={p.image}
-              alt={`Hal ${p.page}`}
-              className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
-              loading="lazy"
-              decoding="async"
-              onDoubleClick={() => setFullscreenPage(p)}
-              onTouchStart={() => handleLongPressStart(p)}
-              onTouchEnd={handleLongPressEnd}
-              onTouchCancel={handleLongPressEnd}
-              onMouseLeave={handleLongPressEnd}
-            />
-          </div>
-        ))}
+        {activePagesMemo.map((p, idx) => {
+          const isNear = Math.abs(idx - activePageIndex) <= PRELOAD_RANGE;
+          return (
+            <div key={p.page} className="bg-white overflow-hidden" style={{ boxShadow: "inset 0 0 20px rgba(0,0,0,0.05)" }}>
+              {isNear ? (
+                <motion.img
+                  key={`page-${p.page}`}
+                  src={p.image}
+                  alt={`Hal ${p.page}`}
+                  className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
+                  loading="lazy"
+                  decoding="async"
+                  initial={{ opacity: 0.7 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  onDoubleClick={() => generatedPages.length > 0 && setFullscreenPage(p)}
+                  onTouchStart={() => handleLongPressStart(p)}
+                  onTouchEnd={handleLongPressEnd}
+                  onTouchCancel={handleLongPressEnd}
+                  onMouseLeave={handleLongPressEnd}
+                />
+              ) : (
+                <div className={`w-full h-full flex items-center justify-center ${D ? "bg-white/5" : "bg-gray-50"}`}>
+                  <Loader2 className="w-6 h-6 text-violet-400/30 animate-spin" />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </FlipBook>
     );
-  }, [activePagesMemo, generatedPages.length, D]);
+  }, [activePagesMemo, activePageIndex, generatedPages.length, D]);
 
   // PERF FIX LCP: isAuthChecking TIDAK memblokir render lagi.
   // Landing page tetap tampil (!showEditor && !user) selama auth check berjalan.
@@ -5113,22 +5126,6 @@ export default function Home() {
                         ? "radial-gradient(#ffffff09 1px, transparent 1px)"
                         : "radial-gradient(#8b5cf630 1px, transparent 1px)",
                       backgroundSize: "28px 28px",
-                    }}
-                    onTouchStart={(e) => {
-                      if (e.touches.length === 1 && generatedPages.length > 1) {
-                        swipeStartXRef.current = e.touches[0].clientX;
-                        swipeStartYRef.current = e.touches[0].clientY;
-                      }
-                    }}
-                    onTouchEnd={(e) => {
-                      if (swipeStartXRef.current === null || generatedPages.length <= 1) return;
-                      const deltaX = e.changedTouches[0].clientX - swipeStartXRef.current;
-                      const deltaY = e.changedTouches[0].clientY - (swipeStartYRef.current ?? 0);
-                      swipeStartXRef.current = null;
-                      swipeStartYRef.current = null;
-                      if (Math.abs(deltaX) < Math.abs(deltaY) || Math.abs(deltaX) < 40) return;
-                      if (deltaX < 0) navigateToPage(activePageIndex + 1);
-                      else navigateToPage(activePageIndex - 1);
                     }}>
 
                     <AnimatePresence mode="wait">
@@ -5230,9 +5227,7 @@ export default function Home() {
                                   maxWidth: "100%",
                                   display: "flex",
                                   justifyContent: "center",
-                                  transformStyle: "preserve-3d",
-                                  paddingLeft: generatedPages.length > 1 ? "56px" : "0",
-                                  paddingRight: generatedPages.length > 1 ? "56px" : "0",
+                                  transformStyle: "preserve-3d"
                                 }}
                                 whileHover={enableHolo3D ? { scale: 1.02 } : {}}
                                 onMouseMove={(e: any) => {
@@ -5266,41 +5261,18 @@ export default function Home() {
                                   </>
                                 )}
 
-                                {/* Left nav arrow */}
-                                {generatedPages.length > 1 && (
-                                  <button
-                                    onClick={() => navigateToPage(activePageIndex - 1)}
-                                    disabled={activePageIndex === 0}
-                                    className={`absolute left-0 top-1/2 -translate-y-1/2 z-[55] w-10 h-10 rounded-full flex items-center justify-center shadow-xl border transition-all duration-200 ${activePageIndex === 0
-                                        ? "opacity-0 pointer-events-none"
-                                        : D
-                                          ? "bg-black/70 backdrop-blur-xl border-white/15 text-white hover:bg-black/90 hover:scale-110 active:scale-95"
-                                          : "bg-white/90 backdrop-blur-xl border-violet-200 text-violet-600 hover:bg-white hover:scale-110 active:scale-95"
-                                      }`}
+                                <AnimatePresence mode="wait">
+                                  <motion.div
+                                    key={activePageIndex}
+                                    initial={{ opacity: 0, scale: 0.98 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.98 }}
+                                    transition={{ duration: 0.2, ease: "easeOut" }}
+                                    style={{ width: "100%", display: "flex", justifyContent: "center" }}
                                   >
-                                    <ChevronDown className="w-5 h-5 rotate-90" />
-                                  </button>
-                                )}
-
-                                {/* Right nav arrow */}
-                                {generatedPages.length > 1 && (
-                                  <button
-                                    onClick={() => navigateToPage(activePageIndex + 1)}
-                                    disabled={activePageIndex === generatedPages.length - 1}
-                                    className={`absolute right-0 top-1/2 -translate-y-1/2 z-[55] w-10 h-10 rounded-full flex items-center justify-center shadow-xl border transition-all duration-200 ${activePageIndex === generatedPages.length - 1
-                                        ? "opacity-0 pointer-events-none"
-                                        : D
-                                          ? "bg-black/70 backdrop-blur-xl border-white/15 text-white hover:bg-black/90 hover:scale-110 active:scale-95"
-                                          : "bg-white/90 backdrop-blur-xl border-violet-200 text-violet-600 hover:bg-white hover:scale-110 active:scale-95"
-                                      }`}
-                                  >
-                                    <ChevronDown className="w-5 h-5 -rotate-90" />
-                                  </button>
-                                )}
-
-                                <div style={{ width: "100%", display: "flex", justifyContent: "center" }}>
-                                  {memoizedFlipBook}
-                                </div>
+                                    {memoizedFlipBook}
+                                  </motion.div>
+                                </AnimatePresence>
                               </motion.div>
                             </motion.div>
                           );
