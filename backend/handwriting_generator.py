@@ -106,25 +106,28 @@ class HandwritingGenerator:
             # === SANGAT PENTING: Sesuaikan koordinat Config agar teks tidak meleset ===
             self.config["startX"] = int(self.config.get("startX", 0) * scale_ratio)
             self.config["startY"] = int(self.config.get("startY", 0) * scale_ratio)
-            self.config["lineHeight"] = float(
-                self.config.get("lineHeight", 0) * scale_ratio
-            )
+            self.config["lineHeight"] = float(self.config.get("lineHeight", 0) * scale_ratio)
             self.config["maxWidth"] = int(self.config.get("maxWidth", 0) * scale_ratio)
-            self.config["pageBottom"] = int(
-                self.config.get("pageBottom", 0) * scale_ratio
-            )
-            self.config["fontSize"] = max(
-                10, int(self.config.get("fontSize", 0) * scale_ratio)
-            )
+            self.config["pageBottom"] = int(self.config.get("pageBottom", 0) * scale_ratio)
+            self.config["fontSize"] = max(10, int(self.config.get("fontSize", 0) * scale_ratio))
 
             if "marginJitter" in self.config:
-                self.config["marginJitter"] = max(
-                    1, int(self.config["marginJitter"] * scale_ratio)
-                )
+                self.config["marginJitter"] = max(1, int(self.config["marginJitter"] * scale_ratio))
             if "wordSpacing" in self.config:
-                self.config["wordSpacing"] = int(
-                    self.config["wordSpacing"] * scale_ratio
-                )
+                self.config["wordSpacing"] = int(self.config["wordSpacing"] * scale_ratio)
+
+        # --- FIX BUG 1: Konversi Tipe Data & Clamping (Mencegah Teks Off-Canvas) ---
+        img_w, img_h = self.folio_odd.size
+        
+        self.config["startX"] = float(self.config.get("startX", 70))
+        self.config["startY"] = float(self.config.get("startY", 65))
+        self.config["lineHeight"] = max(15.0, float(self.config.get("lineHeight", 38)))
+        self.config["fontSize"] = int(self.config.get("fontSize", 25))
+        
+        # JANGAN biarkan setting melebihi lebar dan tinggi gambar asli!
+        self.config["maxWidth"] = min(float(img_w - 20), float(self.config.get("maxWidth", 1100)))
+        self.config["pageBottom"] = min(float(img_h - 20), float(self.config.get("pageBottom", 1520)))
+        # --------------------------------------------------------------------------
 
         self.folio_template = self.folio_odd  # default untuk kompatibilitas
 
@@ -625,62 +628,56 @@ class HandwritingGenerator:
         return cursor_x
 
     def calculate_text_width(self, text):
-        """Estimasi lebar teks termasuk wordSpacing"""
-        bbox = self.font.getbbox(text)
-        base_width = bbox[2] - bbox[0]
+        """Estimasi lebar teks termasuk wordSpacing (Fix untuk Pillow)"""
+        try:
+            # getlength jauh lebih akurat dari getbbox karena menghitung 'advance width' (termasuk spasi)
+            base_width = self.font.getlength(text)
+        except AttributeError:
+            # Fallback jika menggunakan versi Pillow lama
+            base_width = self.font.getsize(text)[0]
+            
         extra = text.count(" ") * self.word_spacing
-
-        # PINTAR: Beri "diskon" 4% (0.96) karena saat teks digambar, 
-        # efek 'end_squeeze' akan otomatis merapatkan huruf di ujung margin.
         return (base_width + extra) * 0.96
 
     def split_into_pages(self, text):
         pages, current_lines = [], []
         y = self.config["startY"]
-        line_index = 0
-
+        
         for paragraph in text.split("\n"):
             if not paragraph.strip():
-                # [PERBAIKAN]: Cegah baris kosong di awal halaman baru
-                # Jika array current_lines kosong, berarti kita sedang di baris paling atas halaman baru.
-                # Abaikan baris kosong (enter) ini dan langsung lanjut ke paragraf berikutnya.
+                # Cegah baris kosong terbuat di awal halaman baru
                 if len(current_lines) == 0:
                     continue
 
-                current_lines.append({"text": "", "y": float(y), "line_index": line_index})
+                current_lines.append({"text": "", "y": float(y), "line_index": 0})
                 y += self.config["lineHeight"]
-                line_index += 1
                 
                 if y > self.config["pageBottom"]:
                     pages.append(current_lines)
                     current_lines = []
                     y = self.config["startY"]
-                    line_index = 0
                 continue
 
-            # PERBAIKAN: Hapus margin drift agar teks tidak tumpah keluar garis
             margin_jitter = 0
             current_line = ""
+            
+            # FIX BUG 3: Gunakan paragraph_line_idx agar indentasi tidak reset saat pindah halaman
+            paragraph_line_idx = 0 
 
-            # Gunakan Regex agar blok LaTeX yang diapit $...$ tidak terpisah oleh spasi
             words_with_math = re.findall(r'\$.*?\$|\S+', paragraph)
             for word in words_with_math:
-                # Ini mencegah kata dipotong hanya karena spasi setelahnya menabrak margin.
                 test_line_exact = current_line + word
-                
                 max_w = self.config["maxWidth"] - self.config["startX"]
 
-                # FIX BUG 1: Jatah lebar khusus baris pertama (karena ada huruf besar/drop cap)
                 current_max_w = max_w
-                if line_index == 0:
+                if paragraph_line_idx == 0:
+                    # Indentasi HANYA berlaku di baris pertama sebuah paragraf
                     current_max_w = max_w - int(self.config["fontSize"] * 2.0)
 
-                # Gunakan test_line_exact untuk mengecek batas margin
                 if self.calculate_text_width(test_line_exact) > current_max_w and current_line:
                     remaining_space = current_max_w - self.calculate_text_width(current_line)
                     word_split_handled = False
 
-                    # FIX BUG 3: Tangani kata yang sudah ada strip-nya (misal: "berwarna-warni")
                     if "-" in word and word != "-":
                         parts = word.split("-")
                         for i in range(len(parts) - 1, 0, -1):
@@ -693,23 +690,21 @@ class HandwritingGenerator:
                                     {
                                         "text": current_line.strip(),
                                         "y": float(y),
-                                        "line_index": line_index,
+                                        "line_index": paragraph_line_idx,
                                         "margin_jitter": margin_jitter,
                                     }
                                 )
                                 current_line = test_part2 + " "
                                 y += self.config["lineHeight"]
-                                line_index += 1
+                                paragraph_line_idx += 1
                                 word_split_handled = True
                                 
                                 if y > self.config["pageBottom"]:
                                     pages.append(current_lines)
                                     current_lines = []
                                     y = self.config["startY"]
-                                    line_index = 0
                                 break
 
-                    # Pemecah kata panjang (hyphenation) Pyphen
                     if not word_split_handled and remaining_space > self.config["fontSize"] * 1.5 and len(word) >= 5:
                         hyphenated = dic_id.inserted(word)
                         syllables = hyphenated.split('-')
@@ -723,7 +718,6 @@ class HandwritingGenerator:
 
                                 if len(test_part1) >= 2 and len(test_part2) >= 2:
                                     test_str = test_part1 + "-"
-                                    
                                     if self.calculate_text_width(current_line + test_str) <= current_max_w:
                                         part1 = test_str
                                         part2 = test_part2
@@ -735,64 +729,55 @@ class HandwritingGenerator:
                                     {
                                         "text": current_line.strip(),
                                         "y": float(y),
-                                        "line_index": line_index,
+                                        "line_index": paragraph_line_idx,
                                         "margin_jitter": margin_jitter,
                                     }
                                 )
                                 current_line = part2 + " "
                                 y += self.config["lineHeight"]
-                                line_index += 1
+                                paragraph_line_idx += 1
                                 word_split_handled = True
 
                                 if y > self.config["pageBottom"]:
                                     pages.append(current_lines)
                                     current_lines = []
                                     y = self.config["startY"]
-                                    line_index = 0
 
-                    # Jika tidak bisa dipotong, turun ke baris baru
                     if not word_split_handled:
                         current_lines.append(
                             {
                                 "text": current_line.strip(),
                                 "y": float(y),
-                                "line_index": line_index,
+                                "line_index": paragraph_line_idx,
                                 "margin_jitter": margin_jitter,
                             }
                         )
                         current_line = word + " "
                         y += self.config["lineHeight"]
-                        line_index += 1
+                        paragraph_line_idx += 1
 
                         if y > self.config["pageBottom"]:
                             pages.append(current_lines)
                             current_lines = []
                             y = self.config["startY"]
-                            line_index = 0
                 else:
-                    # INGAT: Kalau kata MURNI-nya muat, baru kita tambahkan spasi 
-                    # sebagai persiapan untuk menempelkan kata selanjutnya!
                     current_line = current_line + word + " "
 
-            # Memasukkan sisa teks terakhir di paragraf tersebut
             if current_line.strip():
                 current_lines.append(
                     {
                         "text": current_line.strip(),
                         "y": float(y),
-                        "line_index": line_index,
+                        "line_index": paragraph_line_idx,
                         "margin_jitter": margin_jitter,
                     }
                 )
                 y += self.config["lineHeight"]
-                line_index += 1
                 if y > self.config["pageBottom"]:
                     pages.append(current_lines)
                     current_lines = []
                     y = self.config["startY"]
-                    line_index = 0
 
-        # Memasukkan sisa baris terakhir ke halaman
         if current_lines:
             pages.append(current_lines)
 
