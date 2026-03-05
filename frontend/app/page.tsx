@@ -735,7 +735,6 @@ export default function Home() {
   // ── State ──────────────────────────────────────────────────────────────────
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [showEditor, setShowEditor] = useState(false);
-  const [isAuthChecking, setIsAuthChecking] = useState(true); // Mencegah CLS saat ngecek login
 
   // Cek apakah user sudah login saat web dibuka
   useEffect(() => {
@@ -746,13 +745,11 @@ export default function Home() {
         setUser(data.user);
         setShowEditor(true);
       }
-      setIsAuthChecking(false);
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event: any, session: any) => {
       setUser(session?.user ?? null);
       if (session?.user) setShowEditor(true);
-      setIsAuthChecking(false);
     });
 
     return () => { authListener.subscription.unsubscribe(); };
@@ -830,6 +827,7 @@ export default function Home() {
     await supabase.auth.signOut();
     toast.success("Berhasil logout");
   };
+
   const [inputText, setInputText] = useState("");
   const [text, setText] = useState("");
   const [hideMobileDock, setHideMobileDock] = useState(false);
@@ -5714,9 +5712,9 @@ export default function Home() {
             </div>
 
             {/* ══ MOBILE & TABLET: Editor + Output tabs (< lg) ══ */}
-            <div className="flex lg:hidden flex-col w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
+            <div className="flex lg:hidden flex-col md:flex-row w-full overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
               {/* Tab Switcher — sembunyikan di tablet karena layout split */}
-              <div className={`flex-shrink-0 px-4 py-3 border-b lg:hidden ${c.divider} bg-transparent`}>
+              <div className={`flex-shrink-0 px-4 py-3 border-b md:hidden ${c.divider} bg-transparent`}>
                 <DraggableLiquidTabs
                   options={[
                     { label: "✏️ Editor", value: "editor" },
@@ -5735,7 +5733,7 @@ export default function Home() {
               </div>
 
               {/* Editor panel — full di mobile, fixed width di tablet */}
-              <div className={`md:w-[340px] md:border-r md:flex-shrink-0 flex-1 flex flex-col overflow-hidden ${c.sidebar} ${c.divider} ${activeTab === "result" ? "hidden md:flex" : "flex"}`}>
+              <div className={`md:w-[300px] md:border-r md:flex-shrink-0 flex flex-col overflow-hidden ${c.sidebar} ${c.divider} ${activeTab === "result" && window.innerWidth < 768 ? "hidden" : "flex"} md:flex`}>
                 <div className="flex-1 flex flex-col overflow-y-auto p-4 pb-28 scrollbar-thin gap-3"
                   onScroll={(e) => {
                     const currentScrollY = e.currentTarget.scrollTop;
@@ -5864,7 +5862,7 @@ export default function Home() {
                 </div>
               </div>
 
-              // Result panel — full di mobile, flex-1 di tablet
+              {/* Result panel — full di mobile, flex-1 di tablet */}
               {(activeTab === "result" || (typeof window !== 'undefined' && window.innerWidth >= 768)) && (() => {
                 // Menggunakan activePagesMemo dari atas agar tidak duplikasi state
                 return (
@@ -6295,7 +6293,7 @@ export default function Home() {
           < div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden pointer-events-none px-3 sm:px-4 safe-area-pb flex justify-center" >
 
             {/* Dock Kaca (Glassmorphism) */}
-            < div className={`w-full flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-2xl pointer-events-auto transition-[transform,opacity] duration-500 ease-in-out ${activeTab === "result" || hideMobileDock ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"} ${isAppleDevice ? (D ? "liquid-glass shadow-2xl" : "glass-panel") : (D ? "bg-[#2c2c35] border border-[#ffffff10] shadow-2xl" : "bg-white border border-gray-200 shadow-xl")}`
+            < div className={`w-full flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-2xl pointer-events-auto transition-[transform,opacity] duration-500 ease-in-out ${activeTab === "result" || hideMobileDock || activePagesMemo.length > 0 ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"} ${isAppleDevice ? (D ? "liquid-glass shadow-2xl" : "glass-panel") : (D ? "bg-[#2c2c35] border border-[#ffffff10] shadow-2xl" : "bg-white border border-gray-200 shadow-xl")}`
             }>
               {/* Ubah md:hidden menjadi lg:hidden di bawah ini */}
               < button onClick={() => setMobileSidebarOpen(true)}
