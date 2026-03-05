@@ -159,7 +159,7 @@ function SidebarSection({
       >
         <div className="flex items-center gap-2">
           {icon && <span className="text-sm">{icon}</span>}
-          <span className={`text-[10px] font-bold uppercase tracking-[0.12em] ${labelColor}`}>{title}</span>
+          <span className={`text-[10px] 3xl:text-xs 4xl:text-sm font-bold uppercase tracking-[0.12em] ${labelColor}`}>{title}</span>
           {badge && (
             <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full ${isDark
               ? "bg-violet-500/20 text-violet-400 border border-violet-500/30"
@@ -4131,7 +4131,7 @@ export default function Home() {
                   <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${D ? "bg-white/5 border-[#ffffff10]" : "bg-gray-50 border-gray-200"}`}>
                     <Clock className={`w-3.5 h-3.5 ${c.ts}`} />
                     <span className={`text-xs ${c.ts}`}>
-                      ~{estimatedPages} hal · {estimatedTimeLabel}
+                      ~{estimatedPages} hal · {estimatedTimeLabel} · {wordCount.toLocaleString()} kata
                     </span>
                   </div>
                 ) : null}
@@ -4206,11 +4206,13 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => {
-                    setThemeTransitioning(true);
-                    setTimeout(() => {
+                    if (!document.startViewTransition) {
                       setIsDark(!isDark);
-                      setTimeout(() => setThemeTransitioning(false), 150);
-                    }, 80);
+                      return;
+                    }
+                    document.startViewTransition(() => {
+                      setIsDark(!isDark);
+                    });
                   }}
                   className={`relative w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden border theme-toggle-btn ${isDark
                     ? "bg-[#18181b] border-[#ffffff1a]"
@@ -4557,6 +4559,22 @@ export default function Home() {
                           )}
 
                         </div>
+                      </div>
+
+                      {/* Stats mini — tablet & mobile */}
+                      <div className={`flex items-center gap-2 flex-wrap md:hidden`}>
+                        <span className={`text-[10px] px-2 py-1 rounded-lg border ${c.pillBorder} ${c.pill} ${c.ts}`}>
+                          📄 ~{estimatedPages} hal
+                        </span>
+                        <span className={`text-[10px] px-2 py-1 rounded-lg border ${c.pillBorder} ${c.pill} ${c.ts}`}>
+                          ⏱ {estimatedTimeLabel}
+                        </span>
+                        {currentFont && (
+                          <span className={`text-[10px] px-2 py-1 rounded-lg border ${c.pillBorder} ${c.pill} ${c.ts}`}
+                            style={{ fontFamily: FONT_FAMILY_MAP[currentFont.name] || currentFont.name }}>
+                            {currentFont.name}
+                          </span>
+                        )}
                       </div>
 
                       {/* Auto-save indicator */}
@@ -5509,6 +5527,19 @@ export default function Home() {
                                     />
                                   </g>
                                 </svg>
+                                <style>{`
+  @keyframes drawLine {
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes linePulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+  @keyframes penMove {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(2px, 8px); }
+  }
+`}</style>
                               </div>
 
                               <p className={`text-base font-bold mb-2 ${D ? "text-white/70" : "text-gray-700"}`}>
