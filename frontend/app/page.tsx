@@ -857,6 +857,9 @@ export default function Home() {
   const [isAppleDevice, setIsAppleDevice] = useState(false);
   const platformTheme = isAppleDevice ? "theme-ios" : "theme-futuristic";
   const [zoomLevel, setZoomLevel] = useState(100);
+  const outputViewerRef = useRef<HTMLDivElement>(null);
+  const [navPreviewDir, setNavPreviewDir] = useState<'prev' | 'next' | null>(null);
+  const [ambientColor, setAmbientColor] = useState('violet');
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isExportingTransparent, setIsExportingTransparent] = useState(false);
@@ -1319,6 +1322,40 @@ export default function Home() {
   useEffect(() => { localStorage.setItem("hw_config", JSON.stringify(config)); }, [config]);
   useEffect(() => { localStorage.setItem("hw_energy", energy.toString()); }, [energy]);
   useEffect(() => { localStorage.setItem("hw_lastFont", selectedFont); }, [selectedFont]);
+
+  // ── STEP 19: AMBIENT COLOR — deteksi warna tinta → update background gradient ──
+  useEffect(() => {
+    const hex = config.color.toLowerCase().replace('#', '');
+    if (hex.startsWith('1') || hex.startsWith('2') || hex.startsWith('0')) {
+      setAmbientColor('navy');
+    } else if (hex.includes('ff') && (hex.includes('00ff') || hex.match(/^0{0,2}[0-9a-f]{0,2}(ff|cc|99)/))) {
+      setAmbientColor('blue');
+    } else if (hex.startsWith('ff') && !hex.startsWith('ff00')) {
+      setAmbientColor('amber');
+    } else if (hex.includes('22') || hex.includes('16') || hex.includes('15') || hex.startsWith('16') || hex.startsWith('0f')) {
+      setAmbientColor('emerald');
+    } else if (hex.includes('8b') || hex.includes('7c') || hex.includes('6d') || hex.includes('4f') || hex.includes('5c')) {
+      setAmbientColor('violet');
+    } else {
+      setAmbientColor('violet');
+    }
+  }, [config.color]);
+
+  // ── STEP 17: SCROLL WHEEL ZOOM (Ctrl+Scroll pada output viewer desktop) ──
+  useEffect(() => {
+    const el = outputViewerRef.current;
+    if (!el) return;
+    const handleWheelZoom = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const isTrackpad = Math.abs(e.deltaY) < 50;
+      const sensitivity = isTrackpad ? 1.5 : 0.3;
+      const delta = -e.deltaY * sensitivity;
+      setZoomLevel(z => Math.round(Math.min(200, Math.max(50, z + delta))));
+    };
+    el.addEventListener('wheel', handleWheelZoom, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheelZoom);
+  }, []);
   useEffect(() => {
     if (typeof window !== "undefined") {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -4953,31 +4990,142 @@ export default function Home() {
                       }}>
 
                       {/* Zoom Controls */}
-                      <div className={`flex items-center gap-1 rounded-xl p-1 ${D ? "bg-black/40" : "bg-gray-100/80"}`}>
+                      <div className={`relative flex items-center gap-1 rounded-xl p-1 group/zoom ${D ? "bg-black/40" : "bg-gray-100/80"}`}>
                         <button onClick={() => setZoomLevel(z => Math.max(40, z - 20))} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-white text-gray-600 hover:shadow-sm"}`}>
                           <ZoomOut className="w-4 h-4" />
                         </button>
-                        <span className={`text-xs font-mono w-10 text-center font-bold ${D ? "text-gray-200" : "text-gray-800"}`}>{zoomLevel}%</span>
+                        <button
+                          onClick={() => setZoomLevel(100)}
+                          className={`text-xs font-mono w-10 text-center font-bold transition-colors ${zoomLevel !== 100 ? "text-violet-400 hover:text-violet-300" : D ? "text-gray-200" : "text-gray-800"}`}
+                          title="Reset zoom ke 100%"
+                        >{zoomLevel}%</button>
                         <button onClick={() => setZoomLevel(z => Math.min(200, z + 20))} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${D ? "hover:bg-white/10 text-gray-300" : "hover:bg-white text-gray-600 hover:shadow-sm"}`}>
                           <ZoomIn className="w-4 h-4" />
                         </button>
+                        {/* Tooltip Ctrl+Scroll hint */}
+                        <AnimatePresence>
+                          {zoomLevel === 100 && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 4 }}
+                              transition={{ delay: 2, duration: 0.3 }}
+                              className={`absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap pointer-events-none z-50 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium border shadow-lg opacity-0 group/zoom:opacity-100 transition-opacity`}
+                              style={{
+                                background: D ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.95)",
+                                borderColor: D ? "rgba(255,255,255,0.1)" : "rgba(139,92,246,0.2)",
+                                color: D ? "rgba(255,255,255,0.6)" : "#7c3aed",
+                              }}
+                            >
+                              <kbd className={`px-1 rounded text-[9px] font-mono ${D ? "bg-white/10" : "bg-gray-100"}`}>Ctrl</kbd>
+                              <span>+</span>
+                              <span>scroll untuk zoom</span>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
 
                       <div className={`w-px h-6 mx-1 ${D ? "bg-white/10" : "bg-gray-300"}`} />
 
-                      {/* ── TAMBAHAN KODE: NAVIGASI DESKTOP / LAPTOP ── */}
+                      {/* ── NAVIGASI DESKTOP / LAPTOP dengan Nav Preview Tooltip (Step 18) ── */}
                       <div className="flex items-center gap-1">
-                        <button onClick={() => navigateToPage(activePageIndex - 1)} disabled={activePageIndex === 0} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${activePageIndex === 0 ? "opacity-30 cursor-not-allowed" : D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`} title="Halaman Sebelumnya">
-                          <ChevronDown className="w-4 h-4 rotate-90" />
-                        </button>
+                        {/* Tombol PREV dengan tooltip preview */}
+                        <div
+                          className="relative group/navprev"
+                          onMouseEnter={() => activePageIndex > 0 && generatedPages.length > 0 && setNavPreviewDir('prev')}
+                          onMouseLeave={() => setNavPreviewDir(null)}
+                        >
+                          <button
+                            onClick={() => navigateToPage(activePageIndex - 1)}
+                            disabled={activePageIndex === 0}
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${activePageIndex === 0 ? "opacity-30 cursor-not-allowed" : D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`}
+                            title="Halaman Sebelumnya"
+                          >
+                            <ChevronDown className="w-4 h-4 rotate-90" />
+                          </button>
+                          {/* Nav Preview Tooltip - PREV */}
+                          <AnimatePresence>
+                            {navPreviewDir === 'prev' && activePageIndex > 0 && generatedPages[activePageIndex - 1] && (
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.9, y: 4 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 4 }}
+                                transition={{ duration: 0.15 }}
+                                className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 pointer-events-none rounded-xl overflow-hidden border shadow-2xl`}
+                                style={{
+                                  width: 120,
+                                  background: D ? "rgba(13,13,20,0.95)" : "rgba(255,255,255,0.98)",
+                                  borderColor: D ? "rgba(255,255,255,0.12)" : "rgba(139,92,246,0.25)",
+                                }}
+                              >
+                                <img
+                                  src={generatedPages[activePageIndex - 1].image}
+                                  alt=""
+                                  className="w-full object-cover object-top"
+                                  style={{ aspectRatio: "210/297" }}
+                                />
+                                <div className={`px-2 py-1.5 text-center`}>
+                                  <p className={`text-[10px] font-bold ${D ? "text-white/70" : "text-gray-700"}`}>
+                                    Hal. {activePageIndex}
+                                  </p>
+                                  <p className={`text-[9px] ${D ? "text-white/30" : "text-gray-400"}`}>Klik untuk kembali</p>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+
                         <span className={`text-xs font-bold px-1.5 flex items-center gap-0.5 ${D ? "text-gray-300" : "text-gray-700"}`}>
                           <OdometerNumber value={activePageIndex + 1} isDark={D} />
                           <span className="opacity-40">/</span>
                           <OdometerNumber value={Math.max(1, activePagesMemo.length)} isDark={D} />
                         </span>
-                        <button onClick={() => navigateToPage(activePageIndex + 1)} disabled={activePageIndex === generatedPages.length - 1} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${activePageIndex === generatedPages.length - 1 ? "opacity-30 cursor-not-allowed" : D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`} title="Halaman Selanjutnya">
-                          <ChevronDown className="w-4 h-4 -rotate-90" />
-                        </button>
+
+                        {/* Tombol NEXT dengan tooltip preview */}
+                        <div
+                          className="relative group/navnext"
+                          onMouseEnter={() => activePageIndex < generatedPages.length - 1 && generatedPages.length > 0 && setNavPreviewDir('next')}
+                          onMouseLeave={() => setNavPreviewDir(null)}
+                        >
+                          <button
+                            onClick={() => navigateToPage(activePageIndex + 1)}
+                            disabled={activePageIndex === generatedPages.length - 1}
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${activePageIndex === generatedPages.length - 1 ? "opacity-30 cursor-not-allowed" : D ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`}
+                            title="Halaman Selanjutnya"
+                          >
+                            <ChevronDown className="w-4 h-4 -rotate-90" />
+                          </button>
+                          {/* Nav Preview Tooltip - NEXT */}
+                          <AnimatePresence>
+                            {navPreviewDir === 'next' && activePageIndex < generatedPages.length - 1 && generatedPages[activePageIndex + 1] && (
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.9, y: 4 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 4 }}
+                                transition={{ duration: 0.15 }}
+                                className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 pointer-events-none rounded-xl overflow-hidden border shadow-2xl`}
+                                style={{
+                                  width: 120,
+                                  background: D ? "rgba(13,13,20,0.95)" : "rgba(255,255,255,0.98)",
+                                  borderColor: D ? "rgba(255,255,255,0.12)" : "rgba(139,92,246,0.25)",
+                                }}
+                              >
+                                <img
+                                  src={generatedPages[activePageIndex + 1].image}
+                                  alt=""
+                                  className="w-full object-cover object-top"
+                                  style={{ aspectRatio: "210/297" }}
+                                />
+                                <div className={`px-2 py-1.5 text-center`}>
+                                  <p className={`text-[10px] font-bold ${D ? "text-white/70" : "text-gray-700"}`}>
+                                    Hal. {activePageIndex + 2}
+                                  </p>
+                                  <p className={`text-[9px] ${D ? "text-white/30" : "text-gray-400"}`}>Klik untuk lanjut</p>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
                       </div>
 
                       <div className={`w-px h-6 mx-1 ${D ? "bg-white/10" : "bg-gray-300"}`} />
@@ -5094,7 +5242,8 @@ export default function Home() {
 
                   {/* Output viewer utama (Figma-style Workspace) */}
                   <div
-                    className={`relative flex-1 overflow-y-auto scrollbar-thin pb-24 ${D
+                    ref={outputViewerRef}
+                    className={`relative flex-1 overflow-y-auto scrollbar-thin pb-24 transition-all duration-700 ${D
                       ? "bg-[#060610]"
                       : "bg-gradient-to-br from-sky-100/80 via-indigo-50 to-violet-100/80"
                       }`}
@@ -5103,6 +5252,31 @@ export default function Home() {
                         ? "radial-gradient(#ffffff09 1px, transparent 1px)"
                         : "radial-gradient(#8b5cf630 1px, transparent 1px)",
                       backgroundSize: "28px 28px",
+                      background: (() => {
+                        const ambientColorMap: Record<string, { dark: string; light: string }> = {
+                          violet: {
+                            dark: "radial-gradient(ellipse at 50% 0%, rgba(139,92,246,0.07) 0%, transparent 70%), radial-gradient(#ffffff09 1px, transparent 1px)",
+                            light: "radial-gradient(ellipse at 50% 0%, rgba(139,92,246,0.06) 0%, transparent 70%), radial-gradient(#8b5cf630 1px, transparent 1px)",
+                          },
+                          blue: {
+                            dark: "radial-gradient(ellipse at 50% 0%, rgba(37,99,235,0.08) 0%, transparent 70%), radial-gradient(#ffffff09 1px, transparent 1px)",
+                            light: "radial-gradient(ellipse at 50% 0%, rgba(37,99,235,0.06) 0%, transparent 70%), radial-gradient(#8b5cf630 1px, transparent 1px)",
+                          },
+                          amber: {
+                            dark: "radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.07) 0%, transparent 70%), radial-gradient(#ffffff09 1px, transparent 1px)",
+                            light: "radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.05) 0%, transparent 70%), radial-gradient(#8b5cf630 1px, transparent 1px)",
+                          },
+                          navy: {
+                            dark: "radial-gradient(ellipse at 50% 0%, rgba(30,58,138,0.10) 0%, transparent 70%), radial-gradient(#ffffff09 1px, transparent 1px)",
+                            light: "radial-gradient(ellipse at 50% 0%, rgba(30,58,138,0.06) 0%, transparent 70%), radial-gradient(#8b5cf630 1px, transparent 1px)",
+                          },
+                          emerald: {
+                            dark: "radial-gradient(ellipse at 50% 0%, rgba(16,185,129,0.07) 0%, transparent 70%), radial-gradient(#ffffff09 1px, transparent 1px)",
+                            light: "radial-gradient(ellipse at 50% 0%, rgba(16,185,129,0.05) 0%, transparent 70%), radial-gradient(#8b5cf630 1px, transparent 1px)",
+                          },
+                        };
+                        return ambientColorMap[ambientColor]?.[D ? 'dark' : 'light'] || undefined;
+                      })(),
                     }}>
 
                     <AnimatePresence mode="wait">
