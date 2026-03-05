@@ -5763,8 +5763,8 @@ export default function Home() {
                 />
               </div>
 
-              {/* Editor panel — full di mobile, fixed width di tablet */}
-              <div className={`md:w-[300px] md:border-r md:flex-shrink-0 flex flex-col overflow-hidden ${c.sidebar} ${c.divider} ${activeTab === "result" && window.innerWidth < 768 ? "hidden" : "flex"} md:flex`}>
+              {/* Editor panel — proporsional & modern di tablet */}
+              <div className={`md:w-[380px] lg:w-[420px] md:border-r md:flex-shrink-0 flex flex-col overflow-hidden relative ${c.sidebar} ${c.divider} ${activeTab === "result" && window.innerWidth < 768 ? "hidden" : "flex"} md:flex`}>
                 <div className="flex-1 flex flex-col overflow-y-auto p-4 pb-28 scrollbar-thin gap-3"
                   onScroll={(e) => {
                     const currentScrollY = e.currentTarget.scrollTop;
@@ -5807,10 +5807,10 @@ export default function Home() {
                         <Mic className="w-3.5 h-3.5" /><span>{isListening ? "Dengerin..." : "Dikte"}</span>
                       </button>
                       <button
-                        id="generate-btn"
+                        id="generate-btn-mobile"
                         onClick={handleGenerate}
                         disabled={isGenerating || !text.trim() || !selectedFolio}
-                        className={`flex items-center gap-1.5 text-[11px] px-4 py-2 rounded-xl border flex-shrink-0 font-bold transition-colors ${isGenerating || !text.trim() || !selectedFolio
+                        className={`md:hidden flex items-center gap-1.5 text-[11px] px-4 py-2 rounded-xl border flex-shrink-0 font-bold transition-colors ${isGenerating || !text.trim() || !selectedFolio
                           ? "opacity-40 cursor-not-allowed " + c.btn
                           : `bg-gradient-to-r ${c.accent} text-white border-transparent shadow-lg`
                           }`}>
@@ -5904,6 +5904,40 @@ export default function Home() {
                     </div>
                   )}
                 </div>
+                {/* ── STICKY DOCK GENERATE (KHUSUS TABLET) ── */}
+                <div className="hidden md:flex lg:hidden flex-shrink-0 p-4 border-t z-20 backdrop-blur-2xl transition-all"
+                  style={{
+                    borderColor: D ? "rgba(255,255,255,0.08)" : "rgba(139,92,246,0.15)",
+                    background: D ? "rgba(18,18,24,0.85)" : "rgba(255,255,255,0.92)",
+                    boxShadow: D ? "0 -10px 40px rgba(0,0,0,0.5)" : "0 -10px 40px rgba(139,92,246,0.08)"
+                  }}>
+                  <div className="flex items-center justify-between w-full gap-3">
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className={`text-[13px] font-bold truncate block ${c.tp}`} style={{ fontFamily: currentFont ? (FONT_FAMILY_MAP[currentFont.name] || currentFont.name) : "inherit" }}>
+                        {currentFont ? currentFont.name : "Pilih font..."}
+                      </span>
+                      <span className={`text-[10.5px] mt-0.5 block truncate ${c.ts}`}>
+                        {wordCount} kata • Est. {estimatedPages} hal
+                      </span>
+                      {isGenerating && (
+                        <div className="h-[3px] mt-2 w-full bg-violet-500/20 rounded-full overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-[width] duration-500" style={{ width: `${generateProgress}%` }} />
+                        </div>
+                      )}
+                    </div>
+
+                    <button onClick={handleGenerate} disabled={isGenerating || !text.trim() || !selectedFolio}
+                      className={`btn-ripple flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl font-bold text-sm transition-all flex-shrink-0 ${isGenerating || !text.trim() || !selectedFolio
+                        ? D ? "bg-white/5 text-white/30 cursor-not-allowed border border-[#ffffff10]" : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+                        : `bg-gradient-to-r ${c.accent} text-white shadow-[0_8px_20px_rgba(139,92,246,0.3)] hover:scale-[1.02] active:scale-95 border border-white/10`
+                        }`}>
+                      {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                      <span>{isGenerating ? `${Math.round(generateProgress)}%` : "Generate AI"}</span>
+                    </button>
+                  </div>
+                </div>
+                {/* ── AKHIR DOCK ── */}
+
               </div>
 
               {/* Result panel — full di mobile, flex-1 di tablet */}
