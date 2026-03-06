@@ -4546,10 +4546,9 @@ export default function Home() {
             <motion.aside
               id="sidebar-settings"
               className={`page-enter hidden lg:flex flex-col flex-shrink-0 border-r overflow-hidden ${c.sidebar} ${zenMode ? "!hidden" : ""}`}
-              style={{ animationDelay: "0.1s" }}
               animate={{ width: sidebarOpen ? "auto" : 0 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              style={{ height: "calc(100dvh - 56px)" }}
+              style={{ height: "calc(100dvh - 56px)", animationDelay: "0.1s" }}
             >
               <motion.div
                 animate={{
