@@ -3212,18 +3212,49 @@ export default function Home() {
         </div>
       ) : (
         <>
-          {/* ── MESH GRADIENT BACKGROUND ── */}
-          <div className="fixed inset-0 pointer-events-none z-[-1]">
+          {/* ── MESH GRADIENT BACKGROUND — Animated Aurora ── */}
+          <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">
             {isDark ? (
-              <div className="absolute inset-0"
-                style={{
-                  background: "radial-gradient(ellipse 80% 50% at 20% 0%, #3b0764 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 100%, #1e1b4b 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 50% 50%, #0f0a1e 0%, #09090b 100%)"
-                }} />
+              <>
+                <div className="absolute inset-0 bg-[#060610]" />
+                {/* Orb 1 — violet kiri atas, bergerak */}
+                <div className="absolute w-[70vw] h-[70vw] rounded-full opacity-[0.18] blur-[100px]"
+                  style={{
+                    background: "radial-gradient(circle, #7c3aed 0%, #4f46e5 50%, transparent 80%)",
+                    top: "-20%", left: "-15%",
+                    animation: "orb-drift-1 18s ease-in-out infinite alternate"
+                  }} />
+                {/* Orb 2 — cyan kanan bawah */}
+                <div className="absolute w-[50vw] h-[50vw] rounded-full opacity-[0.10] blur-[80px]"
+                  style={{
+                    background: "radial-gradient(circle, #06b6d4 0%, #3b82f6 60%, transparent 80%)",
+                    bottom: "-10%", right: "-10%",
+                    animation: "orb-drift-2 22s ease-in-out infinite alternate"
+                  }} />
+                {/* Orb 3 — pink center, subtle */}
+                <div className="absolute w-[40vw] h-[40vw] rounded-full opacity-[0.07] blur-[120px]"
+                  style={{
+                    background: "radial-gradient(circle, #ec4899 0%, transparent 70%)",
+                    top: "40%", left: "40%",
+                    animation: "orb-drift-3 28s ease-in-out infinite alternate"
+                  }} />
+              </>
             ) : (
-              <div className="absolute inset-0"
-                style={{
-                  background: "radial-gradient(ellipse 80% 50% at 20% 0%, #a78bfa 0%, transparent 55%), radial-gradient(ellipse 60% 40% at 80% 100%, #818cf8 0%, transparent 55%), radial-gradient(ellipse 50% 60% at 50% 50%, #c4b5fd 0%, #ddd6fe 100%)"
-                }} />
+              <>
+                <div className="absolute inset-0 bg-[#f8f7ff]" />
+                <div className="absolute w-[60vw] h-[60vw] rounded-full opacity-[0.25] blur-[80px]"
+                  style={{
+                    background: "radial-gradient(circle, #c4b5fd 0%, #a78bfa 40%, transparent 80%)",
+                    top: "-15%", left: "-10%",
+                    animation: "orb-drift-1 18s ease-in-out infinite alternate"
+                  }} />
+                <div className="absolute w-[50vw] h-[50vw] rounded-full opacity-[0.15] blur-[60px]"
+                  style={{
+                    background: "radial-gradient(circle, #818cf8 0%, #6366f1 50%, transparent 80%)",
+                    bottom: "-10%", right: "-5%",
+                    animation: "orb-drift-2 22s ease-in-out infinite alternate"
+                  }} />
+              </>
             )}
           </div>
 
@@ -3489,19 +3520,21 @@ export default function Home() {
                     <div className={`w-10 h-1 rounded-full ${D ? "bg-white/20" : "bg-gray-300"}`} />
                   </div>
                   <div className={`sticky top-0 flex items-center justify-between px-4 h-14 border-b ${c.divider} ${isAppleDevice ? (D ? "bg-black/70 backdrop-blur-3xl" : "liquid-glass-light") : (D ? "bg-[#18181b]" : "bg-white")} z-[80]`}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                        <PenTool className="w-3 h-3 text-white" />
+                    <div className="flex items-center gap-2.5">
+                      <div className="relative">
+                        <div className={`absolute inset-0 rounded-xl blur-sm opacity-50 ${D ? "bg-violet-500" : "bg-violet-400"}`} />
+                        <div className="relative w-7 h-7 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
+                          <PenTool className="w-3.5 h-3.5 text-white" />
+                        </div>
                       </div>
-                      <span className={`text-[13px] font-semibold ${c.tp}`}>Pengaturan</span>
+                      <div>
+                        <p className={`text-[13px] font-bold leading-none ${c.tp}`}>Pengaturan</p>
+                        <p className={`text-[9px] leading-none mt-0.5 ${D ? "text-white/25" : "text-gray-400"}`}>Mager Nulis v1.2</p>
+                      </div>
                     </div>
-                    <button onClick={() => {
-                      setMobileSidebarOpen(false);
-                      // Kembalikan fokus ke textarea setelah drawer tertutup
-                      setTimeout(() => textareaRef.current?.focus(), 350);
-                    }}
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center ${c.btn}`}>
-                      <X className="w-4 h-4" />
+                    <button onClick={() => { setMobileSidebarOpen(false); setTimeout(() => textareaRef.current?.focus(), 350); }}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-90 ${D ? "bg-white/8 hover:bg-white/14 text-white/60" : "bg-gray-100 hover:bg-gray-200 text-gray-500"}`}>
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                   {renderSidebarContent()}
@@ -3521,9 +3554,14 @@ export default function Home() {
                       </div>
                     ) : (
                       <button onClick={() => { setMobileSidebarOpen(false); handleLogin(); }}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm transition-colors hover:bg-indigo-700">
+                        className="w-full flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-95"
+                        style={{
+                          background: "linear-gradient(135deg, #8b5cf6, #6d28d9, #4f46e5)",
+                          color: "white",
+                          boxShadow: "0 4px 20px rgba(109,40,217,0.4), inset 0 1px 0 rgba(255,255,255,0.2)"
+                        }}>
                         <LogIn className="w-4 h-4" />
-                        <span>Login Cloud</span>
+                        <span>Masuk dengan Google</span>
                       </button>
                     )}
                   </div>
@@ -5885,13 +5923,14 @@ export default function Home() {
                                 <div className="flex flex-col gap-2">
                                   <button
                                     onClick={() => { setGenerateError(null); handleGenerate(); }}
-                                    className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r ${c.accent} text-white hover:opacity-90 active:scale-95 transition-all`}>
+                                    className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-2xl font-bold text-sm text-white transition-all hover:scale-[1.02] active:scale-95"
+                                    style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", boxShadow: "0 4px 16px rgba(109,40,217,0.35)" }}>
                                     <RefreshCw className="w-4 h-4" />
                                     Coba Lagi
                                   </button>
                                   <button
                                     onClick={() => setGenerateError(null)}
-                                    className={`px-6 py-2 rounded-xl text-xs font-medium border transition-colors ${c.btn}`}>
+                                    className={`px-6 py-2 rounded-2xl text-xs font-medium border transition-all hover:scale-105 active:scale-95 ${c.btn}`}>
                                     Tutup
                                   </button>
                                 </div>
@@ -5952,31 +5991,36 @@ export default function Home() {
                               </p>
 
                               {/* Step hints */}
-                              <div className="space-y-2 text-left mb-6">
+                              <div className="space-y-1.5 text-left mb-6">
                                 {[
-                                  { icon: "📝", label: "Ketik atau paste teks", color: D ? "bg-indigo-900/30 border-indigo-700/30" : "bg-indigo-50 border-indigo-100" },
-                                  { icon: "🎨", label: "Pilih font & folio di sidebar", color: D ? "bg-violet-900/30 border-violet-700/30" : "bg-violet-50 border-violet-100" },
-                                  { icon: "✨", label: "Klik Generate atau Ctrl+Enter", color: D ? "bg-purple-900/30 border-purple-700/30" : "bg-purple-50 border-purple-100" },
+                                  { icon: "📝", label: "Ketik atau paste teks", num: "1", color: D ? "border-indigo-500/15" : "border-indigo-100", bg: D ? "bg-indigo-500/6" : "bg-indigo-50/80", numBg: D ? "bg-indigo-500/20 text-indigo-400" : "bg-indigo-100 text-indigo-600" },
+                                  { icon: "🎨", label: "Pilih font & folio di sidebar", num: "2", color: D ? "border-violet-500/15" : "border-violet-100", bg: D ? "bg-violet-500/6" : "bg-violet-50/80", numBg: D ? "bg-violet-500/20 text-violet-400" : "bg-violet-100 text-violet-600" },
+                                  { icon: "✨", label: "Klik Generate atau Ctrl+Enter", num: "3", color: D ? "border-purple-500/15" : "border-purple-100", bg: D ? "bg-purple-500/6" : "bg-purple-50/80", numBg: D ? "bg-purple-500/20 text-purple-400" : "bg-purple-100 text-purple-600" },
                                 ].map((step, i) => (
-                                  <div key={i} className={`stagger-item flex items-center gap-3 px-3 py-2 rounded-xl border text-xs ${step.color}`}>
-                                    <span className="text-base">{step.icon}</span>
-                                    <span className={D ? "text-white/50" : "text-gray-600"}>{step.label}</span>
+                                  <div key={i} className={`stagger-item flex items-center gap-3 px-3 py-2.5 rounded-2xl border text-xs ${step.bg} ${step.color}`}>
+                                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black flex-shrink-0 ${step.numBg}`}>{step.num}</span>
+                                    <span className={D ? "text-white/55" : "text-gray-600"}>{step.label}</span>
+                                    <span className="ml-auto text-sm">{step.icon}</span>
                                   </div>
                                 ))}
                               </div>
 
                               <button
                                 onClick={handleLoadDemo}
-                                className={`w-full mb-3 py-2.5 rounded-xl text-xs font-bold border-2 border-dashed transition-colors hover:scale-[1.02] active:scale-95 ${D
-                                  ? "border-violet-500/40 text-violet-400 hover:border-violet-500/70 hover:bg-violet-500/8"
-                                  : "border-violet-400 text-violet-600 hover:border-violet-500 hover:bg-violet-50"
-                                  }`}
+                                className="w-full mb-3 py-3 rounded-2xl text-xs font-bold transition-all hover:scale-[1.02] active:scale-95 overflow-hidden relative"
+                                style={{
+                                  background: D
+                                    ? "linear-gradient(135deg, rgba(124,58,237,0.15), rgba(99,102,241,0.10))"
+                                    : "linear-gradient(135deg, rgba(139,92,246,0.08), rgba(99,102,241,0.06))",
+                                  border: D ? "1.5px dashed rgba(139,92,246,0.35)" : "1.5px dashed rgba(139,92,246,0.4)",
+                                  color: D ? "#a78bfa" : "#7c3aed"
+                                }}
                               >
-                                ✍️ Coba Teks Demo — langsung isi & pilih font otomatis
+                                <span className="relative z-10">✍️ Coba Teks Demo — langsung isi & pilih font otomatis</span>
                               </button>
 
-                              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] ${D ? "bg-white/4 border-[#ffffff08] text-white/25" : "bg-violet-50 border-violet-100 text-violet-400"}`}>
-                                <kbd className={`font-mono px-1.5 py-0.5 rounded text-[9px] ${D ? "bg-white/8" : "bg-white border border-violet-200"}`}>Ctrl+Enter</kbd>
+                              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10.5px] ${D ? "bg-white/4 border-white/6 text-white/25" : "bg-violet-50 border-violet-100 text-violet-400"}`}>
+                                <kbd className={`font-mono px-1.5 py-0.5 rounded-md text-[9px] ${D ? "bg-white/8 border border-white/10" : "bg-white border border-violet-200"}`}>Ctrl+Enter</kbd>
                                 <span>untuk Generate cepat</span>
                               </div>
                             </div>
@@ -6822,7 +6866,7 @@ export default function Home() {
                 generatedPages.length > 0 && typeof navigator !== "undefined" && !!navigator.share && (
                   <button
                     onClick={() => handleSharePage(generatedPages[activePageIndex])}
-                    className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 transition-colors ${c.btn}`}
+                    className={`w-9 h-9 rounded-full border flex items-center justify-center flex-shrink-0 transition-all hover:scale-110 active:scale-90 ${c.btn}`}
                     title="Bagikan ke WA/Telegram"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6833,12 +6877,25 @@ export default function Home() {
                 )
               }
 
-              <button onClick={handleGenerate} disabled={isGenerating || !text.trim() || !selectedFolio}
-                className={`btn-ripple flex items-center gap-1.5 px-5 py-3 rounded-xl font-bold text-sm transition-colors flex-shrink-0 shadow-lg ${isGenerating || !text.trim() || !selectedFolio
-                  ? D ? "bg-white/4 text-white/20 cursor-not-allowed border border-[#ffffff06] shadow-none" : "bg-gray-100 text-gray-300 cursor-not-allowed border border-gray-200 shadow-none"
-                  : `bg-gradient-to-r ${c.accent} text-white hover:opacity-90 active:scale-95`
-                  }`}>
-                {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mx-3" /> : <><Sparkles className="w-4 h-4" /><span>Generate</span></>}
+              <button
+                onClick={handleGenerate}
+                disabled={isGenerating || !text.trim() || !selectedFolio}
+                className="btn-ripple relative flex items-center gap-1.5 px-5 py-3 rounded-2xl font-bold text-sm flex-shrink-0 transition-all overflow-hidden active:scale-95"
+                style={isGenerating || !text.trim() || !selectedFolio
+                  ? { background: D ? "rgba(255,255,255,0.04)" : "#f3f4f6", color: D ? "rgba(255,255,255,0.15)" : "#9ca3af", cursor: "not-allowed" }
+                  : { background: "linear-gradient(135deg, #8b5cf6, #6d28d9, #4f46e5)", color: "white", boxShadow: "0 4px 16px rgba(109,40,217,0.45), inset 0 1px 0 rgba(255,255,255,0.2)" }
+                }>
+                {/* shimmer sweep */}
+                {!(isGenerating || !text.trim() || !selectedFolio) && (
+                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_2.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+                )}
+                <div className="relative z-10 flex items-center gap-1.5">
+                  {isGenerating
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <Sparkles className="w-4 h-4" />
+                  }
+                  <span>{isGenerating ? `${Math.round(generateProgress)}%` : "Generate"}</span>
+                </div>
               </button>
             </div >
           </div >
