@@ -4323,7 +4323,7 @@ export default function Home() {
           <header className={`${c.header} border-b sticky top-0 z-50 transition-all duration-300 ${hideHeader && isMobileView ? "-translate-y-full" : "translate-y-0"} ${zenMode ? "hidden" : ""} ${isAppleDevice ? 'liquid-glass-shimmer' : ''}`}>
             {isGenerating && (
               <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-violet-500/10">
-                <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-[width] duration-500"
+                <div className="progress-shimmer h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-[width] duration-500"
                   style={{ width: `${generateProgress}%` }} />
               </div>
             )}
@@ -4395,7 +4395,9 @@ export default function Home() {
                 ) : generatedPages.length > 0 ? (
                   <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border ${D ? "bg-emerald-500/8 border-emerald-500/20" : "bg-emerald-50 border-emerald-200"}`}
                     style={{ boxShadow: D ? "0 0 16px rgba(16,185,129,0.1)" : "none" }}>
-                    <div className={`w-1.5 h-1.5 rounded-full bg-emerald-500 animate-[glow-pulse_2s_ease-in-out_infinite]`} style={{ boxShadow: "0 0 6px rgba(16,185,129,0.8)" }} />
+                    <span className="status-dot" style={{ background: "transparent" }}>
+                      <span className="status-dot-inner" style={{ background: "#10b981", boxShadow: "0 0 6px rgba(16,185,129,0.8)" }} />
+                    </span>
                     <span className={`text-[11px] font-semibold ${D ? "text-emerald-400" : "text-emerald-700"}`}>
                       {generatedPages.length} halaman siap
                     </span>
@@ -4804,7 +4806,7 @@ export default function Home() {
                                   setInputText(t); setText(t); toast.success("Teks ditempel!");
                                 } catch { toast.error("Tidak bisa akses clipboard"); }
                               }}
-                              className={`flex items-center w-full gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap ${isAppleDevice ? 'liquid-glass-btn' : c.btn}`}>
+                              className={`token-chip flex items-center w-full gap-1.5 text-[11px] px-3 py-2 rounded-xl border whitespace-nowrap ${isAppleDevice ? 'liquid-glass-btn' : c.btn}`}>
                               <Clipboard className="w-3.5 h-3.5 flex-shrink-0" />
                               <span>Tempel</span>
                             </button>
@@ -4814,7 +4816,7 @@ export default function Home() {
                           <MagneticHover isApple={isAppleDevice} className="flex-shrink-0">
                             <button
                               onClick={() => setShowAiModal(true)}
-                              className={`flex items-center w-full gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap ${D
+                              className={`token-chip flex items-center w-full gap-1.5 text-[11px] px-3 py-2 rounded-xl border whitespace-nowrap ${D
                                 ? "bg-indigo-500/8 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/15 hover:border-indigo-500/35"
                                 : "bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300"
                                 }`}>
@@ -4828,7 +4830,7 @@ export default function Home() {
                             <button
                               onClick={handleAiExpand}
                               disabled={!text.trim() || isAiExpanding}
-                              className={`flex items-center w-full gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap ${!text.trim()
+                              className={`token-chip flex items-center w-full gap-1.5 text-[11px] px-3 py-2 rounded-xl border whitespace-nowrap ${!text.trim()
                                 ? "opacity-35 cursor-not-allowed border-gray-300"
                                 : D
                                   ? "bg-purple-500/10 text-purple-400 border-purple-500/30 hover:bg-purple-500/20"
@@ -4845,7 +4847,7 @@ export default function Home() {
                             <button
                               onClick={toggleListening}
                               title={isListening ? "Berhenti mendikte" : "Mulai mendikte"}
-                              className={`flex items-center w-full gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap ${isListening
+                              className={`token-chip flex items-center w-full gap-1.5 text-[11px] px-3 py-2 rounded-xl border whitespace-nowrap ${isListening
                                 ? "bg-red-500/15 text-red-400 border-red-500/30 animate-pulse"
                                 : c.btn
                                 }`}>
@@ -4888,7 +4890,7 @@ export default function Home() {
                                 });
                               }}
                               disabled={!text}
-                              className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${!text
+                              className={`token-chip flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border whitespace-nowrap flex-shrink-0 ${!text
                                 ? "opacity-35 cursor-not-allowed " + c.btn
                                 : D
                                   ? "hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25 " + c.btn
@@ -4911,7 +4913,7 @@ export default function Home() {
                                 });
                               }}
                               disabled={!text.trim()}
-                              className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap ${!text.trim()
+                              className={`token-chip flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border whitespace-nowrap ${!text.trim()
                                 ? "opacity-35 cursor-not-allowed " + c.btn
                                 : D
                                   ? "bg-sky-500/10 text-sky-400 border-sky-500/30 hover:bg-sky-500/20"
@@ -4927,7 +4929,7 @@ export default function Home() {
                             <button
                               onClick={handleSharePublicLink}
                               disabled={!text.trim()}
-                              className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${!text.trim()
+                              className={`token-chip flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border whitespace-nowrap ${!text.trim()
                                 ? "opacity-35 cursor-not-allowed " + c.btn
                                 : D
                                   ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/20"
@@ -4948,7 +4950,7 @@ export default function Home() {
                                 setText(prev => prev + latex);
                                 setTimeout(() => textareaRef.current?.focus(), 50);
                               }}
-                              className={`flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border transition-colors whitespace-nowrap flex-shrink-0 ${D
+                              className={`token-chip flex items-center gap-1.5 text-[11px] px-3 py-2 rounded-xl border whitespace-nowrap flex-shrink-0 ${D
                                 ? "bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20"
                                 : "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
                                 }`}
@@ -5224,7 +5226,7 @@ export default function Home() {
                   : "bg-gradient-to-b from-violet-50 to-indigo-100/80"}`}>
                   <div className="grid grid-cols-2 gap-2">
                     {/* Estimasi halaman */}
-                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
+                    <div className={`stats-card flex items-center gap-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
                       <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${D ? "bg-violet-500/15" : "bg-violet-100"}`}>
                         <FileText className="w-3.5 h-3.5 text-violet-500" />
                       </div>
@@ -5234,7 +5236,7 @@ export default function Home() {
                       </div>
                     </div>
                     {/* Estimasi waktu */}
-                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
+                    <div className={`stats-card flex items-center gap-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
                       <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${D ? "bg-amber-500/15" : "bg-amber-100"}`}>
                         <Clock className="w-3.5 h-3.5 text-amber-500" />
                       </div>
@@ -5244,7 +5246,7 @@ export default function Home() {
                       </div>
                     </div>
                     {/* Font aktif */}
-                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
+                    <div className={`stats-card flex items-center gap-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
                       <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${D ? "bg-indigo-500/15" : "bg-indigo-100"}`}>
                         <PenTool className="w-3.5 h-3.5 text-indigo-500" />
                       </div>
@@ -5257,7 +5259,7 @@ export default function Home() {
                       </div>
                     </div>
                     {/* Folio aktif */}
-                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
+                    <div className={`stats-card flex items-center gap-2 px-3 py-2 rounded-xl border ${c.pillBorder} ${c.pill}`}>
                       <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${D ? "bg-emerald-500/15" : "bg-emerald-100"}`}>
                         <ImageIcon className="w-3.5 h-3.5 text-emerald-500" />
                       </div>
@@ -5398,7 +5400,7 @@ export default function Home() {
                 {generatedPages.length > 1 && !isGenerating && (
                   <div className={`h-[2px] w-full relative overflow-hidden ${D ? "bg-white/5" : "bg-violet-100"}`}>
                     <motion.div
-                      className="absolute top-0 left-0 h-full bg-gradient-to-r from-violet-500 via-indigo-400 to-cyan-400"
+                      className="progress-shimmer absolute top-0 left-0 h-full bg-gradient-to-r from-violet-500 via-indigo-400 to-cyan-400"
                       initial={{ width: 0 }}
                       animate={{
                         width: `${((activePageIndex + 1) / generatedPages.length) * 100}%`
