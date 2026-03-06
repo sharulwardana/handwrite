@@ -2783,7 +2783,7 @@ export default function Home() {
                   ? D ? "border-violet-500/70 bg-violet-500/12 text-white" : "border-violet-500 bg-violet-50 text-violet-700"
                   : D ? "border-[#ffffff08] text-white/55 hover:border-[#ffffff18]" : "border-[#d1d5db] text-gray-600 hover:border-[#9ca3af] hover:bg-gray-50"
                   }`}>
-                <div className="w-3 h-3 rounded-full flex-shrink-0 ring-1 ring-black/10" style={{ backgroundColor: p.color }} />
+                <div className="ink-dot" style={{ backgroundColor: p.color }} />
                 <span className="truncate">{p.label}</span>
               </button>
             ))}
@@ -2798,8 +2798,8 @@ export default function Home() {
           </div>
 
           {/* Live ink preview */}
-          <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border ${c.pillBorder} ${c.pill} mt-2`}>
-            <p className="text-[13px] leading-relaxed"
+          <div className={`ink-preview-box flex items-center gap-2 px-3 py-2.5 rounded-xl border ${c.pillBorder} ${c.pill} mt-2`}>
+            <p className="ink-preview-text text-[13px] leading-relaxed"
               style={{
                 fontFamily: currentFont ? (FONT_FAMILY_MAP[currentFont.name] || currentFont.name) : 'cursive',
                 color: config.color
@@ -3522,7 +3522,7 @@ export default function Home() {
                 >
                   {/* Drag handle visual */}
                   <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-                    <div className={`w-10 h-1 rounded-full ${D ? "bg-white/20" : "bg-gray-300"}`} />
+                    <div className={`drag-handle ${D ? "bg-white/20" : "bg-gray-300"}`} />
                   </div>
                   <div className={`sticky top-0 flex items-center justify-between px-4 h-14 border-b ${c.divider} ${isAppleDevice ? (D ? "bg-black/70 backdrop-blur-3xl" : "liquid-glass-light") : (D ? "bg-[#18181b]" : "bg-white")} z-[80]`}>
                     <div className="flex items-center gap-2.5">
@@ -4094,7 +4094,7 @@ export default function Home() {
                 >
                   {/* Handle */}
                   <div className="flex justify-center pt-3 pb-1">
-                    <div className={`w-10 h-1 rounded-full ${D ? "bg-white/20" : "bg-gray-300"}`} />
+                    <div className="drag-handle" />
                   </div>
 
                   {/* Title */}
@@ -4545,7 +4545,8 @@ export default function Home() {
             {/* ══ PANEL 1: SIDEBAR SETTINGS — Desktop only ══ */}
             <motion.aside
               id="sidebar-settings"
-              className={`hidden lg:flex flex-col flex-shrink-0 border-r overflow-hidden ${c.sidebar} ${zenMode ? "!hidden" : ""}`}
+              className={`page-enter hidden lg:flex flex-col flex-shrink-0 border-r overflow-hidden ${c.sidebar} ${zenMode ? "!hidden" : ""}`}
+              style={{ animationDelay: "0.1s" }}
               animate={{ width: sidebarOpen ? "auto" : 0 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
               style={{ height: "calc(100dvh - 56px)" }}
@@ -4565,7 +4566,7 @@ export default function Home() {
             </motion.aside>
 
             {/* ══ BUNGKUS PANEL 2 & 3 ══ */}
-            <div className="hidden lg:flex flex-1 overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
+            <div className="page-enter hidden lg:flex flex-1 overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
 
               {/* ══ PANEL 2: EDITOR ══ */}
               <div id="editor-panel"
