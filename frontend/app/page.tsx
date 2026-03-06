@@ -4358,7 +4358,7 @@ export default function Home() {
                   </div>
                   {/* Brand name + badge */}
                   <div className="hidden xs:flex flex-col gap-0">
-                    <span className="font-extrabold text-[13px] leading-none tracking-tight bg-clip-text text-transparent shimmer-text">
+                    <span className="font-extrabold text-[13px] leading-tight tracking-tight bg-clip-text text-transparent shimmer-text pb-[2px]">
                       Mager Nulis
                     </span>
                     <span className={`text-[8px] font-bold tracking-widest uppercase leading-none mt-0.5 ${D ? "text-white/25" : "text-violet-400/60"}`}>
