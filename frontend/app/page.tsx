@@ -4887,6 +4887,106 @@ export default function Home() {
                       </div>
 
                     </div>
+                    {/* ── AI QUICK INSERT CHIPS ── */}
+                    {!text.trim() && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 8 }}
+                        transition={{ duration: 0.3, delay: 0.2 }}
+                        className="flex flex-col gap-2"
+                      >
+                        <p className={`text-[10px] font-semibold uppercase tracking-widest px-1 ${c.ts}`}>
+                          ✨ Mulai dengan...
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            "Pada suatu hari yang cerah,",
+                            "Berdasarkan hasil penelitian,",
+                            "Menurut pendapat saya,",
+                            "Di era globalisasi ini,",
+                            "Seiring perkembangan zaman,",
+                            "Dalam kehidupan sehari-hari,",
+                            "Pendidikan merupakan hal penting",
+                            "Indonesia adalah negara yang",
+                          ].map((starter) => (
+                            <motion.button
+                              key={starter}
+                              whileHover={{ scale: 1.03 }}
+                              whileTap={{ scale: 0.97 }}
+                              onClick={() => {
+                                const newText = starter + " ";
+                                setInputText(newText);
+                                setText(newText);
+                                setTimeout(() => {
+                                  textareaRef.current?.focus();
+                                  const len = newText.length;
+                                  textareaRef.current?.setSelectionRange(len, len);
+                                }, 50);
+                              }}
+                              className={`flex items-center gap-1 text-[11px] px-3 py-1.5 rounded-full border transition-all ${D
+                                ? "bg-[#ffffff06] border-[#ffffff10] text-white/50 hover:bg-violet-500/12 hover:border-violet-500/30 hover:text-violet-300"
+                                : "bg-white border-violet-200 text-violet-600 hover:bg-violet-50 hover:border-violet-300 shadow-sm"
+                                }`}
+                            >
+                              <span>"{starter}"</span>
+                            </motion.button>
+                          ))}
+                        </div>
+                        <p className={`text-[9px] px-1 ${c.ts} opacity-60`}>
+                          Klik untuk langsung mulai menulis
+                        </p>
+                      </motion.div>
+                    )}
+
+                    {/* ── AI QUICK INSERT CHIPS (DIPINDAH KE ATAS TEXTAREA) ── */}
+                    {!text.trim() && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 8 }}
+                        transition={{ duration: 0.3, delay: 0.2 }}
+                        className="flex flex-col gap-2 mb-2"
+                      >
+                        <p className={`text-[10px] font-semibold uppercase tracking-widest px-1 ${c.ts}`}>
+                          ✨ Mulai dengan...
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            "Pada suatu hari yang cerah,",
+                            "Berdasarkan hasil penelitian,",
+                            "Menurut pendapat saya,",
+                            "Di era globalisasi ini,",
+                            "Seiring perkembangan zaman,",
+                            "Dalam kehidupan sehari-hari,",
+                            "Pendidikan merupakan hal penting",
+                            "Indonesia adalah negara yang",
+                          ].map((starter) => (
+                            <motion.button
+                              key={starter}
+                              whileHover={{ scale: 1.03 }}
+                              whileTap={{ scale: 0.97 }}
+                              onClick={() => {
+                                const newText = starter + " ";
+                                setInputText(newText);
+                                setText(newText);
+                                setTimeout(() => {
+                                  textareaRef.current?.focus();
+                                  const len = newText.length;
+                                  textareaRef.current?.setSelectionRange(len, len);
+                                }, 50);
+                              }}
+                              className={`flex items-center gap-1 text-[11px] px-3 py-1.5 rounded-full border transition-all ${D
+                                ? "bg-[#ffffff06] border-[#ffffff10] text-white/50 hover:bg-violet-500/12 hover:border-violet-500/30 hover:text-violet-300"
+                                : "bg-white border-violet-200 text-violet-600 hover:bg-violet-50 hover:border-violet-300 shadow-sm"
+                                }`}
+                            >
+                              <span>"{starter}"</span>
+                            </motion.button>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
 
                     {/* Textarea */}
                     <OptimizedTextarea
@@ -4964,73 +5064,22 @@ export default function Home() {
 
                     {/* Char progress */}
                     {text.length > 0 && (
-                      <div className={`h-1 rounded-full overflow-hidden ${D ? "bg-[#ffffff08]" : "bg-gray-200"}`}>
+                      <div className={`h-1 flex-shrink-0 rounded-full overflow-hidden mt-1 ${D ? "bg-[#ffffff08]" : "bg-gray-200"}`}>
                         <div className={`h-full rounded-full transition-[width] duration-500 ${text.length > 45000 ? "bg-red-500" : text.length > 30000 ? "bg-amber-500" : D ? "bg-emerald-500" : "bg-emerald-600"
                           }`} style={{ width: `${Math.min(100, (text.length / 50000) * 100)}%` }} />
                       </div>
                     )}
 
                     {/* Shortcut hints */}
-                    <div className={`flex items-center gap-3 text-[10px] ${c.ts}`}>
+                    <div className={`flex items-center gap-3 text-[10px] ${c.ts} mt-1.5`}>
                       <div className="flex items-center gap-1">
                         <kbd className={`px-1.5 py-0.5 rounded border font-mono text-[9px] ${D ? "bg-white/5 border-white/10" : "bg-gray-100 border-gray-200"}`}>Ctrl+Enter</kbd>
                         <span>Generate</span>
                       </div>
-                      {/* ── AI QUICK INSERT CHIPS ── */}
-                      {!text.trim() && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 8 }}
-                          transition={{ duration: 0.3, delay: 0.2 }}
-                          className="flex flex-col gap-2"
-                        >
-                          <p className={`text-[10px] font-semibold uppercase tracking-widest px-1 ${c.ts}`}>
-                            ✨ Mulai dengan...
-                          </p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {[
-                              "Pada suatu hari yang cerah,",
-                              "Berdasarkan hasil penelitian,",
-                              "Menurut pendapat saya,",
-                              "Di era globalisasi ini,",
-                              "Seiring perkembangan zaman,",
-                              "Dalam kehidupan sehari-hari,",
-                              "Pendidikan merupakan hal penting",
-                              "Indonesia adalah negara yang",
-                            ].map((starter) => (
-                              <motion.button
-                                key={starter}
-                                whileHover={{ scale: 1.03 }}
-                                whileTap={{ scale: 0.97 }}
-                                onClick={() => {
-                                  const newText = starter + " ";
-                                  setInputText(newText);
-                                  setText(newText);
-                                  setTimeout(() => {
-                                    textareaRef.current?.focus();
-                                    const len = newText.length;
-                                    textareaRef.current?.setSelectionRange(len, len);
-                                  }, 50);
-                                }}
-                                className={`flex items-center gap-1 text-[11px] px-3 py-1.5 rounded-full border transition-all ${D
-                                  ? "bg-[#ffffff06] border-[#ffffff10] text-white/50 hover:bg-violet-500/12 hover:border-violet-500/30 hover:text-violet-300"
-                                  : "bg-white border-violet-200 text-violet-600 hover:bg-violet-50 hover:border-violet-300 shadow-sm"
-                                  }`}
-                              >
-                                <span>"{starter}"</span>
-                              </motion.button>
-                            ))}
-                          </div>
-                          <p className={`text-[9px] px-1 ${c.ts} opacity-60`}>
-                            Klik untuk langsung mulai menulis
-                          </p>
-                        </motion.div>
-                      )}
                       <div className={`w-px h-3 ${D ? "bg-white/10" : "bg-gray-200"}`} />
                       <div className="flex items-center gap-1">
                         <span>Drag & drop</span>
-                        <kbd className={`px-1.5 py-0.5 rounded border font-mono text-[9px] ${D ? "bg-white/5 border-white/10" : "bg-gray-100 border-gray-200"}`}>.txt</kbd>
+                        <kbd className={`px-1.5 py-0.5 rounded border font-mono text-[9px] ${D ? "bg-white/5 border-white/10" : "bg-gray-100 border-gray-200"}`}>.txt / .docx</kbd>
                       </div>
                     </div>
 
@@ -6168,6 +6217,51 @@ export default function Home() {
                     </div>
                   </div>
 
+                  {/* ── AI QUICK INSERT CHIPS MOBILE (DIPINDAH KE ATAS TEXTAREA) ── */}
+                  {!text.trim() && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 8 }}
+                      transition={{ duration: 0.3, delay: 0.2 }}
+                      className="flex flex-col gap-2 mb-2"
+                    >
+                      <p className={`text-[10px] font-semibold uppercase tracking-widest px-1 ${c.ts}`}>
+                        ✨ Mulai dengan...
+                      </p>
+                      <div className="flex overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1 gap-1.5">
+                        {[
+                          "Pada suatu hari yang cerah,",
+                          "Berdasarkan hasil penelitian,",
+                          "Menurut pendapat saya,",
+                          "Di era globalisasi ini,",
+                          "Seiring perkembangan zaman,",
+                        ].map((starter) => (
+                          <motion.button
+                            key={starter}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => {
+                              const newText = starter + " ";
+                              setInputText(newText);
+                              setText(newText);
+                              setTimeout(() => {
+                                textareaRef.current?.focus();
+                                const len = newText.length;
+                                textareaRef.current?.setSelectionRange(len, len);
+                              }, 50);
+                            }}
+                            className={`flex-shrink-0 flex items-center gap-1 text-[11px] px-3 py-1.5 rounded-full border transition-all ${D
+                              ? "bg-[#ffffff06] border-[#ffffff10] text-white/50 hover:bg-violet-500/12 hover:text-violet-300"
+                              : "bg-white border-violet-200 text-violet-600 hover:bg-violet-50 hover:border-violet-300 shadow-sm"
+                              }`}
+                          >
+                            <span>"{starter}"</span>
+                          </motion.button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+
                   {/* Textarea — Ditambahkan flex-1 agar memenuhi sisa ruang layar dan UI lebih modern ala Notion */}
                   <OptimizedTextarea
                     ref={textareaRef}
@@ -6197,42 +6291,9 @@ export default function Home() {
 
                   {/* Progress bar — Ditambahkan flex-shrink-0 agar tidak gepeng */}
                   {text.length > 0 && (
-                    <div className={`h-1 flex-shrink-0 rounded-full overflow-hidden ${D ? "bg-[#ffffff08]" : "bg-gray-200"}`}>
-                      <div className={`h-full rounded-full ${text.length > 45000 ? "bg-red-500" : D ? "bg-emerald-500" : "bg-emerald-600"}`}
+                    <div className={`h-1 flex-shrink-0 rounded-full overflow-hidden mt-1 ${D ? "bg-[#ffffff08]" : "bg-gray-200"}`}>
+                      <div className={`h-full rounded-full transition-[width] duration-500 ${text.length > 45000 ? "bg-red-500" : D ? "bg-emerald-500" : "bg-emerald-600"}`}
                         style={{ width: `${Math.min(100, (text.length / 50000) * 100)}%` }} />
-                    </div>
-                  )}
-                  {/* Quick Insert Mobile */}
-                  {!text.trim() && (
-                    <div className="flex flex-col gap-2 pt-1">
-                      <p className={`text-[10px] font-semibold uppercase tracking-widest ${c.ts}`}>
-                        ✨ Mulai dengan...
-                      </p>
-                      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
-                        {[
-                          "Pada suatu hari,",
-                          "Berdasarkan penelitian,",
-                          "Menurut pendapat saya,",
-                          "Di era globalisasi ini,",
-                          "Seiring perkembangan zaman,",
-                        ].map((starter) => (
-                          <button
-                            key={starter}
-                            onClick={() => {
-                              const newText = starter + " ";
-                              setInputText(newText);
-                              setText(newText);
-                              setTimeout(() => textareaRef.current?.focus(), 50);
-                            }}
-                            className={`flex-shrink-0 text-[11px] px-3 py-1.5 rounded-full border whitespace-nowrap transition-colors ${D
-                              ? "bg-[#ffffff06] border-[#ffffff10] text-white/50 hover:bg-violet-500/12 hover:text-violet-300"
-                              : "bg-white border-violet-200 text-violet-600 shadow-sm"
-                              }`}
-                          >
-                            "{starter}"
-                          </button>
-                        ))}
-                      </div>
                     </div>
                   )}
                 </div>
