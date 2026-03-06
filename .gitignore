@@ -65,3 +65,12 @@ venv/
 frontend/.env.local
 frontend/.next/
 frontend/node_modules/
+
+# Temporary / scratch files
+frontend/search_results*.txt
+frontend/exact_lines*.txt
+frontend/tsc_errors.log
+frontend/script.js
+frontend/script*.ps1
+frontend/null
+frontend/tsconfig.tsbuildinfo

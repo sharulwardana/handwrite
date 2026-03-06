@@ -16,32 +16,52 @@ from matplotlib import mathtext
 from PIL import ImageOps
 
 
-def hex_to_rgb(hex_color):
+def hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
     hex_color = hex_color.lstrip("#")
     return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
 
 
 class HandwritingGenerator:
-    _image_cache: dict = {}  # Cache gambar folio antar request
-    _MAX_CACHE = 5  # Turunkan ke 5
-    _MAX_CACHE_SIZE_MB = 50  # Batas total maksimal 50 MB
+    # Improved LRU cache with TTL
+    _image_cache: dict = {}  # key -> (image, timestamp)
+    _cache_order: list = []  # LRU order tracking
+    _MAX_CACHE = 5
+    _MAX_CACHE_SIZE_MB = 50
+    _CACHE_TTL_SECONDS = 600  # 10 menit TTL
     _cache_lock = threading.Lock()
 
-    def __init__(self, config, folio_path_or_url, font_path):
+    def __init__(self, config: dict, folio_path_or_url: str, font_path: str) -> None:
         self.config = config
 
         # Cek apakah ini URL Cloudinary dari internet atau file lokal
         def load_image(path_or_url):
+            import time as _time
             mtime = (
                 os.path.getmtime(path_or_url)
                 if not path_or_url.startswith("http")
                 else 0
             )
             cache_key = (path_or_url, mtime)
+            now = _time.time()
 
             with HandwritingGenerator._cache_lock:
+                # Evict expired entries (TTL)
+                expired = [
+                    k for k, (_, ts) in HandwritingGenerator._image_cache.items()
+                    if now - ts > HandwritingGenerator._CACHE_TTL_SECONDS
+                ]
+                for k in expired:
+                    del HandwritingGenerator._image_cache[k]
+                    if k in HandwritingGenerator._cache_order:
+                        HandwritingGenerator._cache_order.remove(k)
+
+                # Check cache hit
                 if cache_key in HandwritingGenerator._image_cache:
-                    return HandwritingGenerator._image_cache[cache_key].copy()
+                    # Move to end (most recently used)
+                    if cache_key in HandwritingGenerator._cache_order:
+                        HandwritingGenerator._cache_order.remove(cache_key)
+                    HandwritingGenerator._cache_order.append(cache_key)
+                    return HandwritingGenerator._image_cache[cache_key][0].copy()
 
             if path_or_url.startswith("http"):
                 response = requests.get(path_or_url, stream=True, timeout=15)
@@ -51,22 +71,17 @@ class HandwritingGenerator:
                 img = Image.open(path_or_url).convert("RGB")
 
             with HandwritingGenerator._cache_lock:
-                total_size = sum(
-                    img.size[0] * img.size[1] * 3 / (1024 * 1024)
-                    for img in HandwritingGenerator._image_cache.values()
-                )
-                while (
-                    len(HandwritingGenerator._image_cache)
-                    >= HandwritingGenerator._MAX_CACHE
-                    or total_size > HandwritingGenerator._MAX_CACHE_SIZE_MB
-                ):
-                    oldest_key = next(iter(HandwritingGenerator._image_cache))
-                    del HandwritingGenerator._image_cache[oldest_key]
-                    total_size = sum(
-                        img.size[0] * img.size[1] * 3 / (1024 * 1024)
-                        for img in HandwritingGenerator._image_cache.values()
-                    )
-                HandwritingGenerator._image_cache[cache_key] = img
+                # LRU eviction: remove oldest when full
+                while len(HandwritingGenerator._image_cache) >= HandwritingGenerator._MAX_CACHE:
+                    if HandwritingGenerator._cache_order:
+                        oldest_key = HandwritingGenerator._cache_order.pop(0)
+                        HandwritingGenerator._image_cache.pop(oldest_key, None)
+                    else:
+                        oldest_key = next(iter(HandwritingGenerator._image_cache))
+                        del HandwritingGenerator._image_cache[oldest_key]
+
+                HandwritingGenerator._image_cache[cache_key] = (img, now)
+                HandwritingGenerator._cache_order.append(cache_key)
 
             return img.copy()
 
@@ -148,7 +163,7 @@ class HandwritingGenerator:
         self._prev_text_layer = None
         self.font_cache = {}  # Tambahan: Inisialisasi penyimpanan cache font
 
-    def get_baseline_wobble(self, line_index):
+    def get_baseline_wobble(self, line_index: int) -> float:
         # PINTAR: Kita hanya mengembalikan "Amplitudo" (tinggi maksimal gelombang)
         # Angka 1.5 sampai 2.5 piksel sangat aman, tidak akan pernah keluar dari garis folio.
         amplitude = random.uniform(1.5, 2.5)
@@ -157,7 +172,7 @@ class HandwritingGenerator:
         direction = random.choice([-1, 1])
         return amplitude * direction
 
-    def make_typo_version(self, word):
+    def make_typo_version(self, word: str) -> str:
         """
         Buat versi cacat dari sebuah kata — simulasi salah ketik tangan:
         - Tukar 2 huruf berdekatan (transposisi)
@@ -187,7 +202,7 @@ class HandwritingGenerator:
             neighbors = chr(ord(c) - 1) if ord(c) > ord("a") else chr(ord(c) + 1)
             return word[:idx] + neighbors + word[idx + 1 :]
 
-    def ink_vary(self, pressure_delta=0):
+    def ink_vary(self, pressure_delta: float = 0) -> tuple[int, int, int, int]:
         """
         Kembalikan warna tinta dengan variasi tekanan pena.
         pressure_delta: negatif = tekan lebih kuat (lebih gelap).
@@ -636,7 +651,7 @@ class HandwritingGenerator:
 
         return cursor_x
 
-    def calculate_text_width(self, text):
+    def calculate_text_width(self, text: str) -> float:
         """Estimasi lebar teks termasuk wordSpacing (Fix untuk Pillow)"""
         try:
             # getlength jauh lebih akurat dari getbbox karena menghitung 'advance width' (termasuk spasi)
@@ -648,7 +663,7 @@ class HandwritingGenerator:
         extra = text.count(" ") * self.word_spacing
         return (base_width + extra) * 0.96
 
-    def split_into_pages(self, text):
+    def split_into_pages(self, text: str) -> list[list[str]]:
         pages, current_lines = [], []
         y = self.config["startY"]
         
@@ -894,7 +909,7 @@ class HandwritingGenerator:
         result = np.clip(arr, 0, 255).astype(np.uint8)
         return Image.fromarray(result)
 
-    def generate_page(self, lines, page_number=1):
+    def generate_page(self, lines: list[str], page_number: int = 1) -> Image.Image:
         self._page_margin_offset = 0  # Dihapus agar margin halaman konstan
         # Seed baseline berbeda tiap halaman agar gelombang tidak identik
         self.session_seed = random.uniform(0, 100)
@@ -1094,7 +1109,7 @@ class HandwritingGenerator:
             print("Watermark error:", e)
             return image
 
-    def generate_all_pages(self, text):
+    def generate_all_pages(self, text: str) -> list[Image.Image]:
         pages = self.split_into_pages(text)
         self.total_pages = len(pages)
         return [self.generate_page(lines, idx + 1) for idx, lines in enumerate(pages)]
