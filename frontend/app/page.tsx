@@ -5724,7 +5724,7 @@ export default function Home() {
                   {/* Output viewer utama (Figma-style Workspace) */}
                   <div
                     ref={outputViewerRef}
-                    className={`relative flex-1 overflow-y-auto scrollbar-thin pb-24 transition-all duration-700 ${D
+                    className={`spotlight-container relative flex-1 overflow-y-auto scrollbar-thin pb-24 transition-all duration-700 ${D
                       ? "bg-[#060610]"
                       : "bg-gradient-to-br from-sky-100/80 via-indigo-50 to-violet-100/80"
                       }`}
@@ -5758,7 +5758,14 @@ export default function Home() {
                         };
                         return ambientColorMap[ambientColor]?.[D ? 'dark' : 'light'] || undefined;
                       })(),
-                    }}>
+                    }}
+                    onMouseMove={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      e.currentTarget.style.setProperty('--x', `${e.clientX - rect.left}px`);
+                      e.currentTarget.style.setProperty('--y', `${e.clientY - rect.top}px`);
+                    }}
+                  >
+
 
                     <AnimatePresence mode="wait">
                       {(() => {

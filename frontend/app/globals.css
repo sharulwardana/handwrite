@@ -31,6 +31,7 @@
 
 html {
   scroll-behavior: smooth;
+  font-size: clamp(14px, 0.85vw, 22px);
 }
 
 :focus-visible {
@@ -53,18 +54,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-@media (min-width: 2560px) {
-  html {
-    font-size: 18px;
-  }
-}
-
-@media (min-width: 3840px) {
-  html {
-    font-size: 22px;
-  }
 }
 
 /* Pengecualian: animasi & transform tidak ikut transition tema */
@@ -133,6 +122,21 @@ html, body, div, main, aside, nav, section, article {
 @keyframes btn-shimmer {
   0% { background-position: -200% center; }
   100% { background-position: 200% center; }
+}
+
+@keyframes skeleton-sweep {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.0) 0%,
+    rgba(255,255,255,0.15) 50%,
+    rgba(255,255,255,0.0) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
 }
 
 /* ── RANGE SLIDER ── */
@@ -1922,6 +1926,10 @@ html:not(.dark) .skeleton::after {
   animation: none;
   opacity: 0;
 }
+.btn-generate:active {
+  transform: scale(0.96);
+  transition: transform 0.1s cubic-bezier(0.25, 1.15, 0.4, 1);
+}
 /* ═══════════════════════════════════════════════════════════════════
    iOS 26 / iPhone — FULL BLEED (Poni, Dynamic Island, Home Indicator)
    Pastikan app mengisi seluruh layar fisik termasuk zona notch & bawah
@@ -2092,11 +2100,16 @@ html:not(.dark) .bg-gradient-to-b.from-violet-50 {
 
 @media (prefers-reduced-motion: no-preference) {
   ::view-transition-old(root) {
-    animation: 90ms ease-in both fade-out;
+    animation: 150ms ease-in both fade-out,
+               150ms ease-in both scale-out;
   }
   ::view-transition-new(root) {
-    animation: 210ms ease-out both fade-in;
+    animation: 250ms ease-out both fade-in,
+               250ms ease-out both scale-in;
   }
+}
+@keyframes scale-out {
+  to { transform: scale(0.98); }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -2192,3 +2205,23 @@ body::after {
   contain: layout style paint;
 }
 .dark body::after { opacity: 0.04; }
+
+.spotlight-container {
+  --x: 50%;
+  --y: 50%;
+  position: relative;
+  overflow: hidden;
+}
+.spotlight-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    400px circle at var(--x) var(--y),
+    rgba(139, 92, 246, 0.06),
+    transparent 60%
+  );
+  z-index: 1;
+  transition: opacity 0.3s ease;
+}
