@@ -159,9 +159,9 @@ function SidebarSection({
       >
         <div className="flex items-center gap-2">
           {icon && <span className="text-sm">{icon}</span>}
-          <span className={`text-[10px] 3xl:text-xs 4xl:text-sm font-bold uppercase tracking-[0.12em] ${labelColor}`}>{title}</span>
+          <span className={`text-[11.5px] 3xl:text-xs 4xl:text-sm font-bold uppercase tracking-[0.1em] ${labelColor}`}>{title}</span>
           {badge && (
-            <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full ${isDark
+            <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${isDark
               ? "bg-violet-500/20 text-violet-400 border border-violet-500/30"
               : "bg-violet-100 text-violet-600 border border-violet-200"
               }`}>
@@ -173,7 +173,7 @@ function SidebarSection({
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
         >
-          <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 ${labelColor}`} />
+          <ChevronDown className={`w-4 h-4 flex-shrink-0 ${labelColor}`} />
         </motion.div>
       </button>
       <AnimatePresence initial={false}>
@@ -445,7 +445,7 @@ function BeforeAfterSlider() {
         className="absolute inset-0 bg-white flex items-center justify-center p-8 sm:p-12"
         style={{ backgroundImage: "radial-gradient(#8b5cf630 1px, transparent 1px)", backgroundSize: "28px 28px" }}
       >
-        <p className="font-['Caveat',cursive] text-2xl sm:text-4xl text-[#1a3a7c] leading-relaxed opacity-90 text-left w-full max-w-3xl">
+        <p className="text-2xl sm:text-4xl text-[#1a3a7c] leading-relaxed opacity-90 text-left w-full max-w-3xl" style={{ fontFamily: "var(--font-caveat), cursive" }}>
           "Pendidikan adalah senjata paling ampuh yang bisa kamu gunakan untuk mengubah dunia. Setiap huruf yang kamu tulis adalah bukti bahwa kamu peduli pada masa depanmu."
         </p>
       </div>
@@ -493,7 +493,13 @@ function LiquidGlassSlider({ value, min = 0, max = 1, step = 0.05, onChange, isD
 
     pointerX = Math.max(0, Math.min(trackWidth, pointerX));
     const newVal = min + (pointerX / trackWidth) * (max - min);
-    onChange(Math.max(min, Math.min(max, Math.round(newVal / step) * step)));
+    const snapped = Math.max(min, Math.min(max, Math.round(newVal / step) * step));
+    if (snapped !== value) {
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate(3);
+      }
+      onChange(snapped);
+    }
   };
 
   return (
@@ -2540,11 +2546,11 @@ export default function Home() {
                     className={`w-full flex items-center justify-between px-3 py-2.5 transition-colors ${c.rowHover} ${selectedFont === key ? D ? "bg-violet-500/12" : "bg-violet-50" : ""}`}
                   >
                     <div className="flex flex-col gap-0.5 text-left">
-                      <span className={`text-[13px] font-medium ${c.tp}`} style={{ fontFamily: fontsLoaded ? (FONT_FAMILY_MAP[font.name] || font.name) : 'inherit' }}>
+                      <span className={`text-[11px] font-semibold uppercase tracking-wide ${c.ts}`} style={{ fontFamily: 'inherit' }}>
                         {font.name}
                       </span>
-                      <span className={`text-[12px] ${c.ts}`} style={{ fontFamily: fontsLoaded ? (FONT_FAMILY_MAP[font.name] || font.name) : 'inherit' }}>
-                        {text.trim().slice(0, 28) || "Halo, ini contoh tulisanku."}
+                      <span className={`text-[17px] leading-snug ${c.ts}`} style={{ fontFamily: fontsLoaded ? (FONT_FAMILY_MAP[font.name] || font.name) : 'inherit' }}>
+                        {text.trim().slice(0, 22) || "Halo, tulisanku rapi!"}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -3913,27 +3919,65 @@ export default function Home() {
                       </div>
                     </div>
 
-                    <div className="w-full space-y-2 mb-4 sm:mb-6 flex-shrink-0">
+                    <div className="w-full space-y-2.5 mb-4 sm:mb-6 flex-shrink-0">
                       {[
-                        { name: "Paket Maba", energy: 15, price: "5.000", color: "blue", tag: "Hemat" },
-                        { name: "Paket Deadline", energy: 50, price: "15.000", color: "violet", tag: "Populer" },
-                        { name: "Paket Sultan", energy: 150, price: "35.000", color: "amber", tag: "Terbaik" },
+                        { name: "Paket Maba", energy: 15, price: "5.000", color: "blue", tag: "Hemat", emoji: "🎒" },
+                        { name: "Paket Deadline", energy: 50, price: "15.000", color: "violet", tag: "Populer", emoji: "⚡" },
+                        { name: "Paket Sultan", energy: 150, price: "35.000", color: "amber", tag: "Terbaik", emoji: "👑" },
                       ].map((tier) => (
-                        <div key={tier.name} className={`flex items-center justify-between p-2.5 sm:p-3 rounded-2xl border transition-colors ${tier.tag === "Populer"
-                          ? D ? "bg-violet-500/10 border-violet-500/40 ring-1 ring-violet-500/20" : "bg-violet-50 border-violet-200 ring-1 ring-violet-200"
-                          : D ? "bg-black/20 border-white/10" : "bg-gray-50 border-gray-200"
+                        <div key={tier.name} className={`relative flex items-center justify-between p-3 sm:p-3.5 rounded-2xl border transition-all ${tier.tag === "Populer"
+                          ? D
+                            ? "bg-violet-500/10 border-violet-500/50 ring-1 ring-violet-500/30 shadow-[0_0_20px_rgba(139,92,246,0.15)]"
+                            : "bg-violet-50 border-violet-300 ring-1 ring-violet-300 shadow-[0_0_20px_rgba(139,92,246,0.1)]"
+                          : tier.tag === "Terbaik"
+                            ? D ? "bg-amber-500/8 border-amber-500/30" : "bg-amber-50 border-amber-200"
+                            : D ? "bg-black/20 border-white/10" : "bg-gray-50 border-gray-200"
                           }`}>
-                          <div className="text-left">
-                            <div className="flex items-center gap-1.5 sm:gap-2">
-                              <span className={`text-[9px] sm:text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-md ${tier.color === "blue" ? "bg-blue-500/20 text-blue-500" :
-                                tier.color === "violet" ? "bg-violet-500/20 text-violet-500" : "bg-amber-500/20 text-amber-500"
-                                }`}>{tier.tag}</span>
-                              <span className={`text-[11px] sm:text-xs font-bold ${c.tp}`}>{tier.name}</span>
+
+                          {/* Badge Populer — melayang di atas */}
+                          {tier.tag === "Populer" && (
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                              <span className={`text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-lg whitespace-nowrap
+                                ${D
+                                  ? "bg-gradient-to-r from-violet-600 to-indigo-500 text-white shadow-violet-500/40"
+                                  : "bg-gradient-to-r from-violet-600 to-indigo-500 text-white shadow-violet-500/30"
+                                }`}>
+                                ⭐ PALING LARIS
+                              </span>
                             </div>
-                            <p className={`text-[10px] sm:text-[11px] mt-0.5 ${c.ts}`}>⚡ {tier.energy} Halaman</p>
+                          )}
+
+                          {/* Badge Terbaik — melayang di atas */}
+                          {tier.tag === "Terbaik" && (
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                              <span className="text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-lg whitespace-nowrap bg-gradient-to-r from-amber-500 to-orange-400 text-white shadow-amber-500/30">
+                                👑 PALING HEMAT/HAL
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="text-left flex items-center gap-2.5">
+                            {/* Emoji icon */}
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0 ${tier.color === "blue" ? D ? "bg-blue-500/15" : "bg-blue-100"
+                              : tier.color === "violet" ? D ? "bg-violet-500/15" : "bg-violet-100"
+                                : D ? "bg-amber-500/15" : "bg-amber-100"
+                              }`}>
+                              {tier.emoji}
+                            </div>
+                            <div>
+                              <span className={`text-xs font-bold ${c.tp}`}>{tier.name}</span>
+                              <p className={`text-[10px] mt-0.5 ${c.ts}`}>⚡ {tier.energy} halaman</p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className={`text-xs sm:text-sm font-black ${c.tp}`}>Rp {tier.price}</span>
+
+                          <div className="text-right flex-shrink-0">
+                            <span className={`text-sm font-black ${tier.color === "blue" ? D ? "text-blue-400" : "text-blue-600"
+                              : tier.color === "violet" ? D ? "text-violet-400" : "text-violet-600"
+                                : D ? "text-amber-400" : "text-amber-600"
+                              }`}>Rp {tier.price}</span>
+                            <p className={`text-[9px] mt-0.5 ${c.ts}`}>
+                              Rp {Math.round(parseInt(tier.price.replace(".", "")) / tier.energy)}/hal
+                            </p>
                           </div>
                         </div>
                       ))}
@@ -4376,121 +4420,126 @@ export default function Home() {
 
               {/* RIGHT: backend status + help + dark mode */}
               <div className="flex items-center gap-1.5 flex-shrink-0">
-                {/* ── TOMBOL LOGIN CLOUD ── */}
-                {user ? (
-                  <div className="hidden md:flex items-center gap-2 mr-1">
-                    <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border ${D ? "border-white/8 bg-white/4" : "border-violet-100 bg-violet-50/50"}`}>
-                      <div className="w-4 h-4 rounded-full bg-gradient-to-br from-violet-400 to-indigo-500 flex items-center justify-center text-[8px] text-white font-bold flex-shrink-0">
-                        {(user.user_metadata.full_name || user.email || "U")[0].toUpperCase()}
+                <div className={`flex items-center gap-1.5 pr-2 border-r ${D ? "border-white/10" : "border-violet-200"}`}>
+                  {/* ── TOMBOL LOGIN CLOUD ── */}
+                  {user ? (
+                    <div className="hidden md:flex items-center gap-2 mr-1">
+                      <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border ${D ? "border-white/8 bg-white/4" : "border-violet-100 bg-violet-50/50"}`}>
+                        <div className="w-4 h-4 rounded-full bg-gradient-to-br from-violet-400 to-indigo-500 flex items-center justify-center text-[8px] text-white font-bold flex-shrink-0">
+                          {(user.user_metadata.full_name || user.email || "U")[0].toUpperCase()}
+                        </div>
+                        <span className={`text-[10px] font-medium max-w-[80px] truncate ${D ? "text-white/60" : "text-gray-600"}`}>
+                          {user.user_metadata.full_name?.split(" ")[0] || user.email?.split("@")[0]}
+                        </span>
                       </div>
-                      <span className={`text-[10px] font-medium max-w-[80px] truncate ${D ? "text-white/60" : "text-gray-600"}`}>
-                        {user.user_metadata.full_name?.split(" ")[0] || user.email?.split("@")[0]}
-                      </span>
+                      <button onClick={handleLogout} title="Logout"
+                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${D ? "bg-red-500/10 hover:bg-red-500/20 text-red-400" : "bg-red-50 hover:bg-red-100 text-red-500"}`}>
+                        <LogOut className="w-3 h-3" />
+                      </button>
                     </div>
-                    <button onClick={handleLogout} title="Logout"
-                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${D ? "bg-red-500/10 hover:bg-red-500/20 text-red-400" : "bg-red-50 hover:bg-red-100 text-red-500"}`}>
-                      <LogOut className="w-3 h-3" />
+                  ) : (
+                    <button onClick={handleLogin}
+                      className="btn-ripple hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold mr-1 transition-all hover:scale-105 active:scale-95"
+                      style={{
+                        background: D ? "linear-gradient(135deg, #4f46e5, #7c3aed)" : "linear-gradient(135deg, #6d28d9, #4f46e5)",
+                        color: "white",
+                        boxShadow: "0 2px 12px rgba(109,40,217,0.35)"
+                      }}>
+                      <LogIn className="w-3 h-3" />
+                      <span>Login</span>
                     </button>
+                  )}
+                  {/* Backend status — dot indicator instead of full pill on small screens */}
+                  <div title={backendOnline === null ? "Memeriksa..." : backendOnline ? "Backend terhubung" : "Backend offline"}
+                    className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-[10px] font-medium transition-colors ${backendOnline === null
+                      ? D ? "border-white/6 text-white/25" : "border-gray-200 text-gray-400"
+                      : backendOnline
+                        ? D ? "border-emerald-500/20 bg-emerald-500/6 text-emerald-400" : "border-emerald-200 bg-emerald-50 text-emerald-600"
+                        : D ? "border-red-500/20 bg-red-500/6 text-red-400" : "border-red-200 bg-red-50 text-red-600"
+                      }`}>
+                    {backendOnline === null
+                      ? <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                      : <div className={`w-1.5 h-1.5 rounded-full ${backendOnline ? "bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.8)]" : "bg-red-500"}`} />}
+                    <span className="hidden lg:inline">{backendOnline === null ? "..." : backendOnline ? "Online" : "Offline"}</span>
                   </div>
-                ) : (
-                  <button onClick={handleLogin}
-                    className="btn-ripple hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold mr-1 transition-all hover:scale-105 active:scale-95"
-                    style={{
-                      background: D ? "linear-gradient(135deg, #4f46e5, #7c3aed)" : "linear-gradient(135deg, #6d28d9, #4f46e5)",
-                      color: "white",
-                      boxShadow: "0 2px 12px rgba(109,40,217,0.35)"
-                    }}>
-                    <LogIn className="w-3 h-3" />
-                    <span>Login</span>
-                  </button>
-                )}
-                {/* Backend status — dot indicator instead of full pill on small screens */}
-                <div title={backendOnline === null ? "Memeriksa..." : backendOnline ? "Backend terhubung" : "Backend offline"}
-                  className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-[10px] font-medium transition-colors ${backendOnline === null
-                    ? D ? "border-white/6 text-white/25" : "border-gray-200 text-gray-400"
-                    : backendOnline
-                      ? D ? "border-emerald-500/20 bg-emerald-500/6 text-emerald-400" : "border-emerald-200 bg-emerald-50 text-emerald-600"
-                      : D ? "border-red-500/20 bg-red-500/6 text-red-400" : "border-red-200 bg-red-50 text-red-600"
-                    }`}>
-                  {backendOnline === null
-                    ? <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                    : <div className={`w-1.5 h-1.5 rounded-full ${backendOnline ? "bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.8)]" : "bg-red-500"}`} />}
-                  <span className="hidden lg:inline">{backendOnline === null ? "..." : backendOnline ? "Online" : "Offline"}</span>
+                  {/* INDIKATOR ENERGI / ADMIN DASHBOARD */}
+                  {user?.email === (process.env.NEXT_PUBLIC_DEV_EMAIL || "sharulwrdn10@gmail.com") ? (
+                    <button
+                      onClick={() => setShowAdminModal(true)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border bg-violet-600 border-violet-500 text-white text-[10px] sm:text-[11px] font-bold hover:bg-violet-700 transition-colors flex-shrink-0 shadow-sm"
+                      title="Admin Control Panel">
+                      <Settings className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">ADMIN</span>
+                      <span className="sm:hidden">MGR</span>
+                    </button>
+                  ) : (
+                    <div className="relative group">
+                      <button onClick={() => setShowQrisModal(true)}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-colors ${energy < estimatedPages
+                          ? "bg-rose-500/10 text-rose-500 border-rose-500/30 animate-pulse"
+                          : D ? "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20" : "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
+                          }`}>
+                        <Zap className={`w-3.5 h-3.5 ${energy < estimatedPages ? "text-rose-500" : "text-amber-500"}`} fill="currentColor" />
+                        <span>{energy}</span>
+                      </button>
+                      {/* Tooltip */}
+                      <div className={`absolute top-full right-0 mt-2 w-48 px-3 py-2.5 rounded-xl border shadow-xl text-[11px] leading-relaxed pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[100] ${D ? "bg-[#18181b] border-[#ffffff14] text-white/80" : "bg-white border-gray-200 text-gray-600"}`}>
+                        <p className="font-bold mb-1">⚡ Energi Kamu</p>
+                        <p>1 energi = 1 halaman generate.</p>
+                        <p className="mt-1">Klik untuk Top Up lebih banyak energi.</p>
+                        {energy < estimatedPages && (
+                          <p className={`mt-1.5 font-semibold ${D ? "text-rose-400" : "text-rose-500"}`}>
+                            Tidak cukup untuk {estimatedPages} halaman!
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {/* INDIKATOR ENERGI / ADMIN DASHBOARD */}
-                {user?.email === (process.env.NEXT_PUBLIC_DEV_EMAIL || "sharulwrdn10@gmail.com") ? (
+                {/* ══ GROUP 2: AKSI ══ */}
+                <div className="flex items-center gap-1.5 pl-1">
+
                   <button
-                    onClick={() => setShowAdminModal(true)}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border bg-violet-600 border-violet-500 text-white text-[10px] sm:text-[11px] font-bold hover:bg-violet-700 transition-colors flex-shrink-0 shadow-sm"
-                    title="Admin Control Panel">
-                    <Settings className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">ADMIN</span>
-                    <span className="sm:hidden">MGR</span>
+                    onClick={() => setShowShortcuts(true)}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors text-[13px] font-bold ${c.btn}`}
+                    title="Keyboard Shortcuts">
+                    ?
                   </button>
-                ) : (
-                  <div className="relative group">
-                    <button onClick={() => setShowQrisModal(true)}
-                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-colors ${energy < estimatedPages
-                        ? "bg-rose-500/10 text-rose-500 border-rose-500/30 animate-pulse"
-                        : D ? "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20" : "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
-                        }`}>
-                      <Zap className={`w-3.5 h-3.5 ${energy < estimatedPages ? "text-rose-500" : "text-amber-500"}`} fill="currentColor" />
-                      <span>{energy}</span>
-                    </button>
-                    {/* Tooltip */}
-                    <div className={`absolute top-full right-0 mt-2 w-48 px-3 py-2.5 rounded-xl border shadow-xl text-[11px] leading-relaxed pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[100] ${D ? "bg-[#18181b] border-[#ffffff14] text-white/80" : "bg-white border-gray-200 text-gray-600"}`}>
-                      <p className="font-bold mb-1">⚡ Energi Kamu</p>
-                      <p>1 energi = 1 halaman generate.</p>
-                      <p className="mt-1">Klik untuk Top Up lebih banyak energi.</p>
-                      {energy < estimatedPages && (
-                        <p className={`mt-1.5 font-semibold ${D ? "text-rose-400" : "text-rose-500"}`}>
-                          Tidak cukup untuk {estimatedPages} halaman!
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-                <button
-                  onClick={() => setShowShortcuts(true)}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors text-[13px] font-bold ${c.btn}`}
-                  title="Keyboard Shortcuts">
-                  ?
-                </button>
-                <button
-                  onClick={() => {
-                    if (!document.startViewTransition) {
-                      setIsDark(!isDark);
-                      return;
-                    }
-                    document.startViewTransition(() => {
-                      setIsDark(!isDark);
-                    });
-                  }}
-                  className={`relative w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden border theme-toggle-btn ${isDark
-                    ? "bg-[#18181b] border-[#ffffff1a]"
-                    : "bg-gradient-to-br from-sky-50 to-amber-50 border-amber-200/50"
-                    }`}
-                  title={isDark ? "Ke Mode Siang" : "Ke Mode Malam"}
-                  aria-label={isDark ? "Aktifkan light mode" : "Aktifkan dark mode"}
-                >
-                  {/* Background morphing circle */}
-                  <div className={`absolute inset-0 rounded-2xl theme-bg-morph ${isDark ? "theme-bg-dark" : "theme-bg-light"
-                    }`} />
+                  <button
+                    onClick={() => {
+                      if (!document.startViewTransition) {
+                        setIsDark(!isDark);
+                        return;
+                      }
+                      document.startViewTransition(() => {
+                        setIsDark(!isDark);
+                      });
+                    }}
+                    className={`relative w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden border theme-toggle-btn ${isDark
+                      ? "bg-[#18181b] border-[#ffffff1a]"
+                      : "bg-gradient-to-br from-sky-50 to-amber-50 border-amber-200/50"
+                      }`}
+                    title={isDark ? "Ke Mode Siang" : "Ke Mode Malam"}
+                    aria-label={isDark ? "Aktifkan light mode" : "Aktifkan dark mode"}
+                  >
+                    {/* Background morphing circle */}
+                    <div className={`absolute inset-0 rounded-2xl theme-bg-morph ${isDark ? "theme-bg-dark" : "theme-bg-light"
+                      }`} />
 
-                  {/* Sun icon */}
-                  <Sun className={`absolute w-[18px] h-[18px] theme-icon theme-sun ${isDark ? "theme-icon-hidden-down" : "theme-icon-visible"
-                    } text-amber-500 fill-amber-200`} />
+                    {/* Sun icon */}
+                    <Sun className={`absolute w-[18px] h-[18px] theme-icon theme-sun ${isDark ? "theme-icon-hidden-down" : "theme-icon-visible"
+                      } text-amber-500 fill-amber-200`} />
 
-                  {/* Moon icon */}
-                  <Moon className={`absolute w-[18px] h-[18px] theme-icon theme-moon ${isDark ? "theme-icon-visible" : "theme-icon-hidden-up"
-                    } text-violet-300 fill-violet-900/40`} />
+                    {/* Moon icon */}
+                    <Moon className={`absolute w-[18px] h-[18px] theme-icon theme-moon ${isDark ? "theme-icon-visible" : "theme-icon-hidden-up"
+                      } text-violet-300 fill-violet-900/40`} />
 
-                  {/* Ripple effect on click */}
-                  <div className={`absolute inset-0 rounded-2xl theme-ripple ${isDark ? "theme-ripple-dark" : "theme-ripple-light"
-                    }`} />
-                </button>
+                    {/* Ripple effect on click */}
+                    <div className={`absolute inset-0 rounded-2xl theme-ripple ${isDark ? "theme-ripple-dark" : "theme-ripple-light"
+                      }`} />
+                  </button>
+                </div>
               </div>
-
             </div>
           </header>
 
@@ -4571,7 +4620,7 @@ export default function Home() {
                         disabled={isGenerating || !text.trim() || !selectedFolio}
                         whileHover={!(isGenerating || !text.trim() || !selectedFolio) ? { y: -2, scale: 1.02 } : {}}
                         whileTap={!(isGenerating || !text.trim() || !selectedFolio) ? { scale: 0.96 } : {}}
-                        className={`btn-ripple relative flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl font-bold text-xs min-w-[110px] overflow-hidden transition-all duration-200 ${isGenerating || !text.trim() || !selectedFolio
+                        className={`btn-ripple relative flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm min-w-[130px] overflow-hidden transition-all duration-200 ${isGenerating || !text.trim() || !selectedFolio
                           ? D ? "bg-white/4 text-white/20 cursor-not-allowed border border-white/6" : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
                           : generateSuccess
                             ? "text-white"
@@ -4603,7 +4652,7 @@ export default function Home() {
                         )}
                         <div className="relative z-10 flex items-center gap-1.5">
                           {isGenerating ? (
-                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
                               <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="2.5" />
                               <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="2.5"
                                 strokeDasharray={`${2 * Math.PI * 10}`}
@@ -4613,11 +4662,11 @@ export default function Home() {
                               />
                             </svg>
                           ) : generateSuccess ? (
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                             </svg>
                           ) : (
-                            <Sparkles className="w-3.5 h-3.5" />
+                            <Sparkles className="w-4 h-4" />
                           )}
                           <span>
                             {isGenerating
@@ -4628,7 +4677,7 @@ export default function Home() {
                             }
                           </span>
                           {!isGenerating && !generateSuccess && estimatedPages > 1 && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/20 font-bold">{estimatedPages}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/20 font-bold">{estimatedPages}</span>
                           )}
                         </div>
                       </motion.button>
