@@ -122,11 +122,11 @@ html, body, div, main, aside, nav, section, article {
 
 /* ── ANIMATIONS ── */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.96); }
+  from { opacity: 0; transform: scale(0.97); }
   to { opacity: 1; transform: scale(1); }
 }
 
@@ -211,10 +211,6 @@ html {
 }
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
-  .safe-area-pb {
-    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
-  }
-
   /* Fixed bottom dock di atas home indicator */
   .mobile-bottom-dock {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
@@ -2191,5 +2187,8 @@ body::after {
   opacity: 0.025;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
   background-size: 180px 180px;
+  will-change: transform;
+  transform: translateZ(0);
+  contain: layout style paint;
 }
 .dark body::after { opacity: 0.04; }

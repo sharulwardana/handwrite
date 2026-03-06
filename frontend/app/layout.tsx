@@ -14,16 +14,17 @@ const dmSans = DM_Sans({
 // Caveat dipindahkan ke page.tsx (hanya dipakai di landing hero) agar tidak memblokir LCP di halaman lain
 
 // Font pendukung - dihapus preload:false agar ter-load di mobile dropdown
-const kalam = Kalam({ subsets: ["latin"], weight: ["400"], display: "swap", variable: "--font-kalam" });
-const patrickHand = Patrick_Hand({ subsets: ["latin"], weight: ["400"], display: "swap", variable: "--font-patrick-hand" });
-const indieFlower = Indie_Flower({ subsets: ["latin"], weight: ["400"], display: "swap", variable: "--font-indie-flower" });
-const architectsDaughter = Architects_Daughter({ subsets: ["latin"], weight: ["400"], display: "swap", variable: "--font-architects-daughter" });
-const gochiHand = Gochi_Hand({ subsets: ["latin"], weight: ["400"], display: "swap", variable: "--font-gochi-hand" });
+const kalam = Kalam({ subsets: ["latin"], weight: ["400"], display: "swap", variable: "--font-kalam", preload: false });
+const patrickHand = Patrick_Hand({ subsets: ["latin"], weight: ["400"], display: "swap", variable: "--font-patrick-hand", preload: false });
+const indieFlower = Indie_Flower({ subsets: ["latin"], weight: ["400"], display: "swap", variable: "--font-indie-flower", preload: false });
+const architectsDaughter = Architects_Daughter({ subsets: ["latin"], weight: ["400"], display: "swap", variable: "--font-architects-daughter", preload: false });
+const gochiHand = Gochi_Hand({ subsets: ["latin"], weight: ["400"], display: "swap", variable: "--font-gochi-hand", preload: false });
 
 const virgil = localFont({
     src: "../public/fonts/Virgil.ttf",
     variable: "--font-virgil",
     display: "swap",
+    preload: false,
 });
 
 export const metadata: Metadata = {
@@ -41,6 +42,20 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             className={`${dmSans.variable} ${kalam.variable} ${patrickHand.variable} ${indieFlower.variable} ${architectsDaughter.variable} ${gochiHand.variable} ${virgil.variable}`}
         >
             <head>
+                {/* ── ANTI-FOUC: Jalankan tema sebelum browser render apapun ── */}
+                <script dangerouslySetInnerHTML={{
+                    __html: `
+            try {
+                var t = localStorage.getItem('hw_theme');
+                var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (t === 'dark' || (!t && prefersDark)) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            } catch(e) {}
+        `
+                }} />
                 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
                 <meta name="color-scheme" content="dark light" />
                 {/* iOS 26 / Dynamic Island — full bleed ke poni & bawah */}

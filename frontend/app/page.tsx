@@ -294,15 +294,11 @@ function TypewriterText({ texts, isDark }: { texts: string[]; isDark: boolean })
 // Perbaikan: Memastikan API_URL selalu memiliki protokol yang benar
 const getApiUrl = () => {
   const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-  // Jika URL tidak dimulai dengan http, tambahkan https:// secara otomatis
   if (url && !url.startsWith('http')) {
     return `https://${url}`;
   }
-  // Hapus trailing slash jika ada agar tidak double slash saat dipanggil
   return url.replace(/\/$/, "");
 };
-
-const API_URL = getApiUrl();
 
 const OptimizedTextarea = React.forwardRef(({ value, onChange, debounce = 300, ...props }: any, ref: any) => {
   const [localValue, setLocalValue] = useState(value);
@@ -777,6 +773,7 @@ export default function Home() {
   // PERF + HYDRATION FIX: Mounted guard — useState dan useEffect harus di atas.
   // Tapi `return null` dipindah ke bawah (setelah semua hooks) agar tidak melanggar Rules of Hooks.
   const [mounted, setMounted] = useState(false);
+  const API_URL = useMemo(() => getApiUrl(), []);
   useEffect(() => { setMounted(true); }, []);
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -896,8 +893,16 @@ export default function Home() {
   const [generateProgress, setGenerateProgress] = useState(0);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [showConfig, setShowConfig] = useState(false);
-  const [isDark, setIsDark] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window === 'undefined') return true; // SSR: default dark
+    const saved = localStorage.getItem('hw_theme');
+    if (saved) return saved === 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window === 'undefined') return true; // SSR: default terbuka
+    return window.innerWidth >= 1280; // hanya buka otomatis di layar lebar
+  });
   const [isLoadingFonts, setIsLoadingFonts] = useState(true);
   const [isLoadingFolios, setIsLoadingFolios] = useState(true);
 
@@ -1019,14 +1024,11 @@ export default function Home() {
   const [totalStreamPages, setTotalStreamPages] = useState(0);
   const [streamedPages, setStreamedPages] = useState<GeneratedPage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [isMobileView, setIsMobileView] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(() => {
+    if (typeof window === 'undefined') return false; // SSR: default false
+    return window.innerWidth < 768;
+  });
 
-  useEffect(() => {
-    const checkMobile = () => setIsMobileView(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
   const sessionIdRef = useRef<string>(
     `hw_${Date.now()}_${Math.random().toString(36).slice(2)}`
   );
@@ -1334,10 +1336,9 @@ export default function Home() {
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         const w = window.innerWidth;
+        setIsMobileView(w < 768);
         if (w >= 1280) {
           setSidebarOpen(true);
-        } else if (w >= 768) {
-          setSidebarOpen(false); // tablet: sidebar collapse by default biar editor lebih luas
         } else {
           setSidebarOpen(false);
         }
@@ -1686,9 +1687,7 @@ export default function Home() {
               setGenerateProgress(100);
 
               // ── POTONG ENERGI DI UI & DATABASE (Kecuali Developer) ──
-              const DEV_EMAIL = process.env.NEXT_PUBLIC_DEV_EMAIL || "sharulwrdn10@gmail.com";
-              if (user?.email !== DEV_EMAIL) {
-                // Hitung sisa energi: Energi saat ini dikurangi jumlah halaman yang baru dibuat
+              if (!isDeveloper) {
                 const deduction = collectedPages.length;
                 const newBalance = Math.max(0, energy - deduction);
 
