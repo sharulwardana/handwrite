@@ -32,6 +32,9 @@ module.exports = {
                 'shimmer': 'shimmer 1.6s ease-in-out infinite',
                 'spin': 'spin 1s linear infinite',
                 'drawer': 'drawer 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
+                'float-up': 'float-up 3s ease-in-out infinite',
+                'glow-pulse': 'glow-pulse 2s ease-in-out infinite',
+                'shimmer-text': 'shimmer-text 3s linear infinite',
             },
             keyframes: {
                 fadeIn: { '0%': { opacity: '0', transform: 'translateY(8px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },

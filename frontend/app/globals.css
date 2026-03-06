@@ -286,6 +286,8 @@ html:not(.dark) header {
   );
   backdrop-filter: blur(40px) saturate(150%);
   -webkit-backdrop-filter: blur(40px) saturate(150%);
+  will-change: transform;
+  transform: translateZ(0);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-top-color: rgba(255, 255, 255, 0.8);
   border-left-color: rgba(255, 255, 255, 0.6);
@@ -1822,6 +1824,22 @@ html:not(.dark) .sidebar-section-glow::before {
 @keyframes aurora-shift {
   0%   { transform: scale(1) translateY(0px); }
   100% { transform: scale(1.05) translateY(-20px); }
+}
+
+/* ── ANIMASI TAMBAHAN MODERN ── */
+@keyframes float-up {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(139, 92, 246, 0.3); }
+  50%       { box-shadow: 0 0 24px rgba(139, 92, 246, 0.6), 0 0 48px rgba(139, 92, 246, 0.2); }
+}
+
+@keyframes shimmer-text {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
 }
 
 /* ── SIDEBAR SCROLL FADE INDICATOR ──────────────────── */

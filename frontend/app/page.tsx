@@ -725,6 +725,53 @@ function DraggableLiquidTabs({ options, value, onChange, isDark, isApple }: any)
   );
 }
 
+/* ─── UTILS (di luar komponen agar tidak re-create tiap render) ─── */
+const compressThumbnail = (base64: string, maxWidth = 120, quality = 0.4): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const ratio = maxWidth / img.width;
+      const canvas = document.createElement("canvas");
+      canvas.width = maxWidth;
+      canvas.height = Math.round(img.height * ratio);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { resolve(""); return; }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => resolve("");
+    img.src = base64;
+  });
+};
+
+const formatTime = (ts: number): string => {
+  const d = new Date(ts);
+  return (
+    d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) +
+    " " +
+    d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+  );
+};
+
+const safeSetHistory = (
+  items: HistoryItem[],
+  setter: (items: HistoryItem[]) => void
+) => {
+  const trySet = (data: HistoryItem[]) => {
+    try { localStorage.setItem("hw_history", JSON.stringify(data)); return true; }
+    catch { return false; }
+  };
+  if (trySet(items)) return;
+  let stripped = items.map((item, i) => i === items.length - 1 ? { ...item, thumbnail: "" } : item);
+  if (trySet(stripped)) return;
+  stripped = items.map((item) => ({ ...item, thumbnail: "" }));
+  if (trySet(stripped)) return;
+  const fewer = stripped.slice(0, Math.floor(stripped.length / 2));
+  if (trySet(fewer)) return;
+  localStorage.removeItem("hw_history");
+  toast("History direset karena storage penuh.", { icon: "⚠️" });
+};
+
 export default function Home() {
 
   // PERF + HYDRATION FIX: Mounted guard — useState dan useEffect harus di atas.
@@ -816,17 +863,17 @@ export default function Home() {
     fetchCloudData();
   }, [user]);
 
-  const handleLogin = async () => {
+  const handleLogin = useCallback(async () => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin }
     });
-  };
+  }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
     toast.success("Berhasil logout");
-  };
+  }, []);
 
   const [inputText, setInputText] = useState("");
   const [text, setText] = useState("");
@@ -1522,47 +1569,6 @@ export default function Home() {
     ? `~${estimatedSeconds}s`
     : `~${Math.ceil(estimatedSeconds / 60)}m`;
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
-  const compressThumbnail = (base64: string, maxWidth = 120, quality = 0.4): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const ratio = maxWidth / img.width;
-        const canvas = document.createElement("canvas");
-        canvas.width = maxWidth;
-        canvas.height = Math.round(img.height * ratio);
-        const ctx = canvas.getContext("2d");
-        if (!ctx) { resolve(""); return; }
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", quality));
-      };
-      img.onerror = () => resolve("");
-      img.src = base64;
-    });
-  };
-
-  const safeSetHistory = (items: HistoryItem[]) => {
-    const trySet = (data: HistoryItem[]) => {
-      try { localStorage.setItem("hw_history", JSON.stringify(data)); return true; }
-      catch { return false; }
-    };
-    if (trySet(items)) return;
-    let stripped = items.map((item, i) => i === items.length - 1 ? { ...item, thumbnail: "" } : item);
-    if (trySet(stripped)) return;
-    stripped = items.map((item) => ({ ...item, thumbnail: "" }));
-    if (trySet(stripped)) return;
-    const fewer = stripped.slice(0, Math.floor(stripped.length / 2));
-    if (trySet(fewer)) return;
-    localStorage.removeItem("hw_history");
-    toast("History direset karena storage penuh.", { icon: "⚠️" });
-  };
-
-  const formatTime = (ts: number) => {
-    const d = new Date(ts);
-    return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) + " " +
-      d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-  };
-
   // ── Generate ─────────────────────────────────────────────────────────────────
   const handleGenerate = useCallback(async () => {
     if (!text.trim()) { toast.error("Masukkan teks dulu!"); return; }
@@ -1735,7 +1741,7 @@ export default function Home() {
               };
               const newHistory = [item, ...history].slice(0, 10);
               setHistory(newHistory);
-              safeSetHistory(newHistory);
+              safeSetHistory(newHistory, setHistory);
               // TAHAP 2: SIMPAN KE CLOUD JIKA USER LOGIN
               if (user && supabaseConfigured) {
                 try {
@@ -1780,7 +1786,7 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text, selectedFolio, selectedFont, config, seed, energy, useDoubleFolio, selectedFolioEven,
     leftHanded, writeSpeed, enableTypo, slantAngle, tiredMode, showPageNumber,
-    pageNumberFormat, watermarkText, history, currentFont, currentFolio, sessionIdRef, API_URL]);
+    pageNumberFormat, watermarkText, history, currentFont, currentFolio, handleLogin, API_URL]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
