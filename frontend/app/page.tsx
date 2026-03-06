@@ -4262,49 +4262,77 @@ export default function Home() {
                   <Menu className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
 
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-violet-500/30">
-                    <PenTool className="w-3.5 h-3.5 text-white" />
+                <div className="flex items-center gap-2.5">
+                  {/* Logo icon — layered glow effect */}
+                  <div className="relative flex-shrink-0">
+                    <div className={`absolute inset-0 rounded-xl blur-md opacity-60 ${D ? "bg-violet-500" : "bg-violet-400"}`} />
+                    <div className="relative w-8 h-8 bg-gradient-to-br from-violet-500 via-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/40 border border-white/20">
+                      <PenTool className="w-3.5 h-3.5 text-white drop-shadow" />
+                    </div>
                   </div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="font-bold text-sm bg-clip-text text-transparent hidden xs:block"
+                  {/* Brand name + badge */}
+                  <div className="hidden xs:flex flex-col gap-0">
+                    <span className="font-extrabold text-[13px] leading-none tracking-tight bg-clip-text text-transparent"
                       style={{
                         backgroundImage: D
-                          ? "linear-gradient(135deg, #67e8f9, #a78bfa, #818cf8)"
-                          : "linear-gradient(135deg, #0891b2, #7c3aed, #4f46e5)",
+                          ? "linear-gradient(120deg, #e0d7ff 0%, #a78bfa 40%, #67e8f9 100%)"
+                          : "linear-gradient(120deg, #6d28d9 0%, #7c3aed 50%, #4f46e5 100%)",
                       }}>
                       Mager Nulis
                     </span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-mono border ${D ? "border-violet-500/30 bg-violet-500/10 text-violet-400" : "border-violet-300 bg-violet-50 text-violet-600"}`}>v1.2</span>
+                    <span className={`text-[8px] font-bold tracking-widest uppercase leading-none mt-0.5 ${D ? "text-white/25" : "text-violet-400/60"}`}>
+                      AI Handwriting
+                    </span>
                   </div>
+                  <span className={`hidden sm:inline-flex text-[8px] px-1.5 py-0.5 rounded-full font-bold tracking-wider border ${D ? "border-violet-400/25 bg-violet-500/10 text-violet-400" : "border-violet-200 bg-violet-50 text-violet-500"}`}>v1.2</span>
                 </div>
               </div>
 
-              {/* CENTER: status pill */}
+              {/* CENTER: status pill — premium redesign */}
               <div className="hidden sm:flex flex-1 justify-center">
                 {isGenerating ? (
-                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${D ? "bg-violet-500/10 border border-violet-500/20" : "bg-violet-50 border border-violet-200"}`}>
-                    <Loader2 className="w-3.5 h-3.5 text-violet-500 animate-spin" />
-                    <span className={`text-xs font-medium ${D ? "text-violet-400" : "text-violet-700"}`}>
-                      Generating {Math.round(generateProgress)}%
-                    </span>
-                    <button onClick={() => abortController?.abort()} className="ml-2 text-red-500 hover:text-red-400 bg-red-500/10 rounded-md p-1" title="Batalkan">
-                      <X className="w-3 h-3" />
-                    </button>
+                  <div className={`relative flex items-center gap-2.5 pl-3 pr-2 py-1.5 rounded-full overflow-hidden border ${D ? "bg-violet-500/8 border-violet-500/20" : "bg-violet-50 border-violet-200/80"}`}
+                    style={{ boxShadow: D ? "0 0 20px rgba(139,92,246,0.12)" : "0 0 16px rgba(139,92,246,0.08)" }}>
+                    {/* animated bg bar */}
+                    <div className="absolute inset-0 opacity-20"
+                      style={{ background: `linear-gradient(90deg, transparent 0%, ${D ? "rgba(139,92,246,0.4)" : "rgba(139,92,246,0.2)"} ${generateProgress}%, transparent ${generateProgress}%)`, transition: "background 0.4s ease" }} />
+                    <div className="relative flex items-center gap-2">
+                      <div className="relative w-3.5 h-3.5">
+                        <svg className="w-3.5 h-3.5 -rotate-90" viewBox="0 0 14 14">
+                          <circle cx="7" cy="7" r="5.5" fill="none" stroke={D ? "rgba(139,92,246,0.2)" : "rgba(139,92,246,0.15)"} strokeWidth="1.5" />
+                          <circle cx="7" cy="7" r="5.5" fill="none" stroke={D ? "#a78bfa" : "#7c3aed"} strokeWidth="1.5"
+                            strokeDasharray={`${2 * Math.PI * 5.5}`}
+                            strokeDashoffset={`${2 * Math.PI * 5.5 * (1 - generateProgress / 100)}`}
+                            strokeLinecap="round" style={{ transition: "stroke-dashoffset 0.4s ease" }} />
+                        </svg>
+                      </div>
+                      <span className={`text-[11px] font-semibold tabular-nums ${D ? "text-violet-300" : "text-violet-700"}`}>
+                        Generating {Math.round(generateProgress)}%
+                      </span>
+                      <button onClick={() => abortController?.abort()}
+                        className={`ml-1 w-5 h-5 rounded-full flex items-center justify-center transition-colors ${D ? "bg-red-500/15 hover:bg-red-500/25 text-red-400" : "bg-red-50 hover:bg-red-100 text-red-500"}`}
+                        title="Batalkan">
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
                   </div>
                 ) : generatedPages.length > 0 ? (
-                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${D ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-50 border border-emerald-200"}`}>
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                    <span className={`text-xs font-medium ${D ? "text-emerald-400" : "text-emerald-700"}`}>
+                  <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border ${D ? "bg-emerald-500/8 border-emerald-500/20" : "bg-emerald-50 border-emerald-200"}`}
+                    style={{ boxShadow: D ? "0 0 16px rgba(16,185,129,0.1)" : "none" }}>
+                    <div className={`w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]`} />
+                    <span className={`text-[11px] font-semibold ${D ? "text-emerald-400" : "text-emerald-700"}`}>
                       {generatedPages.length} halaman siap
                     </span>
                   </div>
                 ) : text.trim() ? (
-                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${D ? "bg-white/5 border-[#ffffff10]" : "bg-gray-50 border-gray-200"}`}>
-                    <Clock className={`w-3.5 h-3.5 ${c.ts}`} />
-                    <span className={`text-xs ${c.ts}`}>
-                      ~{estimatedPages} hal · {estimatedTimeLabel} · {wordCount.toLocaleString()} kata
-                    </span>
+                  <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border ${D ? "bg-white/4 border-white/8" : "bg-white border-violet-100 shadow-sm"}`}>
+                    <div className={`flex gap-1 items-center`}>
+                      <span className={`text-[10px] font-bold tabular-nums ${D ? "text-white/70" : "text-violet-700"}`}>~{estimatedPages} hal</span>
+                      <span className={`text-[10px] ${D ? "text-white/20" : "text-violet-300"}`}>·</span>
+                      <span className={`text-[10px] ${D ? "text-white/40" : "text-gray-500"}`}>{estimatedTimeLabel}</span>
+                      <span className={`text-[10px] ${D ? "text-white/20" : "text-violet-300"}`}>·</span>
+                      <span className={`text-[10px] font-medium tabular-nums ${D ? "text-white/50" : "text-gray-600"}`}>{wordCount.toLocaleString()} kata</span>
+                    </div>
                   </div>
                 ) : null}
               </div>
@@ -4313,28 +4341,43 @@ export default function Home() {
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 {/* ── TOMBOL LOGIN CLOUD ── */}
                 {user ? (
-                  <div className="hidden md:flex items-center gap-2 mr-2">
-                    <span className={`text-[11px] font-medium ${D ? "text-white/70" : "text-gray-600"}`}>
-                      {user.user_metadata.full_name}
-                    </span>
-                    <button onClick={handleLogout} title="Logout" className="p-1.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors">
-                      <LogOut className="w-3.5 h-3.5" />
+                  <div className="hidden md:flex items-center gap-2 mr-1">
+                    <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border ${D ? "border-white/8 bg-white/4" : "border-violet-100 bg-violet-50/50"}`}>
+                      <div className="w-4 h-4 rounded-full bg-gradient-to-br from-violet-400 to-indigo-500 flex items-center justify-center text-[8px] text-white font-bold flex-shrink-0">
+                        {(user.user_metadata.full_name || user.email || "U")[0].toUpperCase()}
+                      </div>
+                      <span className={`text-[10px] font-medium max-w-[80px] truncate ${D ? "text-white/60" : "text-gray-600"}`}>
+                        {user.user_metadata.full_name?.split(" ")[0] || user.email?.split("@")[0]}
+                      </span>
+                    </div>
+                    <button onClick={handleLogout} title="Logout"
+                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${D ? "bg-red-500/10 hover:bg-red-500/20 text-red-400" : "bg-red-50 hover:bg-red-100 text-red-500"}`}>
+                      <LogOut className="w-3 h-3" />
                     </button>
                   </div>
                 ) : (
-                  <button onClick={handleLogin} className="btn-ripple hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors text-[11px] font-medium mr-2">
-                    <LogIn className="w-3.5 h-3.5" />
-                    <span>Login Cloud</span>
+                  <button onClick={handleLogin}
+                    className="btn-ripple hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold mr-1 transition-all hover:scale-105 active:scale-95"
+                    style={{
+                      background: D ? "linear-gradient(135deg, #4f46e5, #7c3aed)" : "linear-gradient(135deg, #6d28d9, #4f46e5)",
+                      color: "white",
+                      boxShadow: "0 2px 12px rgba(109,40,217,0.35)"
+                    }}>
+                    <LogIn className="w-3 h-3" />
+                    <span>Login</span>
                   </button>
                 )}
+                {/* Backend status — dot indicator instead of full pill on small screens */}
                 <div title={backendOnline === null ? "Memeriksa..." : backendOnline ? "Backend terhubung" : "Backend offline"}
-                  className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] lg:text-[11px] 2xl:text-xs font-medium transition-colors ${backendOnline === null
-                    ? D ? "border-[#ffffff10] text-white/30" : "border-gray-200 text-gray-400"
+                  className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-[10px] font-medium transition-colors ${backendOnline === null
+                    ? D ? "border-white/6 text-white/25" : "border-gray-200 text-gray-400"
                     : backendOnline
-                      ? D ? "border-emerald-500/20 bg-emerald-500/8 text-emerald-400" : "border-emerald-300 bg-emerald-50 text-emerald-700"
-                      : D ? "border-red-500/20 bg-red-500/8 text-red-400" : "border-red-300 bg-red-50 text-red-600"
+                      ? D ? "border-emerald-500/20 bg-emerald-500/6 text-emerald-400" : "border-emerald-200 bg-emerald-50 text-emerald-600"
+                      : D ? "border-red-500/20 bg-red-500/6 text-red-400" : "border-red-200 bg-red-50 text-red-600"
                     }`}>
-                  {backendOnline === null ? <Loader2 className="w-3 h-3 animate-spin" /> : backendOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                  {backendOnline === null
+                    ? <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                    : <div className={`w-1.5 h-1.5 rounded-full ${backendOnline ? "bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.8)]" : "bg-red-500"}`} />}
                   <span className="hidden lg:inline">{backendOnline === null ? "..." : backendOnline ? "Online" : "Offline"}</span>
                 </div>
                 {/* INDIKATOR ENERGI / ADMIN DASHBOARD */}
@@ -4452,32 +4495,36 @@ export default function Home() {
                     : "lg:w-[380px] xl:w-[440px] 2xl:w-[520px] 3xl:w-[720px] 4xl:w-[850px]"
                   }`}>
 
-                {/* Editor header */}
-                <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} flex items-center justify-between ${D
-                  ? "bg-gradient-to-r from-[#13131f] to-[#0d0d14]"
-                  : "bg-gradient-to-r from-amber-50 via-violet-50 to-indigo-100"}`}>
+                {/* Editor header — premium redesign */}
+                <div className={`flex-shrink-0 px-4 py-3 border-b ${c.divider} flex items-center justify-between`}
+                  style={{
+                    background: D
+                      ? "linear-gradient(135deg, rgba(19,19,31,0.98) 0%, rgba(13,13,20,0.98) 100%)"
+                      : "linear-gradient(135deg, rgba(250,249,255,0.98) 0%, rgba(238,242,255,0.98) 100%)"
+                  }}>
                   <div className="flex items-center gap-2">
-                    <div className={`w-5 h-5 rounded-md flex items-center justify-center ${D ? "bg-indigo-500/20" : "bg-indigo-100"}`}>
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center ${D ? "bg-violet-500/15" : "bg-violet-100"}`}>
                       <span className="text-[10px]">📝</span>
                     </div>
-                    <span className={`text-[10.5px] font-bold uppercase tracking-widest ${c.label}`}>Editor</span>
+                    <span className={`text-[10px] font-bold uppercase tracking-[0.12em] ${D ? "text-white/30" : "text-gray-400"}`}>Editor</span>
                     {currentFont && (
-                      <span className={`text-[11px] px-2 py-0.5 rounded-md border ${c.pillBorder} ${c.pill} ${c.tp}`}
+                      <span className={`text-[10.5px] px-2 py-0.5 rounded-full border font-medium ${D ? "border-violet-500/20 bg-violet-500/8 text-violet-300" : "border-violet-200 bg-violet-50 text-violet-600"}`}
                         style={{ fontFamily: FONT_FAMILY_MAP[currentFont.name] || currentFont.name }}>
                         {currentFont.name}
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`hidden sm:inline-block text-[10px] ${c.ts}`}>
-                      <span className={`font-semibold ${D ? "text-indigo-400" : "text-indigo-600"}`}>{wordCount.toLocaleString()}</span> kata
+                    <span className={`hidden sm:inline-flex items-center gap-1 text-[10px] ${D ? "text-white/25" : "text-gray-400"}`}>
+                      <span className={`font-bold tabular-nums ${D ? "text-indigo-400" : "text-indigo-600"}`}>{wordCount.toLocaleString()}</span>
+                      <span>kata</span>
                     </span>
 
                     <button onClick={() => setZenMode(!zenMode)}
-                      className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-colors border ${zenMode ? "bg-violet-500/20 text-violet-400 border-violet-500/30" : D ? "hover:bg-white/5 text-gray-400 border-transparent" : "hover:bg-gray-100 text-gray-600 border-transparent"}`}
+                      className={`hidden lg:flex items-center gap-1 px-2 py-1 rounded-lg text-[9.5px] font-bold transition-all duration-200 border hover:scale-105 active:scale-95 ${zenMode ? "bg-violet-500/15 text-violet-400 border-violet-500/25" : D ? "hover:bg-white/5 text-white/25 border-transparent hover:text-white/50" : "hover:bg-gray-100 text-gray-400 border-transparent hover:text-gray-600"}`}
                       title="Zen Mode (Fullscreen)">
-                      <Maximize2 className="w-3.5 h-3.5" />
-                      <span>{zenMode ? "Keluar Zen" : "Zen Mode"}</span>
+                      <Maximize2 className="w-3 h-3" />
+                      <span>{zenMode ? "Keluar" : "Zen"}</span>
                     </button>
 
                     <div className="relative group">
@@ -4485,28 +4532,38 @@ export default function Home() {
                         id="generate-btn"
                         onClick={handleGenerate}
                         disabled={isGenerating || !text.trim() || !selectedFolio}
-                        whileHover={!(isGenerating || !text.trim() || !selectedFolio) ? { y: -1 } : {}}
-                        whileTap={!(isGenerating || !text.trim() || !selectedFolio) ? { scale: 0.97 } : {}}
-                        className={`btn-ripple relative flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl font-bold text-xs min-w-[110px] overflow-hidden ${isGenerating || !text.trim() || !selectedFolio
-                          ? D ? "bg-[#ffffff05] text-white/30 cursor-not-allowed border border-[#ffffff0a]" : "bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-200"
+                        whileHover={!(isGenerating || !text.trim() || !selectedFolio) ? { y: -2, scale: 1.02 } : {}}
+                        whileTap={!(isGenerating || !text.trim() || !selectedFolio) ? { scale: 0.96 } : {}}
+                        className={`btn-ripple relative flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl font-bold text-xs min-w-[110px] overflow-hidden transition-all duration-200 ${isGenerating || !text.trim() || !selectedFolio
+                          ? D ? "bg-white/4 text-white/20 cursor-not-allowed border border-white/6" : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
                           : generateSuccess
-                            ? "bg-emerald-500 text-white shadow-emerald-500/30 shadow-lg"
-                            : `bg-gradient-to-r ${c.accent} text-white btn-generate-idle btn-generate-pulse`
-                          } ${isGenerating ? 'btn-generate-active' : ''}`}>
-                        {/* Progress fill background */}
+                            ? "text-white"
+                            : "text-white btn-generate-idle btn-generate-pulse"
+                          } ${isGenerating ? 'btn-generate-active' : ''}`}
+                        style={
+                          generateSuccess
+                            ? { background: "linear-gradient(135deg, #10b981, #059669)", boxShadow: "0 4px 20px rgba(16,185,129,0.4), inset 0 1px 0 rgba(255,255,255,0.2)" }
+                            : !(isGenerating || !text.trim() || !selectedFolio)
+                              ? { background: D ? "linear-gradient(135deg, #7c3aed, #6d28d9, #4f46e5)" : "linear-gradient(135deg, #8b5cf6, #7c3aed, #6366f1)", boxShadow: "0 4px 20px rgba(124,58,237,0.45), inset 0 1px 0 rgba(255,255,255,0.2)" }
+                              : {}
+                        }>
+                        {/* Shimmer sweep overlay */}
+                        {!(isGenerating || !text.trim() || !selectedFolio) && !generateSuccess && (
+                          <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+                            <div className="absolute inset-0 -translate-x-full animate-[shimmer_2.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                          </div>
+                        )}
+                        {/* Progress fill */}
                         {isGenerating && (
                           <motion.div
                             className="absolute inset-0 rounded-xl"
                             style={{
-                              background: D
-                                ? "linear-gradient(90deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%)"
-                                : "linear-gradient(90deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.15) 100%)",
+                              background: "linear-gradient(90deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)",
                               width: `${generateProgress}%`,
                               transition: "width 0.4s ease-out",
                             }}
                           />
                         )}
-
                         <div className="relative z-10 flex items-center gap-1.5">
                           {isGenerating ? (
                             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
@@ -4533,11 +4590,16 @@ export default function Home() {
                                 : 'Generate'
                             }
                           </span>
-                          {!isGenerating && estimatedPages > 1 && (
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${D ? "bg-black/20" : "bg-white/25"}`}>{estimatedPages}</span>
+                          {!isGenerating && !generateSuccess && estimatedPages > 1 && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/20 font-bold">{estimatedPages}</span>
                           )}
                         </div>
                       </motion.button>
+                      {/* Glow halo di bawah tombol */}
+                      {!(isGenerating || !text.trim() || !selectedFolio) && !generateSuccess && (
+                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3/4 h-3 blur-md opacity-50 pointer-events-none rounded-full"
+                          style={{ background: "linear-gradient(90deg, #8b5cf6, #6366f1)" }} />
+                      )}
                       {/* Tooltip shortcut */}
                       <div className={`absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap
     opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50
@@ -4894,24 +4956,32 @@ export default function Home() {
                         transition={{ duration: 0.3, delay: 0.2 }}
                         className="flex flex-col gap-2 mb-2"
                       >
-                        <p className={`text-[10px] font-semibold uppercase tracking-widest px-1 ${c.ts}`}>
-                          ✨ Mulai dengan...
-                        </p>
+                        <div className="flex items-center gap-1.5 px-1">
+                          <div className={`w-3 h-3 rounded-sm flex items-center justify-center ${D ? "bg-violet-500/20" : "bg-violet-100"}`}>
+                            <Sparkles className={`w-2 h-2 ${D ? "text-violet-400" : "text-violet-500"}`} />
+                          </div>
+                          <p className={`text-[9.5px] font-bold uppercase tracking-[0.12em] ${D ? "text-white/25" : "text-gray-400"}`}>
+                            Mulai dengan...
+                          </p>
+                        </div>
                         <div className="flex flex-wrap gap-1.5">
                           {[
-                            "Pada suatu hari yang cerah,",
-                            "Berdasarkan hasil penelitian,",
-                            "Menurut pendapat saya,",
-                            "Di era globalisasi ini,",
-                            "Seiring perkembangan zaman,",
-                            "Dalam kehidupan sehari-hari,",
-                            "Pendidikan merupakan hal penting",
-                            "Indonesia adalah negara yang",
-                          ].map((starter) => (
+                            { text: "Pada suatu hari yang cerah,", color: D ? "from-violet-500/15 to-purple-500/10 border-violet-500/20 text-violet-300 hover:border-violet-400/40" : "from-violet-50 to-purple-50 border-violet-200 text-violet-700 hover:border-violet-300" },
+                            { text: "Berdasarkan hasil penelitian,", color: D ? "from-blue-500/15 to-indigo-500/10 border-blue-500/20 text-blue-300 hover:border-blue-400/40" : "from-blue-50 to-indigo-50 border-blue-200 text-blue-700 hover:border-blue-300" },
+                            { text: "Menurut pendapat saya,", color: D ? "from-emerald-500/15 to-teal-500/10 border-emerald-500/20 text-emerald-300 hover:border-emerald-400/40" : "from-emerald-50 to-teal-50 border-emerald-200 text-emerald-700 hover:border-emerald-300" },
+                            { text: "Di era globalisasi ini,", color: D ? "from-orange-500/15 to-amber-500/10 border-orange-500/20 text-orange-300 hover:border-orange-400/40" : "from-orange-50 to-amber-50 border-orange-200 text-orange-700 hover:border-orange-300" },
+                            { text: "Seiring perkembangan zaman,", color: D ? "from-pink-500/15 to-rose-500/10 border-pink-500/20 text-pink-300 hover:border-pink-400/40" : "from-pink-50 to-rose-50 border-pink-200 text-pink-700 hover:border-pink-300" },
+                            { text: "Dalam kehidupan sehari-hari,", color: D ? "from-cyan-500/15 to-sky-500/10 border-cyan-500/20 text-cyan-300 hover:border-cyan-400/40" : "from-cyan-50 to-sky-50 border-cyan-200 text-cyan-700 hover:border-cyan-300" },
+                            { text: "Pendidikan merupakan hal penting", color: D ? "from-violet-500/15 to-indigo-500/10 border-violet-500/20 text-violet-300 hover:border-violet-400/40" : "from-violet-50 to-indigo-50 border-violet-200 text-violet-700 hover:border-violet-300" },
+                            { text: "Indonesia adalah negara yang", color: D ? "from-red-500/15 to-orange-500/10 border-red-500/20 text-red-300 hover:border-red-400/40" : "from-red-50 to-orange-50 border-red-200 text-red-700 hover:border-red-300" },
+                          ].map(({ text: starter, color }, i) => (
                             <motion.button
                               key={starter}
-                              whileHover={{ scale: 1.03 }}
-                              whileTap={{ scale: 0.97 }}
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: 0.05 * i, duration: 0.2 }}
+                              whileHover={{ scale: 1.04, y: -1 }}
+                              whileTap={{ scale: 0.96 }}
                               onClick={() => {
                                 const newText = starter + " ";
                                 setInputText(newText);
@@ -4922,12 +4992,9 @@ export default function Home() {
                                   textareaRef.current?.setSelectionRange(len, len);
                                 }, 50);
                               }}
-                              className={`flex items-center gap-1 text-[11px] px-3 py-1.5 rounded-full border transition-all ${D
-                                ? "bg-[#ffffff06] border-[#ffffff10] text-white/50 hover:bg-violet-500/12 hover:border-violet-500/30 hover:text-violet-300"
-                                : "bg-white border-violet-200 text-violet-600 hover:bg-violet-50 hover:border-violet-300 shadow-sm"
-                                }`}
+                              className={`flex items-center gap-1 text-[10.5px] px-2.5 py-1 rounded-full border bg-gradient-to-r transition-all duration-200 ${color}`}
                             >
-                              <span>"{starter}"</span>
+                              <span className="font-medium">{starter}</span>
                             </motion.button>
                           ))}
                         </div>
@@ -5139,30 +5206,52 @@ export default function Home() {
               {/* ══ PANEL 3: OUTPUT VIEWER ══ */}
               <main className={`flex flex-1 min-w-0 flex-col overflow-hidden ${zenMode ? "hidden" : ""}`}>
 
-                {/* Output header — 2 baris agar tidak overflow di laptop kecil */}
-                <div className={`flex-shrink-0 border-b ${c.divider} ${D ? "bg-[#09090b]/80" : "bg-white/80"} backdrop-blur-sm`}>
+                {/* Output header — premium redesign */}
+                <div className={`flex-shrink-0 border-b ${c.divider} backdrop-blur-xl`}
+                  style={{
+                    background: D
+                      ? "linear-gradient(135deg, rgba(9,9,11,0.95) 0%, rgba(13,13,20,0.95) 100%)"
+                      : "linear-gradient(135deg, rgba(245,243,255,0.95) 0%, rgba(238,242,255,0.95) 100%)"
+                  }}>
 
                   {/* Baris 1: Status + Navigasi halaman + Riwayat/Preset */}
-                  <div className={`flex items-center justify-between gap-2 px-4 py-2 ${D
-                    ? "bg-gradient-to-r from-[#0d0d14] to-[#13131f]"
-                    : "bg-gradient-to-r from-indigo-100 to-violet-100"}`}>
+                  <div className="flex items-center justify-between gap-2 px-4 py-2.5">
                     <div className="flex items-center gap-2 min-w-0">
-                      {/* Status pill */}
+                      {/* Status pill — premium */}
                       {isGenerating ? (
-                        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${D ? "bg-violet-500/12 border border-violet-500/20" : "bg-violet-50 border border-violet-200"}`}>
-                          <Loader2 className="w-3 h-3 text-violet-500 animate-spin flex-shrink-0" />
-                          <span className={`text-[11px] font-medium ${D ? "text-violet-400" : "text-violet-700"}`}>Generating {Math.round(generateProgress)}%</span>
-                          <button onClick={() => abortController?.abort()} className="ml-1 text-red-500 hover:text-red-400 bg-red-500/10 rounded-md p-0.5" title="Batalkan">
-                            <X className="w-3.5 h-3.5" />
+                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${D ? "bg-violet-500/8 border-violet-500/20" : "bg-violet-50 border-violet-200"}`}>
+                          <div className="relative w-3 h-3 flex-shrink-0">
+                            <svg className="w-3 h-3 -rotate-90" viewBox="0 0 12 12">
+                              <circle cx="6" cy="6" r="4.5" fill="none" stroke={D ? "rgba(139,92,246,0.2)" : "rgba(139,92,246,0.15)"} strokeWidth="1.5" />
+                              <circle cx="6" cy="6" r="4.5" fill="none" stroke={D ? "#a78bfa" : "#7c3aed"} strokeWidth="1.5"
+                                strokeDasharray={`${2 * Math.PI * 4.5}`}
+                                strokeDashoffset={`${2 * Math.PI * 4.5 * (1 - generateProgress / 100)}`}
+                                strokeLinecap="round" style={{ transition: "stroke-dashoffset 0.4s ease" }} />
+                            </svg>
+                          </div>
+                          <span className={`text-[10.5px] font-semibold tabular-nums ${D ? "text-violet-300" : "text-violet-700"}`}>
+                            {Math.round(generateProgress)}%
+                          </span>
+                          <button onClick={() => abortController?.abort()}
+                            className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors ${D ? "bg-red-500/15 hover:bg-red-500/25 text-red-400" : "bg-red-50 hover:bg-red-100 text-red-500"}`}
+                            title="Batalkan">
+                            <X className="w-2 h-2" />
                           </button>
                         </div>
                       ) : generatedPages.length > 0 ? (
-                        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${D ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-50 border border-emerald-200"}`}>
-                          <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-                          <span className={`text-[11px] font-medium ${D ? "text-emerald-400" : "text-emerald-700"}`}>{generatedPages.length} halaman siap</span>
+                        <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border ${D ? "bg-emerald-500/8 border-emerald-500/20" : "bg-emerald-50 border-emerald-200"}`}>
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]" />
+                          <span className={`text-[10.5px] font-semibold ${D ? "text-emerald-400" : "text-emerald-700"}`}>
+                            {generatedPages.length} hal siap
+                          </span>
                         </div>
                       ) : (
-                        <span className={`text-[11px] font-semibold uppercase tracking-widest ${c.label}`}>Output Viewer</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className={`w-4 h-4 rounded-md flex items-center justify-center ${D ? "bg-indigo-500/15" : "bg-indigo-100"}`}>
+                            <ImageIcon className={`w-2.5 h-2.5 ${D ? "text-indigo-400" : "text-indigo-500"}`} />
+                          </div>
+                          <span className={`text-[10px] font-bold uppercase tracking-[0.1em] ${D ? "text-white/30" : "text-gray-400"}`}>Output</span>
+                        </div>
                       )}
                     </div>
 
@@ -5171,18 +5260,18 @@ export default function Home() {
 
                       {/* ── Togle View Mode (Buku vs Scroll Vertikal) ── */}
                       {generatedPages.length > 0 && activeTab === "result" && (
-                        <div className={`hidden sm:flex items-center p-0.5 rounded-lg border mr-2 ${D ? "bg-black/40 border-white/10" : "bg-gray-100/80 border-gray-200"}`}>
+                        <div className={`hidden sm:flex items-center p-0.5 rounded-full border mr-2 ${D ? "bg-black/40 border-white/8" : "bg-gray-100 border-gray-200"}`}>
                           <button
                             onClick={() => setViewMode('book')}
-                            className={`p-1.5 rounded-md transition-colors ${viewMode === 'book' ? (D ? "bg-[#18181b] text-violet-400 shadow-sm" : "bg-white text-violet-600 shadow-sm") : (D ? "text-white/40 hover:text-white/80" : "text-gray-400 hover:text-gray-700")}`}
+                            className={`p-1.5 rounded-full transition-all duration-200 ${viewMode === 'book' ? (D ? "bg-white/10 text-violet-400 shadow-sm" : "bg-white text-violet-600 shadow-sm") : (D ? "text-white/30 hover:text-white/70" : "text-gray-400 hover:text-gray-600")}`}
                             title="Mode Buku (3D)">
-                            <BookOpen className="w-3.5 h-3.5" />
+                            <BookOpen className="w-3 h-3" />
                           </button>
                           <button
                             onClick={() => setViewMode('grid')}
-                            className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? (D ? "bg-[#18181b] text-violet-400 shadow-sm" : "bg-white text-violet-600 shadow-sm") : (D ? "text-white/40 hover:text-white/80" : "text-gray-400 hover:text-gray-700")}`}
+                            className={`p-1.5 rounded-full transition-all duration-200 ${viewMode === 'grid' ? (D ? "bg-white/10 text-violet-400 shadow-sm" : "bg-white text-violet-600 shadow-sm") : (D ? "text-white/30 hover:text-white/70" : "text-gray-400 hover:text-gray-600")}`}
                             title="Mode Scroll Vertikal">
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                             </svg>
                           </button>
@@ -5191,25 +5280,31 @@ export default function Home() {
 
                       <button
                         onClick={() => setActiveTab(activeTab === "history" ? "result" : "history")}
-                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${activeTab === "history" ? c.btnActive : c.btn}`}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10.5px] font-semibold border transition-all duration-200 hover:scale-105 active:scale-95 ${activeTab === "history" ? c.btnActive : c.btn}`}
                         title="Riwayat">
-                        <Clock className="w-3.5 h-3.5" />
+                        <Clock className="w-3 h-3" />
                         <span className="hidden lg:inline">Riwayat</span>
-                        {history.length > 0 && <span className={`text-[9px] px-1 py-0.5 rounded-full ${activeTab === "history" ? D ? "bg-white/20" : "bg-black/10" : D ? "bg-white/8 text-white/40" : "bg-gray-200 text-gray-500"}`}>{history.length}</span>}
+                        {history.length > 0 && (
+                          <span className={`text-[8.5px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === "history" ? D ? "bg-white/20" : "bg-black/10" : D ? "bg-white/8 text-white/35" : "bg-gray-200 text-gray-500"}`}>
+                            {history.length}
+                          </span>
+                        )}
                       </button>
                       <button
                         onClick={() => setActiveTab(activeTab === "presets" ? "result" : "presets")}
-                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${activeTab === "presets" ? c.btnActive : c.btn}`}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10.5px] font-semibold border transition-all duration-200 hover:scale-105 active:scale-95 ${activeTab === "presets" ? c.btnActive : c.btn}`}
                         title="Preset">
-                        <Save className="w-3.5 h-3.5" />
+                        <Save className="w-3 h-3" />
                         <span className="hidden lg:inline">Preset</span>
-                        {presets.length > 0 && <span className={`text-[9px] px-1 py-0.5 rounded-full ${activeTab === "presets" ? D ? "bg-white/20" : "bg-black/10" : D ? "bg-white/8 text-white/40" : "bg-gray-200 text-gray-500"}`}>{presets.length}</span>}
+                        {presets.length > 0 && (
+                          <span className={`text-[8.5px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === "presets" ? D ? "bg-white/20" : "bg-black/10" : D ? "bg-white/8 text-white/35" : "bg-gray-200 text-gray-500"}`}>
+                            {presets.length}
+                          </span>
+                        )}
                       </button>
                     </div>
                   </div>
                 </div>
-
-                {/* (Baris 2 Toolbar atas sudah dihapus agar layar lebih luas) */}
 
                 {/* Progress bar saat generating */}
                 {isGenerating && (
