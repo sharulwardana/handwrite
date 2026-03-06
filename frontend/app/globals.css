@@ -1965,6 +1965,25 @@ html:not(.dark) .skeleton::after {
   animation: none;
   opacity: 0;
 }
+/* Tablet dock generate button — sama premiumnya dengan desktop */
+.btn-generate-tablet {
+  position: relative;
+  overflow: hidden;
+}
+.btn-generate-tablet::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.18) 50%,
+    transparent 60%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2.5s ease-in-out infinite;
+}
 .btn-generate:active {
   transform: scale(0.96);
   transition: transform 0.1s cubic-bezier(0.25, 1.15, 0.4, 1);
@@ -2252,6 +2271,20 @@ html:not(.dark) .drag-handle {
   border-color: rgba(139, 92, 246, 0.3);
   box-shadow: 0 4px 16px rgba(139, 92, 246, 0.1);
 }
+/* History card hover */
+.history-card {
+  transition: transform 0.18s cubic-bezier(0.25, 1.15, 0.4, 1),
+              border-color 0.18s ease,
+              background 0.18s ease;
+}
+.history-card:hover {
+  transform: translateX(3px);
+  border-color: rgba(139, 92, 246, 0.25);
+}
+.dark .history-card:hover {
+  background: rgba(139, 92, 246, 0.05);
+  border-color: rgba(139, 92, 246, 0.2);
+}
 .dark .stats-card:hover {
   border-color: rgba(139, 92, 246, 0.25);
   box-shadow: 0 4px 16px rgba(139, 92, 246, 0.15);
@@ -2469,5 +2502,31 @@ body::after {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Tooltip untuk icon-only buttons di mobile toolbar */
+[title]:not([title=""]) {
+  position: relative;
+}
+@media (hover: hover) {
+  [title]:not([title=""]):hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 8px;
+    pointer-events: none;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    animation: fadeIn 0.15s ease-out both;
   }
 }

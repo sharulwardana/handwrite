@@ -6140,7 +6140,7 @@ export default function Home() {
                                 </button>
                               </div>
                             ) : history.map((item) => (
-                              <div key={item.id} className={`flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer ${c.pillBorder} ${c.rowHover}`}>
+                              <div key={item.id} className={`history-card flex items-start gap-3 p-3 rounded-xl border cursor-pointer ${c.pillBorder} ${c.rowHover}`}>
                                 <div className={`w-14 h-20 rounded-lg overflow-hidden flex-shrink-0 border shadow-sm ${D ? "border-[#ffffff14]" : "border-gray-200"}`}>
                                   {item.thumbnail
                                     ? <img src={item.thumbnail} alt="" className="w-full h-full object-cover object-top" />
@@ -6294,32 +6294,32 @@ export default function Home() {
                       <button onClick={async () => {
                         try { const t = await navigator.clipboard.readText(); setInputText(t); setText(t); toast.success("Ditempel!"); }
                         catch { toast.error("Gagal akses clipboard"); }
-                      }} className={`w-10 h-10 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${D ? "bg-[#ffffff08] border-[#ffffff10] text-white/70" : "bg-white border-gray-200 text-gray-600 shadow-sm"}`} title="Tempel Teks">
+                      }} className={`w-11 h-11 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${D ? "bg-[#ffffff08] border-[#ffffff10] text-white/70" : "bg-white border-gray-200 text-gray-600 shadow-sm"}`} title="Tempel Teks">
                         <Clipboard className="w-4 h-4" />
                       </button>
 
                       {/* Tulis AI */}
                       <button onClick={() => setShowAiModal(true)}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${D ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-400" : "bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm"}`} title="Tulis dengan AI">
+                        className={`w-11 h-11 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${D ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-400" : "bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm"}`} title="Tulis dengan AI">
                         <Bot className="w-4 h-4" />
                       </button>
 
                       {/* Poles AI */}
                       <button onClick={handleAiExpand} disabled={!text.trim() || isAiExpanding}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${!text.trim() ? "opacity-35 cursor-not-allowed" : D ? "bg-purple-500/10 border-purple-500/20 text-purple-400" : "bg-purple-50 border-purple-200 text-purple-600 shadow-sm"}`} title="Poles Teks AI">
+                        className={`w-11 h-11 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${!text.trim() ? "opacity-35 cursor-not-allowed" : D ? "bg-purple-500/10 border-purple-500/20 text-purple-400" : "bg-purple-50 border-purple-200 text-purple-600 shadow-sm"}`} title="Poles Teks AI">
                         {isAiExpanding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
                       </button>
 
                       {/* Dikte */}
                       <button onClick={toggleListening}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${isListening ? "bg-red-500/20 border-red-500/30 text-red-400 animate-pulse" : D ? "bg-[#ffffff08] border-[#ffffff10] text-white/70" : "bg-white border-gray-200 text-gray-600 shadow-sm"}`} title="Dikte Suara">
+                        className={`w-11 h-11 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${isListening ? "bg-red-500/20 border-red-500/30 text-red-400 animate-pulse" : D ? "bg-[#ffffff08] border-[#ffffff10] text-white/70" : "bg-white border-gray-200 text-gray-600 shadow-sm"}`} title="Dikte Suara">
                         <Mic className="w-4 h-4" />
                       </button>
 
                       {/* Hapus */}
                       <button onClick={() => { setInputText(""); setText(""); toast.success("Teks dihapus!"); }}
                         disabled={!text}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${!text ? "opacity-35 cursor-not-allowed" : D ? "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20" : "bg-red-50 border-red-200 text-red-600 shadow-sm"}`} title="Hapus Semua">
+                        className={`w-11 h-11 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${!text ? "opacity-35 cursor-not-allowed" : D ? "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20" : "bg-red-50 border-red-200 text-red-600 shadow-sm"}`} title="Hapus Semua">
                         <Trash2 className="w-4 h-4" />
                       </button>
 
@@ -6330,7 +6330,7 @@ export default function Home() {
                         setText(prev => prev + latex);
                         setTimeout(() => textareaRef.current?.focus(), 50);
                       }}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${D ? "bg-amber-500/10 border-amber-500/20 text-amber-400" : "bg-amber-50 border-amber-200 text-amber-600 shadow-sm"}`} title="Sisipkan Pecahan">
+                        className={`w-11 h-11 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform active:scale-95 ${D ? "bg-amber-500/10 border-amber-500/20 text-amber-400" : "bg-amber-50 border-amber-200 text-amber-600 shadow-sm"}`} title="Sisipkan Pecahan">
                         <Sigma className="w-4 h-4" />
                       </button>
 
@@ -6449,7 +6449,7 @@ export default function Home() {
                     </div>
 
                     <button onClick={handleGenerate} disabled={isGenerating || !text.trim() || !selectedFolio}
-                      className={`btn-ripple flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl font-bold text-sm transition-all flex-shrink-0 ${isGenerating || !text.trim() || !selectedFolio
+                      className={`btn-ripple btn-generate-tablet flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl font-bold text-sm transition-all flex-shrink-0 ${isGenerating || !text.trim() || !selectedFolio
                         ? D ? "bg-white/5 text-white/30 cursor-not-allowed border border-[#ffffff10]" : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
                         : `bg-gradient-to-r ${c.accent} text-white shadow-[0_8px_20px_rgba(139,92,246,0.3)] hover:scale-[1.02] active:scale-95 border border-white/10`
                         }`}>
