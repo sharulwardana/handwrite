@@ -105,11 +105,18 @@ body {
   background: rgba(255, 255, 255, 0.15);
 }
 
-* {
+html, body, div, main, aside, nav, section, article {
   scrollbar-width: thin;
   scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
 }
-.dark * {
+.dark html,
+.dark body,
+.dark div,
+.dark main,
+.dark aside,
+.dark nav,
+.dark section,
+.dark article {
   scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
 }
 
@@ -126,18 +133,6 @@ body {
 @keyframes btn-shimmer {
   0% { background-position: -200% center; }
   100% { background-position: 200% center; }
-}
-
-.btn-generate-idle {
-  background-size: 200% auto;
-  animation: btn-shimmer 3s linear infinite;
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.25s ease-out both;
-}
-.animate-scaleIn {
-  animation: scaleIn 0.2s ease-out both;
 }
 
 /* ── RANGE SLIDER ── */
@@ -244,8 +239,7 @@ html {
    ─────────────────────────────────────────────────────────────────── */
 
 /* Panel sidebar di light mode — bukan putih polos */
-html:not(.dark) .bg-\[#FAFAFB\]\/60,
-html:not(.dark) [class*="bg-\[#FAFAFB\]"] {
+html:not(.dark) .sidebar-light-bg {
   background-color: rgba(245, 243, 255, 0.7) !important;
 }
 
@@ -1888,6 +1882,8 @@ html:not(.dark) .skeleton::after {
 /* ── GENERATE BUTTON READY STATE ────────────────────── */
 .btn-generate-idle {
   position: relative;
+  background-size: 200% auto;
+  animation: btn-shimmer 3s linear infinite;
 }
 
 .btn-generate-idle::before {
@@ -2087,4 +2083,69 @@ html:not(.dark) .bg-gradient-to-b.from-violet-50 {
   ::view-transition-new(root) {
     animation: 210ms ease-out both fade-in;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MISSING UTILITY CLASSES (dipakai di page.tsx tapi belum didefinisikan)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Dipakai di: mobile result panel (swipe area) */
+.mobile-result-page {
+  width: 100%;
+  position: relative;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.mobile-result-page:active {
+  cursor: grabbing;
+}
+
+/* Dipakai di: empty state step hints */
+.stagger-item {
+  animation: fadeIn 0.3s ease-out both;
+}
+.stagger-item:nth-child(1) { animation-delay: 0.05s; }
+.stagger-item:nth-child(2) { animation-delay: 0.10s; }
+.stagger-item:nth-child(3) { animation-delay: 0.15s; }
+
+/* Dipakai di: toolbar buttons (MagneticHover wrapper) */
+.liquid-glass-btn {
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.liquid-glass-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6),
+              0 4px 16px rgba(0, 0, 0, 0.06);
+}
+.dark .liquid-glass-btn {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08);
+}
+.dark .liquid-glass-btn:hover {
+  background: rgba(255, 255, 255, 0.11);
+}
+
+/* Dipakai di: font dropdown saat Apple device */
+.liquid-glass-dropdown {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(40px) saturate(200%) brightness(1.05);
+  -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(1.05);
+  border: 0.5px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.dark .liquid-glass-dropdown {
+  background: rgba(22, 22, 30, 0.88);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }

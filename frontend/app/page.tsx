@@ -980,16 +980,9 @@ export default function Home() {
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
-  const sessionIdRef = useRef<string>("");
-  const [sessionId, setSessionId] = useState("hw_ssr");
-
-  useEffect(() => {
-    if (!sessionIdRef.current) {
-      const newId = `hw_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      sessionIdRef.current = newId;
-      setSessionId(newId);
-    }
-  }, []);
+  const sessionIdRef = useRef<string>(
+    `hw_${Date.now()}_${Math.random().toString(36).slice(2)}`
+  );
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const ONBOARDING_SPOTLIGHT = [
@@ -1727,9 +1720,9 @@ export default function Home() {
               try {
                 await fetch(`${API_URL}/api/cache/save`, {
                   method: "POST", headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ sessionId, pages: collectedPages }),
+                  body: JSON.stringify({ sessionId: sessionIdRef.current, pages: collectedPages }),
                 });
-                localStorage.setItem("hw_lastSession", sessionId);
+                localStorage.setItem("hw_lastSession", sessionIdRef.current);
               } catch { }
               const rawThumb = collectedPages[0]?.image || "";
               const thumbnail = rawThumb ? await compressThumbnail(rawThumb) : "";
@@ -1787,7 +1780,7 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text, selectedFolio, selectedFont, config, seed, energy, useDoubleFolio, selectedFolioEven,
     leftHanded, writeSpeed, enableTypo, slantAngle, tiredMode, showPageNumber,
-    pageNumberFormat, watermarkText, history, currentFont, currentFolio, sessionId, API_URL]);
+    pageNumberFormat, watermarkText, history, currentFont, currentFolio, sessionIdRef, API_URL]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -2382,7 +2375,7 @@ export default function Home() {
   const c = useMemo(() => ({
     page: D
       ? "bg-[#000000]" // Deep Space pekat
-      : "bg-[#FAFAFB]", // Putih bersih modern
+      : "bg-[#FAFAFB] sidebar-light-bg", // Putih bersih modern
 
     header: D
       ? "bg-[#000000]/50 border-b border-[#ffffff08] backdrop-blur-xl supports-[backdrop-filter]:bg-[#000000]/30"
@@ -2390,7 +2383,7 @@ export default function Home() {
 
     sidebar: D
       ? "bg-[#000000]/30 border-r border-[#ffffff0a] backdrop-blur-3xl supports-[backdrop-filter]:bg-[#000000]/20"
-      : "bg-[#FAFAFB]/60 border-r border-violet-100/60 backdrop-blur-2xl",
+      : "bg-[#FAFAFB]/60 sidebar-light-bg border-r border-violet-100/60 backdrop-blur-2xl",
 
     card: D
       ? "bg-[#13131f] border-[#ffffff0d] shadow-[0_2px_16px_rgba(0,0,0,0.4)] backdrop-blur-sm transition-colors"
@@ -4885,60 +4878,7 @@ export default function Home() {
                           </span>
                         </div>
                       </div>
-
                     </div>
-                    {/* ── AI QUICK INSERT CHIPS ── */}
-                    {!text.trim() && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 8 }}
-                        transition={{ duration: 0.3, delay: 0.2 }}
-                        className="flex flex-col gap-2"
-                      >
-                        <p className={`text-[10px] font-semibold uppercase tracking-widest px-1 ${c.ts}`}>
-                          ✨ Mulai dengan...
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {[
-                            "Pada suatu hari yang cerah,",
-                            "Berdasarkan hasil penelitian,",
-                            "Menurut pendapat saya,",
-                            "Di era globalisasi ini,",
-                            "Seiring perkembangan zaman,",
-                            "Dalam kehidupan sehari-hari,",
-                            "Pendidikan merupakan hal penting",
-                            "Indonesia adalah negara yang",
-                          ].map((starter) => (
-                            <motion.button
-                              key={starter}
-                              whileHover={{ scale: 1.03 }}
-                              whileTap={{ scale: 0.97 }}
-                              onClick={() => {
-                                const newText = starter + " ";
-                                setInputText(newText);
-                                setText(newText);
-                                setTimeout(() => {
-                                  textareaRef.current?.focus();
-                                  const len = newText.length;
-                                  textareaRef.current?.setSelectionRange(len, len);
-                                }, 50);
-                              }}
-                              className={`flex items-center gap-1 text-[11px] px-3 py-1.5 rounded-full border transition-all ${D
-                                ? "bg-[#ffffff06] border-[#ffffff10] text-white/50 hover:bg-violet-500/12 hover:border-violet-500/30 hover:text-violet-300"
-                                : "bg-white border-violet-200 text-violet-600 hover:bg-violet-50 hover:border-violet-300 shadow-sm"
-                                }`}
-                            >
-                              <span>"{starter}"</span>
-                            </motion.button>
-                          ))}
-                        </div>
-                        <p className={`text-[9px] px-1 ${c.ts} opacity-60`}>
-                          Klik untuk langsung mulai menulis
-                        </p>
-                      </motion.div>
-                    )}
-
                     {/* ── AI QUICK INSERT CHIPS (DIPINDAH KE ATAS TEXTAREA) ── */}
                     {!text.trim() && (
                       <motion.div
@@ -5901,19 +5841,6 @@ export default function Home() {
                                     />
                                   </g>
                                 </svg>
-                                <style>{`
-  @keyframes drawLine {
-    to { stroke-dashoffset: 0; }
-  }
-  @keyframes linePulse {
-    0%, 100% { opacity: 0.4; }
-    50% { opacity: 1; }
-  }
-  @keyframes penMove {
-    0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(2px, 8px); }
-  }
-`}</style>
                               </div>
 
                               <p className={`text-base font-bold mb-2 ${D ? "text-white/70" : "text-gray-700"}`}>
