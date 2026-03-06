@@ -871,6 +871,79 @@ export default function Home() {
   const [zenMode, setZenMode] = useState(false);
   const [selectedTextRange, setSelectedTextRange] = useState({ text: "", start: 0, end: 0 });
   const [showSlashMenu, setShowSlashMenu] = useState(false);
+  // ── FITUR BARU: Magic Placeholder, Drag Overlay, Command Palette ──
+  const [magicPlaceholder, setMagicPlaceholder] = useState("");
+  const [isGlobalDragging, setIsGlobalDragging] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [cmdSearch, setCmdSearch] = useState("");
+
+  // Effect 1: Animasi Mesin Tik untuk Placeholder
+  useEffect(() => {
+    const phrases = [
+      "Ketik atau paste teks tugasmu di sini...",
+      "Tarik & lepas (Drag & Drop) file Word / TXT ke sini 📄...",
+      "Ketik '/' untuk memanggil Asisten AI 🪄...",
+      "Tekan Ctrl + K untuk menu rahasia ⌨️...",
+      "Mulai ketik 'Menurut sejarah kemerdekaan...' ✍️"
+    ];
+    let currentPhrase = 0;
+    let currentChar = 0;
+    let isDeleting = false;
+    let timer: NodeJS.Timeout;
+
+    const type = () => {
+      const text = phrases[currentPhrase];
+      if (!isDeleting && currentChar < text.length) {
+        setMagicPlaceholder(text.slice(0, currentChar + 1));
+        currentChar++;
+        timer = setTimeout(type, 50);
+      } else if (isDeleting && currentChar > 0) {
+        setMagicPlaceholder(text.slice(0, currentChar - 1));
+        currentChar--;
+        timer = setTimeout(type, 20); // Kecepatan hapus
+      } else {
+        isDeleting = !isDeleting;
+        if (!isDeleting) currentPhrase = (currentPhrase + 1) % phrases.length;
+        timer = setTimeout(type, isDeleting ? 2500 : 500); // Jeda sebelum hapus/ngetik baru
+      }
+    };
+    timer = setTimeout(type, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Effect 2: Sensor Drag & Drop Global dan Shortcut Ctrl+K
+  useEffect(() => {
+    const handleDragOver = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes('Files')) {
+        e.preventDefault();
+        setIsGlobalDragging(true);
+      }
+    };
+    const handleDragLeave = (e: DragEvent) => {
+      if (e.clientX === 0 || e.clientY === 0) setIsGlobalDragging(false);
+    };
+    const handleDrop = () => setIsGlobalDragging(false);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCmdSearch(""); // Reset search bar
+        setShowCommandPalette(true);
+      }
+    };
+
+    window.addEventListener('dragover', handleDragOver);
+    window.addEventListener('dragleave', handleDragLeave);
+    window.addEventListener('drop', handleDrop);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('dragleave', handleDragLeave);
+      window.removeEventListener('drop', handleDrop);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   const checkTextSelection = () => {
     if (!textareaRef.current) return;
@@ -3609,6 +3682,91 @@ export default function Home() {
             );
           })()}
 
+          {/* ── CINEMATIC DRAG & DROP OVERLAY ── */}
+          <AnimatePresence>
+            {isGlobalDragging && (
+              <motion.div
+                initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+                animate={{ opacity: 1, backdropFilter: "blur(12px)" }}
+                exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
+                className="fixed inset-0 z-[999] flex items-center justify-center pointer-events-none bg-black/40"
+              >
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  className="w-full max-w-3xl aspect-video mx-4 rounded-[3rem] border-[6px] border-dashed border-violet-400 bg-violet-500/20 flex flex-col items-center justify-center gap-6 shadow-[0_0_100px_rgba(139,92,246,0.3)]"
+                >
+                  <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center animate-bounce shadow-2xl">
+                    <FileText className="w-12 h-12 text-white" />
+                  </div>
+                  <h2 className="text-3xl sm:text-5xl font-black text-white drop-shadow-lg tracking-wide text-center">
+                    Lepaskan Dokumen Di Sini!
+                  </h2>
+                  <p className="text-white/90 font-medium text-base sm:text-xl px-4 text-center">
+                    File <strong className="text-violet-200">.TXT</strong> atau <strong className="text-blue-200">.DOCX (Word)</strong> akan disulap jadi tulisan tangan.
+                  </p>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ── GLOBAL COMMAND PALETTE (CTRL + K) ── */}
+          <AnimatePresence>
+            {showCommandPalette && (
+              <div className="fixed inset-0 z-[300] flex items-start justify-center pt-[10vh] sm:pt-[15vh] p-4">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                  onClick={() => setShowCommandPalette(false)} />
+                <motion.div initial={{ scale: 0.95, opacity: 0, y: -20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: -20 }}
+                  className={`relative w-full max-w-xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col ${D ? "bg-[#13131f] border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.6)]" : "bg-white border-gray-200 shadow-[0_20px_60px_rgba(139,92,246,0.15)]"}`}>
+
+                  <div className={`flex items-center px-4 border-b ${D ? "border-white/10 bg-white/5" : "border-gray-100 bg-gray-50/50"}`}>
+                    <Sparkles className={`w-5 h-5 flex-shrink-0 ${D ? "text-violet-400" : "text-violet-600"}`} />
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Apa yang ingin kamu lakukan? (Ketik 'dark', 'pdf', 'ai'...)"
+                      value={cmdSearch}
+                      onChange={(e) => setCmdSearch(e.target.value)}
+                      className={`w-full bg-transparent border-none px-4 py-5 text-sm sm:text-base outline-none ${D ? "text-white placeholder-white/30" : "text-gray-900 placeholder-gray-400"}`}
+                    />
+                    <kbd className={`text-[10px] px-2 py-1 rounded border font-bold font-mono ${D ? "bg-white/10 border-white/20 text-white/50" : "bg-white border-gray-200 text-gray-500 shadow-sm"}`}>ESC</kbd>
+                  </div>
+
+                  <div className="p-2 max-h-[50vh] overflow-y-auto scrollbar-hide flex flex-col gap-1">
+                    {[
+                      { icon: <PenTool />, label: "Tulis dengan Asisten AI", keywords: ["ai", "bot", "tulis", "buat", "otomatis", "auto"], action: () => { setShowAiModal(true); setShowCommandPalette(false); } },
+                      { icon: <Mic />, label: "Mulai Dikte Suara", keywords: ["dikte", "suara", "mic", "voice", "ngomong", "bicara"], action: () => { toggleListening(); setShowCommandPalette(false); } },
+                      { icon: D ? <Sun /> : <Moon />, label: `Ganti ke Mode ${D ? "Siang" : "Malam"}`, keywords: ["dark", "light", "malam", "siang", "tema", "theme"], action: () => { setIsDark(!isDark); setShowCommandPalette(false); } },
+                      { icon: <FileDown />, label: "Export PDF (Kualitas Tinggi)", keywords: ["pdf", "export", "download", "cetak", "print", "hd"], action: () => { handleExportPdf("high"); setShowCommandPalette(false); } },
+                      { icon: <FileText />, label: "Export ke Word (.docx)", keywords: ["word", "docx", "export", "download"], action: () => { handleExportDocx(); setShowCommandPalette(false); } },
+                      { icon: <Package />, label: "Download ZIP Archive", keywords: ["zip", "rar", "archive", "semua"], action: () => { handleDownloadZip(); setShowCommandPalette(false); } },
+                      { icon: <Settings />, label: "Buka Advanced Config", keywords: ["setting", "pengaturan", "config", "margin", "spasi"], action: () => { setShowConfig(true); setMobileSidebarOpen(true); setShowCommandPalette(false); } },
+                      { icon: <Trash2 />, label: "Hapus Semua Teks Editor", keywords: ["hapus", "clear", "bersihkan", "trash", "buang"], action: () => { setInputText(""); setText(""); setShowCommandPalette(false); toast.success("Teks dihapus!"); } },
+                    ]
+                      .filter(cmd => cmd.label.toLowerCase().includes(cmdSearch.toLowerCase()) || cmd.keywords.some(k => k.includes(cmdSearch.toLowerCase())))
+                      .map((cmd, i) => (
+                        <button key={i} onClick={cmd.action} className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all active:scale-95 ${D ? "hover:bg-white/5 text-white/80" : "hover:bg-gray-100 text-gray-700"}`}>
+                          <div className={`p-2 rounded-lg flex-shrink-0 ${D ? "bg-white/10 text-white/70" : "bg-white shadow-sm border border-gray-200 text-violet-600"}`}>
+                            {React.cloneElement(cmd.icon, { className: "w-4 h-4" })}
+                          </div>
+                          <span className="text-sm font-semibold">{cmd.label}</span>
+                          <ChevronDown className="w-4 h-4 -rotate-90 ml-auto opacity-30" />
+                        </button>
+                      ))}
+                    {/* Jika tidak ada hasil pencarian */}
+                    {cmdSearch && [/*...filter data*/].length === 0 && (
+                      <div className="py-8 text-center text-sm text-gray-500">
+                        Tidak ada perintah untuk "{cmdSearch}"
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
           {/* ── KEYBOARD SHORTCUT MODAL ── */}
           <AnimatePresence>
             {showShortcuts && (
@@ -4792,7 +4950,7 @@ export default function Home() {
                           toast.error("Saat ini hanya mendukung file .txt dan .docx ⚠️");
                         }
                       }}
-                      placeholder="Ketik atau paste teks di sini...&#10;&#10;Drag & drop file .txt atau .docx (Word) ⚡"
+                      placeholder={magicPlaceholder}
                       className={`flex-1 w-full h-full min-h-[60vh] resize-none px-4 pt-6 pb-[40vh] text-[16px] leading-loose transition-all duration-500 ease-out outline-none border-none bg-transparent ${D
                         ? "text-white/90 placeholder-white/20 caret-violet-400 focus:-translate-y-1 focus:shadow-[0_8px_30px_rgba(139,92,246,0.15)]"
                         : "text-gray-800 placeholder-gray-400/70 caret-violet-500 focus:-translate-y-1 focus:shadow-[0_8px_30px_rgba(139,92,246,0.15)]"
@@ -6026,7 +6184,7 @@ export default function Home() {
                         setShowSlashMenu(false);
                       }
                     }}
-                    placeholder="Ketik atau paste teks di sini..."
+                    placeholder={magicPlaceholder}
                     className={`flex-1 w-full resize-none px-2 pt-4 pb-[40vh] text-[16px] leading-loose transition-all duration-500 ease-out outline-none border-none bg-transparent ${D
                       ? "text-white/90 placeholder-white/20 caret-violet-400 focus:-translate-y-1 focus:shadow-[0_8px_30px_rgba(139,92,246,0.15)]"
                       : "text-gray-800 placeholder-gray-400/70 caret-violet-500 focus:-translate-y-1 focus:shadow-[0_8px_30px_rgba(139,92,246,0.15)]"
