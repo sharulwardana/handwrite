@@ -4153,7 +4153,7 @@ export default function Home() {
                         <button
                           key={i}
                           onClick={item.action}
-                          className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border transition-all active:scale-[0.98] ${D ? "border-[#ffffff08] hover:bg-white/5" : "border-gray-100 hover:bg-gray-50"
+                          className={`card-lift w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border active:scale-[0.98] ${D ? "border-[#ffffff08] hover:bg-white/5" : "border-gray-100 hover:bg-gray-50"
                             }`}
                         >
                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${colorMap[item.color]}`}>
@@ -4347,18 +4347,13 @@ export default function Home() {
                   {/* Logo icon — layered glow effect */}
                   <div className="relative flex-shrink-0">
                     <div className={`absolute inset-0 rounded-xl blur-md opacity-60 ${D ? "bg-violet-500" : "bg-violet-400"}`} />
-                    <div className="relative w-8 h-8 bg-gradient-to-br from-violet-500 via-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/40 border border-white/20">
+                    <div className="relative w-8 h-8 bg-gradient-to-br from-violet-500 via-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/40 border border-white/20 animate-[float-up_3s_ease-in-out_infinite]">
                       <PenTool className="w-3.5 h-3.5 text-white drop-shadow" />
                     </div>
                   </div>
                   {/* Brand name + badge */}
                   <div className="hidden xs:flex flex-col gap-0">
-                    <span className="font-extrabold text-[13px] leading-none tracking-tight bg-clip-text text-transparent"
-                      style={{
-                        backgroundImage: D
-                          ? "linear-gradient(120deg, #e0d7ff 0%, #a78bfa 40%, #67e8f9 100%)"
-                          : "linear-gradient(120deg, #6d28d9 0%, #7c3aed 50%, #4f46e5 100%)",
-                      }}>
+                    <span className="font-extrabold text-[13px] leading-none tracking-tight bg-clip-text text-transparent shimmer-text">
                       Mager Nulis
                     </span>
                     <span className={`text-[8px] font-bold tracking-widest uppercase leading-none mt-0.5 ${D ? "text-white/25" : "text-violet-400/60"}`}>
@@ -4400,7 +4395,7 @@ export default function Home() {
                 ) : generatedPages.length > 0 ? (
                   <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border ${D ? "bg-emerald-500/8 border-emerald-500/20" : "bg-emerald-50 border-emerald-200"}`}
                     style={{ boxShadow: D ? "0 0 16px rgba(16,185,129,0.1)" : "none" }}>
-                    <div className={`w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]`} />
+                    <div className={`w-1.5 h-1.5 rounded-full bg-emerald-500 animate-[glow-pulse_2s_ease-in-out_infinite]`} style={{ boxShadow: "0 0 6px rgba(16,185,129,0.8)" }} />
                     <span className={`text-[11px] font-semibold ${D ? "text-emerald-400" : "text-emerald-700"}`}>
                       {generatedPages.length} halaman siap
                     </span>
@@ -5654,7 +5649,7 @@ export default function Home() {
                           {/* Tombol thumbnail */}
                           <button
                             onClick={() => navigateToPage(idx)}
-                            className={`w-full rounded-lg overflow-hidden border-2 transition-all duration-200 ${idx === activePageIndex
+                            className={`card-lift w-full rounded-lg overflow-hidden border-2 duration-200 ${idx === activePageIndex
                               ? "border-violet-500 shadow-lg shadow-violet-500/25 scale-[1.03]"
                               : D ? "border-[#ffffff10] hover:border-violet-500/40" : "border-gray-200 hover:border-violet-300"
                               }`}
