@@ -3227,21 +3227,24 @@ export default function Home() {
                   style={{
                     background: "radial-gradient(circle, #7c3aed 0%, #4f46e5 50%, transparent 80%)",
                     top: "-20%", left: "-15%",
-                    animation: "orb-drift-1 18s ease-in-out infinite alternate"
+                    animation: "orb-drift-1 18s ease-in-out infinite alternate",
+                    willChange: "transform",
                   }} />
                 {/* Orb 2 — cyan kanan bawah */}
                 <div className="absolute w-[50vw] h-[50vw] rounded-full opacity-[0.10] blur-[80px]"
                   style={{
                     background: "radial-gradient(circle, #06b6d4 0%, #3b82f6 60%, transparent 80%)",
                     bottom: "-10%", right: "-10%",
-                    animation: "orb-drift-2 22s ease-in-out infinite alternate"
+                    animation: "orb-drift-2 22s ease-in-out infinite alternate",
+                    willChange: "transform",
                   }} />
                 {/* Orb 3 — pink center, subtle */}
                 <div className="absolute w-[40vw] h-[40vw] rounded-full opacity-[0.07] blur-[120px]"
                   style={{
                     background: "radial-gradient(circle, #ec4899 0%, transparent 70%)",
                     top: "40%", left: "40%",
-                    animation: "orb-drift-3 28s ease-in-out infinite alternate"
+                    animation: "orb-drift-3 28s ease-in-out infinite alternate",
+                    willChange: "transform",
                   }} />
               </>
             ) : (
@@ -3251,13 +3254,15 @@ export default function Home() {
                   style={{
                     background: "radial-gradient(circle, #c4b5fd 0%, #a78bfa 40%, transparent 80%)",
                     top: "-15%", left: "-10%",
-                    animation: "orb-drift-1 18s ease-in-out infinite alternate"
+                    animation: "orb-drift-1 18s ease-in-out infinite alternate",
+                    willChange: "transform",
                   }} />
                 <div className="absolute w-[50vw] h-[50vw] rounded-full opacity-[0.15] blur-[60px]"
                   style={{
                     background: "radial-gradient(circle, #818cf8 0%, #6366f1 50%, transparent 80%)",
                     bottom: "-10%", right: "-5%",
-                    animation: "orb-drift-2 22s ease-in-out infinite alternate"
+                    animation: "orb-drift-2 22s ease-in-out infinite alternate",
+                    willChange: "transform",
                   }} />
               </>
             )}
