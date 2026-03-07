@@ -30,17 +30,12 @@ import SidebarSection from "./components/SidebarSection";
 import OdometerNumber from "./components/OdometerNumber";
 import TypewriterText from "./components/TypewriterText";
 import MagneticHover from "./components/MagneticHover";
-import BeforeAfterSlider from "./components/BeforeAfterSlider";
 import LiquidGlassSlider from "./components/LiquidGlassSlider";
 import LiquidGlassToggleMorph from "./components/LiquidGlassToggleMorph";
-import DraggableLiquidTabs from "./components/DraggableLiquidTabs";
 import { OptimizedTextarea, OptimizedInput } from "./components/OptimizedInputs";
 import LandingPage from "./components/LandingPage";
-import CommandPalette, { type CommandItem } from "./components/CommandPalette";
-import OnboardingModal from "./components/OnboardingModal";
 import Header from "./components/Header";
 import MobileDock from "./components/MobileDock";
-import ExportDropdown from "./components/ExportDropdown";
 
 // ─── Extracted hooks ────────────────────────────────────
 import { useAuth } from "./hooks/useAuth";
@@ -50,6 +45,12 @@ import { useCloudSync } from "./hooks/useCloudSync";
 const QRCodeSVG = dynamic(() => import("qrcode.react").then(mod => ({ default: mod.QRCodeSVG })), { ssr: false, loading: () => <div className="w-full h-full bg-gray-100 animate-pulse rounded" /> });
 const FlipBook = dynamic(() => import("react-pageflip"), { ssr: false }) as any;
 const ReactCrop = dynamic(() => import("react-image-crop"), { ssr: false });
+
+const CommandPalette = dynamic(() => import("./components/CommandPalette"), { ssr: false });
+const OnboardingModal = dynamic(() => import("./components/OnboardingModal"), { ssr: false });
+const ExportDropdown = dynamic(() => import("./components/ExportDropdown"), { ssr: false });
+const BeforeAfterSlider = dynamic(() => import("./components/BeforeAfterSlider"), { ssr: false });
+const DraggableLiquidTabs = dynamic(() => import("./components/DraggableLiquidTabs"), { ssr: false });
 
 // PERF: Caveat font dipindahkan ke LandingPage component
 
@@ -5515,24 +5516,24 @@ export default function Home() {
             </div>
           </div >
 
-      {/* -- EXPORT DROPDOWN PORTAL -- */}
-      <ExportDropdown
-        D={D} c={c}
-        showExportDropdown={showExportDropdown}
-        setShowExportDropdown={setShowExportDropdown}
-        exportDropdownPos={exportDropdownPos}
-        exportDropdownRef={exportDropdownRef}
-        handleDownloadAllPng={handleDownloadAllPng}
-        handleDownloadZip={handleDownloadZip}
-        handleExportPdf={handleExportPdf}
-        handleExportDocx={handleExportDocx}
-        isDownloadingZip={isDownloadingZip}
-        isExportingPdf={isExportingPdf}
-        isExportingDocx={isExportingDocx}
-        generatedPages={generatedPages}
-        activePageIndex={activePageIndex}
-        API_URL={API_URL}
-      />
+          {/* -- EXPORT DROPDOWN PORTAL -- */}
+          <ExportDropdown
+            D={D} c={c}
+            showExportDropdown={showExportDropdown}
+            setShowExportDropdown={setShowExportDropdown}
+            exportDropdownPos={exportDropdownPos}
+            exportDropdownRef={exportDropdownRef}
+            handleDownloadAllPng={handleDownloadAllPng}
+            handleDownloadZip={handleDownloadZip}
+            handleExportPdf={handleExportPdf}
+            handleExportDocx={handleExportDocx}
+            isDownloadingZip={isDownloadingZip}
+            isExportingPdf={isExportingPdf}
+            isExportingDocx={isExportingDocx}
+            generatedPages={generatedPages}
+            activePageIndex={activePageIndex}
+            API_URL={API_URL}
+          />
 
           {/* ── MOBILE BOTTOM BAR (Modern Floating Dock) ── */}
           <MobileDock
