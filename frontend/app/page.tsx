@@ -35,6 +35,12 @@ import LiquidGlassSlider from "./components/LiquidGlassSlider";
 import LiquidGlassToggleMorph from "./components/LiquidGlassToggleMorph";
 import DraggableLiquidTabs from "./components/DraggableLiquidTabs";
 import { OptimizedTextarea, OptimizedInput } from "./components/OptimizedInputs";
+import LandingPage from "./components/LandingPage";
+import CommandPalette, { type CommandItem } from "./components/CommandPalette";
+import OnboardingModal from "./components/OnboardingModal";
+import Header from "./components/Header";
+import MobileDock from "./components/MobileDock";
+import ExportDropdown from "./components/ExportDropdown";
 
 // ─── Extracted hooks ────────────────────────────────────
 import { useAuth } from "./hooks/useAuth";
@@ -45,13 +51,7 @@ const QRCodeSVG = dynamic(() => import("qrcode.react").then(mod => ({ default: m
 const FlipBook = dynamic(() => import("react-pageflip"), { ssr: false }) as any;
 const ReactCrop = dynamic(() => import("react-image-crop"), { ssr: false });
 
-// PERF: Caveat font di-load di level page (hanya dipakai di landing hero)
-const caveat = Caveat({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  display: "swap",
-  variable: "--font-caveat",
-});
+// PERF: Caveat font dipindahkan ke LandingPage component
 
 export default function Home() {
 
@@ -2308,107 +2308,7 @@ export default function Home() {
 
       {/* --- TAMBAHKAN KODE INI MULAI DARI SINI --- */}
       {!showEditor && !user ? (
-        /* ══ LANDING PAGE SECTION ══ */
-        <div className={`relative min-h-[100dvh] w-full flex flex-col items-center p-4 sm:p-6 text-center overflow-clip ${isDark ? "aurora-bg-dark" : "aurora-bg-light"}`}>
-          {/* Background Ambient Glow */}
-          <div className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none">
-            <div className={`absolute top-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[150px] animate-pulse ${isDark ? "bg-violet-600/20" : "bg-violet-400/35"}`} />
-            <div className={`absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] rounded-full blur-[150px] ${isDark ? "bg-indigo-600/20" : "bg-indigo-400/30"}`} />
-            <div className={`absolute top-[40%] left-[30%] w-[40%] h-[40%] rounded-full blur-[120px] ${isDark ? "bg-fuchsia-600/10" : "bg-fuchsia-400/20"}`} />
-          </div>
-
-          {/* Staggered Container */}
-          <motion.div
-            initial="hidden"
-            animate="show"
-            variants={{
-              hidden: { opacity: 0 },
-              show: { opacity: 1, transition: { staggerChildren: 0.15 } }
-            }}
-            className="relative z-10 w-full max-w-5xl mx-auto flex flex-col items-center mt-12 mb-20"
-          >
-            {/* 1. Badge */}
-            <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } }}>
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border mb-8 shadow-xl backdrop-blur-md ${isDark ? "bg-[#ffffff08] border-[#ffffff15]" : "bg-white/70 border-violet-200 shadow-violet-100"}`}>
-                <motion.div
-                  animate={{ rotate: [0, 15, -15, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}>
-                  <Sparkles className={`w-4 h-4 ${isDark ? "text-violet-400" : "text-violet-600"}`} />
-                </motion.div>
-                <span className={`text-xs font-bold uppercase tracking-widest ${isDark ? "text-gray-300" : "text-violet-700"}`}>
-                  Teknologi Humanizer AI
-                </span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${isDark ? "bg-emerald-500/20 text-emerald-400" : "bg-emerald-100 text-emerald-600"}`}>
-                  GRATIS
-                </span>
-              </div>
-            </motion.div>
-
-            {/* 2. Headline — DILUAR motion.div agar render langsung tanpa animasi = LCP optimal */}
-            <h1 className={`text-3xl xs:text-4xl sm:text-6xl md:text-8xl 2xl:text-[7rem] 3xl:text-[8rem] 4xl:text-[10rem] font-black mb-6 tracking-tight leading-[1.1] ${c.tp} ${caveat.variable}`} style={{ fontFamily: "var(--font-caveat), 'Caveat Fallback', cursive" }}>
-              Tugas Tulis Tangan <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-400 via-indigo-400 to-cyan-400">
-                Selesai dalam 5 Detik.
-              </span>
-            </h1>
-
-            {/* 3. Deskripsi */}
-            <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } }}>
-              <p className={`text-base sm:text-xl lg:text-2xl 2xl:text-[1.6rem] mb-12 max-w-2xl 3xl:max-w-3xl mx-auto leading-relaxed ${isDark ? "text-gray-400" : "text-gray-600 font-medium"}`}>
-                Gak perlu lagi pegal atau begadang menyalin teks. Ubah ketikan panjangmu menjadi tulisan tangan bolpoin super realistis di atas kertas folio, langsung dari browser.
-              </p>
-            </motion.div>
-
-            {/* 4. Interaktif Before/After Slider */}
-            <motion.div variants={{ hidden: { opacity: 0, scale: 0.95, y: 30 }, show: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 25 } } }} className="w-full mb-16">
-              <BeforeAfterSlider />
-              <p className="text-[11px] text-gray-500 mt-4 uppercase tracking-widest font-bold">Geser slider untuk melihat keajaiban 👆</p>
-            </motion.div>
-
-            {/* 5. Tombol Aksi */}
-            <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } }} className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto px-6">
-              <button onClick={handleLogin} className={`w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-lg transition-colors hover:scale-105 active:scale-95 flex items-center justify-center gap-2 shadow-lg ${isDark ? "bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]" : "bg-violet-600 text-white shadow-violet-500/40"}`}>
-                <LogIn className="w-5 h-5" />
-                Mulai Gratis Sekarang
-              </button>
-              <button onClick={() => setShowEditor(true)} className={`w-full sm:w-auto px-8 py-4 rounded-2xl border font-bold text-lg transition-colors active:scale-95 flex items-center justify-center gap-2 ${isDark ? "border-[#ffffff15] text-white hover:bg-white/10" : "border-violet-300 text-violet-700 hover:bg-violet-100 bg-white/60"}`}>
-                <PenTool className="w-5 h-5 opacity-70" />
-                Coba Demo Editor
-              </button>
-            </motion.div>
-
-            {/* 6. Fitur List */}
-            <motion.div variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { delay: 0.5, duration: 1 } } }} className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-12">
-              <div className="flex flex-col items-center gap-2">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-white/5" : "bg-violet-100 shadow-sm"}`}><Zap className={`w-5 h-5 ${isDark ? "text-gray-300" : "text-violet-600"}`} /></div>
-                <div className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-700"}`}>Real-time Preview</div>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-white/5" : "bg-violet-100 shadow-sm"}`}><FileDown className={`w-5 h-5 ${isDark ? "text-gray-300" : "text-violet-600"}`} /></div>
-                <div className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-700"}`}>Export PDF & Word</div>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-white/5" : "bg-violet-100 shadow-sm"}`}><BookOpen className={`w-5 h-5 ${isDark ? "text-gray-300" : "text-violet-600"}`} /></div>
-                <div className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-700"}`}>Flipbook 3D Mode</div>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-white/5" : "bg-violet-100 shadow-sm"}`}><Bot className={`w-5 h-5 ${isDark ? "text-gray-300" : "text-violet-600"}`} /></div>
-                <div className={`text-xs font-semibold ${isDark ? "text-gray-400" : "text-gray-700"}`}>AI Anti-Plagiasi</div>
-              </div>
-            </motion.div>
-
-            {/* WATERMARK DEVELOPER */}
-            <div className="mt-auto w-full pt-16 pb-6 text-center z-10 select-none pointer-events-none">
-              <p className={`text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-white/30" : "text-violet-400/50"}`}>
-                Engineered & Designed by
-              </p>
-              <p className={`text-sm font-black tracking-widest mt-1.5 ${isDark ? "text-white/50" : "text-violet-600/60"}`}>
-                MOHAMMAD ADAM MAHFUD
-              </p>
-            </div>
-
-          </motion.div>
-        </div>
+        <LandingPage isDark={isDark} tp={c.tp} handleLogin={handleLogin} setShowEditor={setShowEditor} />
       ) : (
         <>
           {/* ── MESH GRADIENT BACKGROUND — Animated Aurora ── */}
@@ -2776,152 +2676,15 @@ export default function Home() {
           </AnimatePresence>
 
           {/* ── ONBOARDING TOUR ── */}
-          {showOnboarding && (() => {
-            const isMobileView = typeof window !== 'undefined' && window.innerWidth < 1024;
-
-            // Tentukan selector berdasarkan ukuran layar
-            // Di mobile: sidebar-settings adalah hidden lg:flex, jadi tidak ada di DOM visible
-            // Hanya generate-btn yang ada di semua ukuran layar
-            const mobileSelectors: Record<number, string | null> = {
-              0: null,          // welcome — tidak highlight apapun
-              1: null,          // sidebar di mobile = drawer, tidak bisa di-highlight
-              2: null,          // editor panel di mobile tidak punya id yang visible
-              3: "generate-btn", // generate button ada di mobile dock bottom
-            };
-            const desktopSelectors: Record<number, string | null> = {
-              0: null,
-              1: "sidebar-settings",
-              2: "editor-panel",
-              3: "generate-btn",
-            };
-
-            const targetId = isMobileView
-              ? mobileSelectors[onboardingStep] ?? null
-              : desktopSelectors[onboardingStep] ?? null;
-
-            const el = targetId ? document.getElementById(targetId) : null;
-            const rect = el?.getBoundingClientRect();
-            const hasValidRect = rect && rect.width > 0 && rect.height > 0;
-
-            return (
-              <div className="fixed inset-0 z-[200] pointer-events-none">
-                {/* Overlay gelap */}
-                <motion.div
-                  className="absolute inset-0 pointer-events-auto"
-                  animate={{ backgroundColor: onboardingStep === 0 ? "rgba(0,0,0,0.7)" : "rgba(0,0,0,0.55)" }}
-                  transition={{ duration: 0.3 }}
-                  onClick={() => { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); }}
-                />
-
-                {/* Spotlight — hanya render jika elemen valid & terlihat di viewport */}
-                {onboardingStep > 0 && hasValidRect && (() => {
-                  const safeLeft = Math.max(8, rect.left - 6);
-                  const safeTop = Math.max(8, rect.top - 6);
-                  const safeWidth = Math.min(
-                    rect.width + 12,
-                    (typeof window !== 'undefined' ? window.innerWidth : 400) - safeLeft - 8
-                  );
-                  return (
-                    <motion.div
-                      key={targetId}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                      className="absolute pointer-events-none rounded-2xl"
-                      style={{
-                        top: safeTop,
-                        left: safeLeft,
-                        width: safeWidth,
-                        height: rect.height + 12,
-                        boxShadow: "0 0 0 4px #7C3AED, 0 0 0 9999px rgba(0,0,0,0.55)",
-                        border: "2px solid rgba(139,92,246,0.8)",
-                      }}
-                    />
-                  );
-                })()}
-
-                {/* Modal card — fixed center, responsive semua ukuran S/M/L/XL/4K */}
-                <div
-                  className="pointer-events-auto"
-                  style={{
-                    position: 'fixed',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    width: 'min(340px, calc(100vw - 2rem))',
-                    maxHeight: 'calc(100dvh - 4rem)',
-                    overflowY: 'auto',
-                    zIndex: 202,
-                  }}
-                >
-                  <div className={`rounded-[2rem] border shadow-2xl overflow-hidden ${isAppleDevice
-                    ? (isDark ? "bg-[#1c1c1e]/85 backdrop-blur-3xl border-white/15" : "bg-white/85 backdrop-blur-3xl border-white/40")
-                    : (isDark ? "bg-[#0d0d14] border-[#ffffff10]" : "bg-white border-violet-100")
-                    } ${isDark ? "shadow-[0_24px_64px_rgba(0,0,0,0.8)]" : "shadow-[0_24px_64px_rgba(139,92,246,0.15)]"}`}>
-
-                    {isAppleDevice && <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-violet-500/10 pointer-events-none z-0" />}
-
-                    <div className="relative z-10 p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex gap-1.5">
-                          {[0, 1, 2, 3].map(i => (
-                            <div key={i} className={`h-1.5 rounded-full transition-colors duration-300 ${i === onboardingStep ? "w-6 bg-violet-500" : i < onboardingStep ? "w-3 bg-violet-300" : "w-3 bg-gray-300 dark:bg-white/10"}`} />
-                          ))}
-                        </div>
-                        <button onClick={() => { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); }}
-                          className={`text-[11px] px-2.5 py-1.5 rounded-lg transition-colors font-medium ${isDark ? "text-white/50 hover:text-white hover:bg-white/10" : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"}`}>
-                          Skip
-                        </button>
-                      </div>
-                      <div className="text-4xl mb-3">{[["👋"], ["🎨"], ["📝"], ["🚀"]][onboardingStep]}</div>
-                      <h3 className={`text-base font-bold mb-2 ${isDark ? "text-white" : "text-gray-900"}`}>
-                        {["Selamat datang di Mager Nulis!", "Pilih Gaya Tulisan", "Ketik Teks Tugasmu", "Generate & Download"][onboardingStep]}
-                      </h3>
-                      <p className={`text-[12.5px] leading-relaxed mb-6 ${isDark ? "text-white/70" : "text-gray-600"}`}>
-                        {[
-                          "Ubah teks apapun jadi tulisan tangan realistis di atas folio dalam hitungan detik.",
-                          isMobileView
-                            ? "Ketuk tombol ☰ di pojok kiri atas untuk membuka sidebar. Di sana kamu bisa pilih font, warna tinta, efek typo, dan banyak lagi!"
-                            : "Di sidebar kiri, pilih font, kemiringan, warna tinta, efek typo, dan banyak lagi untuk tulisan yang benar-benar terasa manusiawi.",
-                          isMobileView
-                            ? "Ketuk tab Editor di atas, lalu ketik atau paste teks tugasmu. Bisa sampai 50.000 karakter!"
-                            : "Paste teks tugasmu di area utama. Bisa sampai 50.000 karakter! Gunakan Ctrl+Enter untuk langsung Generate.",
-                          "Klik Generate dan halaman muncul satu per satu secara real-time. Download sebagai JPG, ZIP, PDF, atau Word."
-                        ][onboardingStep]}
-                      </p>
-
-                      {/* Hint visual khusus mobile step 1: tunjukkan tombol hamburger */}
-                      {isMobileView && onboardingStep === 1 && (
-                        <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl mb-4 border ${isDark ? "bg-violet-500/10 border-violet-500/20" : "bg-violet-50 border-violet-200"}`}>
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${isDark ? "bg-white/10" : "bg-white shadow-sm border border-gray-200"}`}>
-                            <svg className={`w-4 h-4 ${isDark ? "text-white" : "text-gray-700"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
-                          </div>
-                          <p className={`text-[11px] font-medium ${isDark ? "text-white/80" : "text-gray-600"}`}>
-                            Tombol ini ada di pojok kiri atas header
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="flex gap-2">
-                        {onboardingStep > 0 && (
-                          <button onClick={handlePrevOnboardingStep}
-                            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isDark ? "bg-black/30 border border-white/10 text-white/80 hover:bg-white/10" : "bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100"}`}>
-                            ← Kembali
-                          </button>
-                        )}
-                        <button onClick={handleNextOnboardingStep}
-                          className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 active:scale-95 transition-colors shadow-lg shadow-violet-500/25">
-                          {onboardingStep < 3 ? "Lanjut →" : "Mulai Sekarang! 🚀"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
+          <OnboardingModal
+            show={showOnboarding}
+            isDark={isDark}
+            isAppleDevice={isAppleDevice}
+            onboardingStep={onboardingStep}
+            onClose={() => { setShowOnboarding(false); localStorage.setItem("hw_onboarded", "1"); }}
+            onNext={handleNextOnboardingStep}
+            onPrev={handlePrevOnboardingStep}
+          />
 
           {/* ── CINEMATIC DRAG & DROP OVERLAY ── */}
           <AnimatePresence>
@@ -2953,60 +2716,23 @@ export default function Home() {
           </AnimatePresence>
 
           {/* ── GLOBAL COMMAND PALETTE (CTRL + K) ── */}
-          <AnimatePresence>
-            {showCommandPalette && (
-              <div className="fixed inset-0 z-[300] flex items-start justify-center pt-[10vh] sm:pt-[15vh] p-4">
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                  onClick={() => setShowCommandPalette(false)} />
-                <motion.div initial={{ scale: 0.95, opacity: 0, y: -20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: -20 }}
-                  className={`relative w-full max-w-xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col ${D ? "bg-[#13131f] border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.6)]" : "bg-white border-gray-200 shadow-[0_20px_60px_rgba(139,92,246,0.15)]"}`}>
-
-                  <div className={`flex items-center px-4 border-b ${D ? "border-white/10 bg-white/5" : "border-gray-100 bg-gray-50/50"}`}>
-                    <Sparkles className={`w-5 h-5 flex-shrink-0 ${D ? "text-violet-400" : "text-violet-600"}`} />
-                    <input
-                      autoFocus
-                      type="text"
-                      placeholder="Apa yang ingin kamu lakukan? (Ketik 'dark', 'pdf', 'ai'...)"
-                      value={cmdSearch}
-                      onChange={(e) => setCmdSearch(e.target.value)}
-                      className={`w-full bg-transparent border-none px-4 py-5 text-sm sm:text-base outline-none ${D ? "text-white placeholder-white/30" : "text-gray-900 placeholder-gray-400"}`}
-                    />
-                    <kbd className={`text-[10px] px-2 py-1 rounded border font-bold font-mono ${D ? "bg-white/10 border-white/20 text-white/50" : "bg-white border-gray-200 text-gray-500 shadow-sm"}`}>ESC</kbd>
-                  </div>
-
-                  <div className="p-2 max-h-[50vh] overflow-y-auto scrollbar-hide flex flex-col gap-1">
-                    {[
-                      { icon: <PenTool />, label: "Tulis dengan Asisten AI", keywords: ["ai", "bot", "tulis", "buat", "otomatis", "auto"], action: () => { setShowAiModal(true); setShowCommandPalette(false); } },
-                      { icon: <Mic />, label: "Mulai Dikte Suara", keywords: ["dikte", "suara", "mic", "voice", "ngomong", "bicara"], action: () => { toggleListening(); setShowCommandPalette(false); } },
-                      { icon: D ? <Sun /> : <Moon />, label: `Ganti ke Mode ${D ? "Siang" : "Malam"}`, keywords: ["dark", "light", "malam", "siang", "tema", "theme"], action: () => { setIsDark(!isDark); setShowCommandPalette(false); } },
-                      { icon: <FileDown />, label: "Export PDF (Kualitas Tinggi)", keywords: ["pdf", "export", "download", "cetak", "print", "hd"], action: () => { handleExportPdf("high"); setShowCommandPalette(false); } },
-                      { icon: <FileText />, label: "Export ke Word (.docx)", keywords: ["word", "docx", "export", "download"], action: () => { handleExportDocx(); setShowCommandPalette(false); } },
-                      { icon: <Package />, label: "Download ZIP Archive", keywords: ["zip", "rar", "archive", "semua"], action: () => { handleDownloadZip(); setShowCommandPalette(false); } },
-                      { icon: <Settings />, label: "Buka Advanced Config", keywords: ["setting", "pengaturan", "config", "margin", "spasi"], action: () => { setShowConfig(true); setMobileSidebarOpen(true); setShowCommandPalette(false); } },
-                      { icon: <Trash2 />, label: "Hapus Semua Teks Editor", keywords: ["hapus", "clear", "bersihkan", "trash", "buang"], action: () => { setInputText(""); setText(""); setShowCommandPalette(false); toast.success("Teks dihapus!"); } },
-                    ]
-                      .filter(cmd => cmd.label.toLowerCase().includes(cmdSearch.toLowerCase()) || cmd.keywords.some(k => k.includes(cmdSearch.toLowerCase())))
-                      .map((cmd, i) => (
-                        <button key={i} onClick={cmd.action} className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all active:scale-95 ${D ? "hover:bg-white/5 text-white/80" : "hover:bg-gray-100 text-gray-700"}`}>
-                          <div className={`p-2 rounded-lg flex-shrink-0 ${D ? "bg-white/10 text-white/70" : "bg-white shadow-sm border border-gray-200 text-violet-600"}`}>
-                            {React.cloneElement(cmd.icon, { className: "w-4 h-4" })}
-                          </div>
-                          <span className="text-sm font-semibold">{cmd.label}</span>
-                          <ChevronDown className="w-4 h-4 -rotate-90 ml-auto opacity-30" />
-                        </button>
-                      ))}
-                    {/* Jika tidak ada hasil pencarian */}
-                    {cmdSearch && [/*...filter data*/].length === 0 && (
-                      <div className="py-8 text-center text-sm text-gray-500">
-                        Tidak ada perintah untuk "{cmdSearch}"
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              </div>
-            )}
-          </AnimatePresence>
+          <CommandPalette
+            show={showCommandPalette}
+            onClose={() => setShowCommandPalette(false)}
+            isDark={D}
+            cmdSearch={cmdSearch}
+            setCmdSearch={setCmdSearch}
+            commands={[
+              { icon: <PenTool />, label: "Tulis dengan Asisten AI", keywords: ["ai", "bot", "tulis", "buat", "otomatis", "auto"], action: () => { setShowAiModal(true); setShowCommandPalette(false); } },
+              { icon: <Mic />, label: "Mulai Dikte Suara", keywords: ["dikte", "suara", "mic", "voice", "ngomong", "bicara"], action: () => { toggleListening(); setShowCommandPalette(false); } },
+              { icon: D ? <Sun /> : <Moon />, label: `Ganti ke Mode ${D ? "Siang" : "Malam"}`, keywords: ["dark", "light", "malam", "siang", "tema", "theme"], action: () => { setIsDark(!isDark); setShowCommandPalette(false); } },
+              { icon: <FileDown />, label: "Export PDF (Kualitas Tinggi)", keywords: ["pdf", "export", "download", "cetak", "print", "hd"], action: () => { handleExportPdf("high"); setShowCommandPalette(false); } },
+              { icon: <FileText />, label: "Export ke Word (.docx)", keywords: ["word", "docx", "export", "download"], action: () => { handleExportDocx(); setShowCommandPalette(false); } },
+              { icon: <Package />, label: "Download ZIP Archive", keywords: ["zip", "rar", "archive", "semua"], action: () => { handleDownloadZip(); setShowCommandPalette(false); } },
+              { icon: <Settings />, label: "Buka Advanced Config", keywords: ["setting", "pengaturan", "config", "margin", "spasi"], action: () => { setShowConfig(true); setMobileSidebarOpen(true); setShowCommandPalette(false); } },
+              { icon: <Trash2 />, label: "Hapus Semua Teks Editor", keywords: ["hapus", "clear", "bersihkan", "trash", "buang"], action: () => { setInputText(""); setText(""); setShowCommandPalette(false); toast.success("Teks dihapus!"); } },
+            ]}
+          />
 
           {/* ── KEYBOARD SHORTCUT MODAL ── */}
           <AnimatePresence>
@@ -3519,229 +3245,26 @@ export default function Home() {
           )}
 
           {/* ── HEADER ── */}
-          <header className={`${c.header} border-b sticky top-0 z-50 transition-all duration-300 ${hideHeader && isMobileView ? "-translate-y-full" : "translate-y-0"} ${zenMode ? "hidden" : ""} ${isAppleDevice ? 'liquid-glass-shimmer' : ''}`}>
-            {isGenerating && (
-              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-violet-500/10">
-                <div className="progress-shimmer h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-[width] duration-500"
-                  style={{ width: `${generateProgress}%` }} />
-              </div>
-            )}
-            <div className="w-full max-w-[1400px] 2xl:max-w-[1600px] 3xl:max-w-[2000px] 4xl:max-w-[2400px] mx-auto px-3 sm:px-4 lg:px-6 3xl:px-12 h-14 flex items-center justify-between gap-2">
-
-              {/* LEFT: toggle + logo */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className={`hidden lg:flex w-8 h-8 rounded-lg items-center justify-center transition-colors ${c.btn}`}>
-                  {sidebarOpen ? <PanelLeftClose className="w-3.5 h-3.5" /> : <PanelLeftOpen className="w-3.5 h-3.5" />}
-                </button>
-                {/* Ubah md:hidden menjadi lg:hidden di bawah ini */}
-                <button
-                  onClick={() => setMobileSidebarOpen(true)}
-                  aria-label="Buka menu pengaturan"
-                  className={`flex lg:hidden w-11 h-11 rounded-xl items-center justify-center transition-colors ${c.btn}`}>
-                  <Menu className="w-3.5 h-3.5" aria-hidden="true" />
-                </button>
-
-                <div className="flex items-center gap-2.5">
-                  {/* Logo icon — layered glow effect */}
-                  <div className="relative flex-shrink-0">
-                    <div className={`absolute inset-0 rounded-xl blur-md opacity-60 ${D ? "bg-violet-500" : "bg-violet-400"}`} />
-                    <div className="relative w-8 h-8 bg-gradient-to-br from-violet-500 via-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/40 border border-white/20 animate-[float-up_3s_ease-in-out_infinite]">
-                      <PenTool className="w-3.5 h-3.5 text-white drop-shadow" />
-                    </div>
-                  </div>
-                  {/* Brand name + badge */}
-                  <div className="hidden xs:flex flex-col gap-0">
-                    <span className="font-extrabold text-[13px] leading-tight tracking-tight bg-clip-text text-transparent shimmer-text pb-[2px]">
-                      Mager Nulis
-                    </span>
-                    <span className={`text-[8px] font-bold tracking-widest uppercase leading-none mt-0.5 ${D ? "text-white/25" : "text-violet-400/60"}`}>
-                      AI Handwriting
-                    </span>
-                  </div>
-                  <span className={`hidden sm:inline-flex text-[8px] px-1.5 py-0.5 rounded-full font-bold tracking-wider border ${D ? "border-violet-400/25 bg-violet-500/10 text-violet-400" : "border-violet-200 bg-violet-50 text-violet-500"}`}>v1.2</span>
-                </div>
-              </div>
-
-              {/* CENTER: status pill — premium redesign */}
-              <div className="hidden sm:flex flex-1 justify-center">
-                {isGenerating ? (
-                  <div className={`relative flex items-center gap-2.5 pl-3 pr-2 py-1.5 rounded-full overflow-hidden border ${D ? "bg-violet-500/8 border-violet-500/20" : "bg-violet-50 border-violet-200/80"}`}
-                    style={{ boxShadow: D ? "0 0 20px rgba(139,92,246,0.12)" : "0 0 16px rgba(139,92,246,0.08)" }}>
-                    {/* animated bg bar */}
-                    <div className="absolute inset-0 opacity-20"
-                      style={{ background: `linear-gradient(90deg, transparent 0%, ${D ? "rgba(139,92,246,0.4)" : "rgba(139,92,246,0.2)"} ${generateProgress}%, transparent ${generateProgress}%)`, transition: "background 0.4s ease" }} />
-                    <div className="relative flex items-center gap-2">
-                      <div className="relative w-3.5 h-3.5">
-                        <svg className="w-3.5 h-3.5 -rotate-90" viewBox="0 0 14 14">
-                          <circle cx="7" cy="7" r="5.5" fill="none" stroke={D ? "rgba(139,92,246,0.2)" : "rgba(139,92,246,0.15)"} strokeWidth="1.5" />
-                          <circle cx="7" cy="7" r="5.5" fill="none" stroke={D ? "#a78bfa" : "#7c3aed"} strokeWidth="1.5"
-                            strokeDasharray={`${2 * Math.PI * 5.5}`}
-                            strokeDashoffset={`${2 * Math.PI * 5.5 * (1 - generateProgress / 100)}`}
-                            strokeLinecap="round" style={{ transition: "stroke-dashoffset 0.4s ease" }} />
-                        </svg>
-                      </div>
-                      <span className={`text-[11px] font-semibold tabular-nums ${D ? "text-violet-300" : "text-violet-700"}`}>
-                        Generating {Math.round(generateProgress)}%
-                      </span>
-                      <button onClick={() => abortController?.abort()}
-                        className={`ml-1 w-5 h-5 rounded-full flex items-center justify-center transition-colors ${D ? "bg-red-500/15 hover:bg-red-500/25 text-red-400" : "bg-red-50 hover:bg-red-100 text-red-500"}`}
-                        title="Batalkan">
-                        <X className="w-2.5 h-2.5" />
-                      </button>
-                    </div>
-                  </div>
-                ) : generatedPages.length > 0 ? (
-                  <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border ${D ? "bg-emerald-500/8 border-emerald-500/20" : "bg-emerald-50 border-emerald-200"}`}
-                    style={{ boxShadow: D ? "0 0 16px rgba(16,185,129,0.1)" : "none" }}>
-                    <span className="status-dot" style={{ background: "transparent" }}>
-                      <span className="status-dot-inner" style={{ background: "#10b981", boxShadow: "0 0 6px rgba(16,185,129,0.8)" }} />
-                    </span>
-                    <span className={`text-[11px] font-semibold ${D ? "text-emerald-400" : "text-emerald-700"}`}>
-                      {generatedPages.length} halaman siap
-                    </span>
-                  </div>
-                ) : text.trim() ? (
-                  <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border ${D ? "bg-white/4 border-white/8" : "bg-white border-violet-100 shadow-sm"}`}>
-                    <div className={`flex gap-1 items-center`}>
-                      <span className={`text-[10px] font-bold tabular-nums ${D ? "text-white/70" : "text-violet-700"}`}>~{estimatedPages} hal</span>
-                      <span className={`text-[10px] ${D ? "text-white/20" : "text-violet-300"}`}>·</span>
-                      <span className={`text-[10px] ${D ? "text-white/40" : "text-gray-500"}`}>{estimatedTimeLabel}</span>
-                      <span className={`text-[10px] ${D ? "text-white/20" : "text-violet-300"}`}>·</span>
-                      <span className={`text-[10px] font-medium tabular-nums ${D ? "text-white/50" : "text-gray-600"}`}>{wordCount.toLocaleString()} kata</span>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-
-              {/* RIGHT: backend status + help + dark mode */}
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                <div className={`flex items-center gap-1.5 pr-2 border-r ${D ? "border-white/10" : "border-violet-200"}`}>
-                  {/* ── TOMBOL LOGIN CLOUD ── */}
-                  {user ? (
-                    <div className="hidden md:flex items-center gap-2 mr-1">
-                      <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border ${D ? "border-white/8 bg-white/4" : "border-violet-100 bg-violet-50/50"}`}>
-                        <div className="w-4 h-4 rounded-full bg-gradient-to-br from-violet-400 to-indigo-500 flex items-center justify-center text-[8px] text-white font-bold flex-shrink-0">
-                          {(user.user_metadata.full_name || user.email || "U")[0].toUpperCase()}
-                        </div>
-                        <span className={`text-[10px] font-medium max-w-[80px] truncate ${D ? "text-white/60" : "text-gray-600"}`}>
-                          {user.user_metadata.full_name?.split(" ")[0] || user.email?.split("@")[0]}
-                        </span>
-                      </div>
-                      <button onClick={handleLogout} title="Logout"
-                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${D ? "bg-red-500/10 hover:bg-red-500/20 text-red-400" : "bg-red-50 hover:bg-red-100 text-red-500"}`}>
-                        <LogOut className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button onClick={handleLogin}
-                      className="btn-ripple hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold mr-1 transition-all hover:scale-105 active:scale-95"
-                      style={{
-                        background: D ? "linear-gradient(135deg, #4f46e5, #7c3aed)" : "linear-gradient(135deg, #6d28d9, #4f46e5)",
-                        color: "white",
-                        boxShadow: "0 2px 12px rgba(109,40,217,0.35)"
-                      }}>
-                      <LogIn className="w-3 h-3" />
-                      <span>Login</span>
-                    </button>
-                  )}
-                  {/* Backend status — dot indicator instead of full pill on small screens */}
-                  <div title={backendOnline === null ? "Memeriksa..." : backendOnline ? "Backend terhubung" : "Backend offline"}
-                    className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-[10px] font-medium transition-colors ${backendOnline === null
-                      ? D ? "border-white/6 text-white/25" : "border-gray-200 text-gray-400"
-                      : backendOnline
-                        ? D ? "border-emerald-500/20 bg-emerald-500/6 text-emerald-400" : "border-emerald-200 bg-emerald-50 text-emerald-600"
-                        : D ? "border-red-500/20 bg-red-500/6 text-red-400" : "border-red-200 bg-red-50 text-red-600"
-                      }`}>
-                    {backendOnline === null
-                      ? <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                      : <div className={`w-1.5 h-1.5 rounded-full ${backendOnline ? "bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.8)]" : "bg-red-500"}`} />}
-                    <span className="hidden lg:inline">{backendOnline === null ? "..." : backendOnline ? "Online" : "Offline"}</span>
-                  </div>
-                  {/* INDIKATOR ENERGI / ADMIN DASHBOARD */}
-                  {user?.email === (process.env.NEXT_PUBLIC_DEV_EMAIL || "sharulwrdn10@gmail.com") ? (
-                    <button
-                      onClick={() => setShowAdminModal(true)}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border bg-violet-600 border-violet-500 text-white text-[10px] sm:text-[11px] font-bold hover:bg-violet-700 transition-colors flex-shrink-0 shadow-sm"
-                      title="Admin Control Panel">
-                      <Settings className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">ADMIN</span>
-                      <span className="sm:hidden">MGR</span>
-                    </button>
-                  ) : (
-                    <div className="relative group">
-                      <button onClick={() => setShowQrisModal(true)}
-                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-colors ${energy < estimatedPages
-                          ? "bg-rose-500/10 text-rose-500 border-rose-500/30 animate-pulse"
-                          : D ? "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20" : "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
-                          }`}>
-                        <Zap className={`w-3.5 h-3.5 ${energy < estimatedPages ? "text-rose-500" : "text-amber-500"}`} fill="currentColor" />
-                        <span>{energy}</span>
-                      </button>
-                      {/* Tooltip */}
-                      <div className={`absolute top-full right-0 mt-2 w-48 px-3 py-2.5 rounded-xl border shadow-xl text-[11px] leading-relaxed pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[100] ${D ? "bg-[#18181b] border-[#ffffff14] text-white/80" : "bg-white border-gray-200 text-gray-600"}`}>
-                        <p className="font-bold mb-1">⚡ Energi Kamu</p>
-                        <p>1 energi = 1 halaman generate.</p>
-                        <p className="mt-1">Klik untuk Top Up lebih banyak energi.</p>
-                        {energy < estimatedPages && (
-                          <p className={`mt-1.5 font-semibold ${D ? "text-rose-400" : "text-rose-500"}`}>
-                            Tidak cukup untuk {estimatedPages} halaman!
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {/* ══ GROUP 2: AKSI ══ */}
-                <div className="flex items-center gap-1.5 pl-1">
-
-                  <button
-                    onClick={() => setShowShortcuts(true)}
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors text-[13px] font-bold ${c.btn}`}
-                    title="Keyboard Shortcuts">
-                    ?
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (!document.startViewTransition) {
-                        setIsDark(!isDark);
-                        return;
-                      }
-                      document.startViewTransition(() => {
-                        setIsDark(!isDark);
-                      });
-                    }}
-                    className={`relative w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden border theme-toggle-btn ${isDark
-                      ? "bg-[#18181b] border-[#ffffff1a]"
-                      : "bg-gradient-to-br from-sky-50 to-amber-50 border-amber-200/50"
-                      }`}
-                    title={isDark ? "Ke Mode Siang" : "Ke Mode Malam"}
-                    aria-label={isDark ? "Aktifkan light mode" : "Aktifkan dark mode"}
-                  >
-                    {/* Background morphing circle */}
-                    <div className={`absolute inset-0 rounded-2xl theme-bg-morph ${isDark ? "theme-bg-dark" : "theme-bg-light"
-                      }`} />
-
-                    {/* Sun icon */}
-                    <Sun className={`absolute w-[18px] h-[18px] theme-icon theme-sun ${isDark ? "theme-icon-hidden-down" : "theme-icon-visible"
-                      } text-amber-500 fill-amber-200`} />
-
-                    {/* Moon icon */}
-                    <Moon className={`absolute w-[18px] h-[18px] theme-icon theme-moon ${isDark ? "theme-icon-visible" : "theme-icon-hidden-up"
-                      } text-violet-300 fill-violet-900/40`} />
-
-                    {/* Ripple effect on click */}
-                    <div className={`absolute inset-0 rounded-2xl theme-ripple ${isDark ? "theme-ripple-dark" : "theme-ripple-light"
-                      }`} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </header>
-
+          <Header
+            isDark={isDark} setIsDark={setIsDark} D={D} c={c}
+            user={user} handleLogin={handleLogin} handleLogout={handleLogout}
+            sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}
+            setMobileSidebarOpen={setMobileSidebarOpen}
+            backendOnline={backendOnline}
+            isGenerating={isGenerating} generateProgress={generateProgress}
+            abortController={abortController}
+            generatedPages={generatedPages} text={text}
+            estimatedPages={estimatedPages} estimatedTimeLabel={estimatedTimeLabel}
+            wordCount={wordCount}
+            hideHeader={hideHeader} isMobileView={isMobileView} zenMode={zenMode}
+            isAppleDevice={isAppleDevice} energy={energy}
+            setShowShortcuts={setShowShortcuts} setShowQrisModal={setShowQrisModal}
+            setShowAdminModal={setShowAdminModal}
+          />
 
           {/* ── BODY: 3-PANEL LAYOUT ── */}
           <div className="w-full max-w-[1400px] 2xl:max-w-[1600px] 3xl:max-w-[2000px] 4xl:max-w-[2400px] mx-auto flex overflow-hidden" style={{ height: "calc(100dvh - 56px)" }}>
+
 
             {/* ══ PANEL 1: SIDEBAR SETTINGS — Desktop only ══ */}
             <motion.aside
@@ -5992,166 +5515,41 @@ export default function Home() {
             </div>
           </div >
 
-          {/* ── EXPORT DROPDOWN PORTAL — fixed di atas semua layer ── */}
-          <AnimatePresence>
-            {
-              showExportDropdown && exportDropdownPos && (
-                <>
-                  <div className="fixed inset-0 z-[90]" onClick={() => setShowExportDropdown(false)} />
-                  <motion.div
-                    ref={exportDropdownRef}
-                    // Animasi menyesuaikan arah buka (dari bawah atau dari atas)
-                    initial={{ opacity: 0, y: exportDropdownPos.top > (typeof window !== 'undefined' ? window.innerHeight : 800) / 2 ? 10 : -10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: exportDropdownPos.top > (typeof window !== 'undefined' ? window.innerHeight : 800) / 2 ? 10 : -10, scale: 0.95 }}
-                    transition={{ duration: 0.15, ease: "easeOut" }}
-                    style={{
-                      position: "fixed",
-                      left: Math.min(
-                        exportDropdownPos.left - 120,
-                        (typeof window !== 'undefined' ? window.innerWidth : 1200) - 220
-                      ),
-                      ...(typeof window !== 'undefined' && exportDropdownPos.top > window.innerHeight / 2
-                        ? { bottom: window.innerHeight - exportDropdownPos.top + 16 }
-                        : { top: exportDropdownPos.top + exportDropdownPos.height + 16 }),
-                      zIndex: 9999,
-                    }}
-                    className={`w-48 rounded-2xl border shadow-2xl overflow-hidden backdrop-blur-xl ${D
-                      ? "bg-[#0d0d14]/95 border-[#ffffff10] shadow-[0_16px_48px_rgba(0,0,0,0.7)]"
-                      : "bg-white/98 border-violet-200 shadow-[0_16px_48px_rgba(139,92,246,0.2)]"}`}>
-                    <div className="p-1">
-                      <button onClick={() => { handleDownloadAllPng(); setShowExportDropdown(false); }}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm}`}>
-                        <div className="w-6 h-6 rounded-md flex items-center justify-center bg-violet-500/15">
-                          <Download className="w-3.5 h-3.5 text-violet-500" />
-                        </div>Semua JPG
-                      </button>
-                      <button onClick={() => { handleDownloadZip(); setShowExportDropdown(false); }}
-                        disabled={isDownloadingZip}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm} ${isDownloadingZip ? "opacity-50" : ""}`}>
-                        <div className="w-6 h-6 rounded-md flex items-center justify-center bg-emerald-500/15">
-                          {isDownloadingZip ? <Loader2 className="w-3.5 h-3.5 text-emerald-500 animate-spin" /> : <Package className="w-3.5 h-3.5 text-emerald-500" />}
-                        </div>ZIP Archive
-                      </button>
-                      <div className={`my-1 h-px ${D ? "bg-white/8" : "bg-gray-100"}`} />
-                      <button onClick={() => { handleExportPdf("high"); setShowExportDropdown(false); }}
-                        disabled={isExportingPdf}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm} ${isExportingPdf ? "opacity-50" : ""}`}>
-                        <div className="w-6 h-6 rounded-md flex items-center justify-center bg-amber-500/15">
-                          {isExportingPdf ? <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin" /> : <FileDown className="w-3.5 h-3.5 text-amber-500" />}
-                        </div>PDF (Resolusi Tinggi / Cetak)
-                      </button>
-                      <button onClick={() => { handleExportPdf("low"); setShowExportDropdown(false); }}
-                        disabled={isExportingPdf}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm} ${isExportingPdf ? "opacity-50" : ""}`}>
-                        <div className="w-6 h-6 rounded-md flex items-center justify-center bg-rose-500/15">
-                          {isExportingPdf ? <Loader2 className="w-3.5 h-3.5 text-rose-500 animate-spin" /> : <FileDown className="w-3.5 h-3.5 text-rose-500" />}
-                        </div>PDF (Hemat Kuota / WA)
-                      </button>
-                      <button onClick={async () => {
-                        setShowExportDropdown(false);
-                        const tid = toast.loading("Membuat PNG transparan...");
-                        try {
-                          const res = await fetch(`${API_URL}/api/download/transparent`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ imageData: generatedPages[activePageIndex].image })
-                          });
-                          if (!res.ok) throw new Error();
-                          const blob = await res.blob();
-                          const { saveAs } = await import("file-saver");
-                          saveAs(blob, `tulisan_transparan_hal${activePageIndex + 1}.png`);
-                          toast.success("PNG transparan berhasil!", { id: tid });
-                        } catch { toast.error("Gagal export", { id: tid }); }
-                      }}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm}`}>
-                        <div className="w-6 h-6 rounded-md flex items-center justify-center bg-purple-500/15">
-                          <ImageIcon className="w-3.5 h-3.5 text-purple-500" />
-                        </div>PNG Transparan
-                      </button>
-                      <button onClick={() => { handleExportDocx(); setShowExportDropdown(false); }}
-                        disabled={isExportingDocx}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${c.rowHover} ${c.tm} ${isExportingDocx ? "opacity-50" : ""}`}>
-                        <div className="w-6 h-6 rounded-md flex items-center justify-center bg-blue-500/15">
-                          {isExportingDocx ? <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" /> : <FileText className="w-3.5 h-3.5 text-blue-500" />}
-                        </div>Word (.docx)
-                      </button>
-                    </div>
-                  </motion.div>
-                </>
-              )
-            }
-          </AnimatePresence >
+      {/* -- EXPORT DROPDOWN PORTAL -- */}
+      <ExportDropdown
+        D={D} c={c}
+        showExportDropdown={showExportDropdown}
+        setShowExportDropdown={setShowExportDropdown}
+        exportDropdownPos={exportDropdownPos}
+        exportDropdownRef={exportDropdownRef}
+        handleDownloadAllPng={handleDownloadAllPng}
+        handleDownloadZip={handleDownloadZip}
+        handleExportPdf={handleExportPdf}
+        handleExportDocx={handleExportDocx}
+        isDownloadingZip={isDownloadingZip}
+        isExportingPdf={isExportingPdf}
+        isExportingDocx={isExportingDocx}
+        generatedPages={generatedPages}
+        activePageIndex={activePageIndex}
+        API_URL={API_URL}
+      />
 
           {/* ── MOBILE BOTTOM BAR (Modern Floating Dock) ── */}
-          <div className="fixed bottom-0 left-0 right-0 z-50 hidden max-[767px]:flex pointer-events-none px-3 sm:px-4 safe-area-pb flex justify-center" >
-
-            {/* Dock Kaca (Glassmorphism) */}
-            <div className={`w-full flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-2xl pointer-events-auto transition-[transform,opacity] duration-500 ease-in-out ${activeTab === "result" || hideMobileDock || activePagesMemo.length > 0 ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"} ${isAppleDevice ? (D ? "liquid-glass shadow-2xl" : "glass-panel") : (D ? "bg-[#2c2c35] border border-[#ffffff10] shadow-2xl" : "bg-white border border-gray-200 shadow-xl")}`
-            }>
-              {/* Ubah md:hidden menjadi lg:hidden di bawah ini */}
-              <button onClick={() => setMobileSidebarOpen(true)}
-                className={`flex lg:hidden w-8 h-8 rounded-lg items-center justify-center transition-colors ${c.btn}`}>
-                <Menu className="w-3.5 h-3.5" />
-              </button >
-
-              <div className="flex-1 min-w-0 pl-1 relative">
-                {currentFont ? (
-                  <span className={`text-[12px] font-bold truncate block ${c.tp}`} style={{ fontFamily: FONT_FAMILY_MAP[currentFont.name] || currentFont.name }}>
-                    {currentFont.name}
-                  </span>
-                ) : (
-                  <span className={`text-[11px] ${c.ts}`}>Pilih font...</span>
-                )}
-                <span className={`text-[9px] mt-0.5 block truncate ${c.ts}`}>
-                  {wordCount} kata • Est. {estimatedPages} hal
-                </span>
-                {isGenerating && (
-                  <div className="absolute -bottom-2.5 left-0 right-0 h-[2px] opacity-70">
-                    <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-[width] duration-500" style={{ width: `${generateProgress}%` }} />
-                  </div>
-                )}
-              </div>
-
-              {
-                generatedPages.length > 0 && typeof navigator !== "undefined" && !!navigator.share && (
-                  <button
-                    onClick={() => handleSharePage(generatedPages[activePageIndex])}
-                    className={`w-9 h-9 rounded-full border flex items-center justify-center flex-shrink-0 transition-all hover:scale-110 active:scale-90 ${c.btn}`}
-                    title="Bagikan ke WA/Telegram"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                    </svg>
-                  </button>
-                )
-              }
-
-              <button
-                onClick={handleGenerate}
-                disabled={isGenerating || !text.trim() || !selectedFolio}
-                className="btn-ripple relative flex items-center gap-1.5 px-5 py-3 rounded-2xl font-bold text-sm flex-shrink-0 transition-all overflow-hidden active:scale-95"
-                style={isGenerating || !text.trim() || !selectedFolio
-                  ? { background: D ? "rgba(255,255,255,0.04)" : "#f3f4f6", color: D ? "rgba(255,255,255,0.15)" : "#9ca3af", cursor: "not-allowed" }
-                  : { background: "linear-gradient(135deg, #8b5cf6, #6d28d9, #4f46e5)", color: "white", boxShadow: "0 4px 16px rgba(109,40,217,0.45), inset 0 1px 0 rgba(255,255,255,0.2)" }
-                }>
-                {/* shimmer sweep */}
-                {!(isGenerating || !text.trim() || !selectedFolio) && (
-                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_2.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
-                )}
-                <div className="relative z-10 flex items-center gap-1.5">
-                  {isGenerating
-                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : <Sparkles className="w-4 h-4" />
-                  }
-                  <span>{isGenerating ? `${Math.round(generateProgress)}%` : "Generate"}</span>
-                </div>
-              </button>
-            </div >
-          </div >
+          <MobileDock
+            isDark={isDark} D={D} c={c} isAppleDevice={isAppleDevice}
+            activeTab={activeTab} hideMobileDock={hideMobileDock}
+            activePagesMemo={activePagesMemo}
+            setMobileSidebarOpen={setMobileSidebarOpen}
+            currentFont={currentFont} wordCount={wordCount}
+            estimatedPages={estimatedPages}
+            isGenerating={isGenerating} generateProgress={generateProgress}
+            generatedPages={generatedPages} activePageIndex={activePageIndex}
+            handleGenerate={handleGenerate} handleSharePage={handleSharePage}
+            text={text} selectedFolio={selectedFolio}
+          />
         </>
-      )}
+      )
+      }
     </div >
   );
 }
