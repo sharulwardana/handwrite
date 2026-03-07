@@ -1,1 +1,0 @@
-const fs = require("fs"); const lines = fs.readFileSync("app/page.tsx", "utf8").split("\n"); lines.forEach((line, i) => { if (line.includes("grid-cols-2") || line.includes("useDoubleFolio") || line.includes("Moon") || line.includes("Sun") || line.includes("fonts.map") || line.includes("style={{ fontFamily")) { console.log((i+1) + ": " + line.trim()); } });

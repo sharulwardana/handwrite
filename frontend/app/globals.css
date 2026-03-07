@@ -2198,16 +2198,37 @@ html:not(.dark) .drag-handle {
 
 @media (prefers-reduced-motion: no-preference) {
   ::view-transition-old(root) {
-    animation: 150ms ease-in both fade-out,
-               150ms ease-in both scale-out;
+    animation: 200ms ease-in both fade-out,
+               200ms ease-in both scale-out;
   }
   ::view-transition-new(root) {
-    animation: 250ms ease-out both fade-in,
-               250ms ease-out both scale-in;
+    animation: 350ms ease-out 50ms both fade-in,
+               350ms ease-out 50ms both scale-in;
   }
 }
 @keyframes scale-out {
   to { transform: scale(0.98); }
+}
+@keyframes scale-in {
+  from { transform: scale(1.02); }
+}
+
+/* ── SMOOTH THEME COLOR TRANSITION ─────────────────── */
+/* Semua elemen transisi warna halus saat dark↔light toggle */
+html,
+html *,
+html *::before,
+html *::after {
+  transition: background-color 0.3s ease,
+              border-color 0.3s ease,
+              color 0.2s ease,
+              box-shadow 0.3s ease;
+}
+/* Exclude elemen dengan custom animation agar tidak bentrok */
+.liquid-glass-slider *,
+.liquid-glass-toggle *,
+[data-framer-motion] {
+  transition: none !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
