@@ -1866,20 +1866,7 @@ html:not(.dark) .sidebar-section-glow::before {
 }
 
 /* ── ANIMASI TAMBAHAN MODERN ── */
-@keyframes float-up {
-  0%, 100% { transform: translateY(0px); }
-  50%       { transform: translateY(-6px); }
-}
-
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(139, 92, 246, 0.3); }
-  50%       { box-shadow: 0 0 24px rgba(139, 92, 246, 0.6), 0 0 48px rgba(139, 92, 246, 0.2); }
-}
-
-@keyframes shimmer-text {
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
+/* PERF: float-up, glow-pulse, shimmer-text sudah didefinisikan di atas (line ~125-136) */
 
 /* ── SIDEBAR SCROLL FADE INDICATOR ──────────────────── */
 .sidebar-scroll-container {
@@ -1931,10 +1918,7 @@ html:not(.dark) .skeleton::after {
   background-size: 200% 100%;
 }
 
-@keyframes skeleton-sweep {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
+/* PERF: skeleton-sweep sudah didefinisikan di atas (line ~143) */
 
 /* ── GENERATE BUTTON READY STATE ────────────────────── */
 .btn-generate-idle {
@@ -2227,7 +2211,13 @@ html *::after {
 /* Exclude elemen dengan custom animation agar tidak bentrok */
 .liquid-glass-slider *,
 .liquid-glass-toggle *,
-[data-framer-motion] {
+[data-framer-motion],
+[class*="animate-"],
+.progress-shimmer,
+.progress-shimmer *,
+.btn-ripple *,
+.skeleton,
+.skeleton * {
   transition: none !important;
 }
 
@@ -2550,4 +2540,64 @@ body::after {
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     animation: fadeIn 0.15s ease-out both;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   QUICK WIN #2: DISABLE BACKDROP-BLUR ON LOW-END MOBILE
+   Touchscreen + small viewport = likely budget device.
+   backdrop-filter: blur() sangat berat di GPU mobile budget.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) and (hover: none) and (pointer: coarse) {
+  /* Hanya disable blur yang berat (>= xl), biarkan blur ringan tetap */
+  .backdrop-blur-xl,
+  .backdrop-blur-2xl,
+  .backdrop-blur-3xl {
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   QUICK WIN #4: LANDING HERO — Ganti blur-150px dengan gradient ringan
+   blur() pada elemen besar (50% viewport) sangat berat di GPU.
+   Di mobile, ganti dengan radial gradient yang sama cantiknya.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Ambient glow di landing page — matikan blur, pakai opacity gradient */
+  .aurora-bg-dark > div:first-child > div[class*="blur-"],
+  .aurora-bg-light > div:first-child > div[class*="blur-"] {
+    filter: none !important;
+    -webkit-filter: none !important;
+    opacity: 0.5;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   QUICK WIN #5: CSS CONTAINMENT — Isolasi render per section
+   Browser bisa skip repaint section yang tidak berubah
+   ═══════════════════════════════════════════════════════════════════ */
+.sidebar-section-glow {
+  contain: content;
+}
+.mobile-result-page {
+  contain: layout style;
+}
+.history-card,
+.stats-card {
+  contain: layout style;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   QUICK WIN #7: CLS FIX — Stabil min-height textarea + skeleton
+   Mencegah layout shift saat textarea auto-resize atau gambar load
+   ═══════════════════════════════════════════════════════════════════ */
+textarea {
+  min-height: 160px;
+}
+/* Placeholder dimensi untuk gambar hasil generate */
+.mobile-result-page img,
+.output-page-image {
+  aspect-ratio: 210 / 297; /* A4 ratio */
+  width: 100%;
+  height: auto;
 }
