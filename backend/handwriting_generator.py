@@ -2,32 +2,29 @@ import math
 import os
 import random
 import threading
-
 import cv2
 import numpy as np
 import requests
 import pyphen
-# Inisialisasi kamus pemisah suku kata bahasa Indonesia
 dic_id = pyphen.Pyphen(lang='id_ID')
 from PIL import Image, ImageDraw, ImageFont
 import re
 import io
+import matplotlib
+matplotlib.use('Agg') 
 from matplotlib import mathtext
 from PIL import ImageOps
-
 
 def hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
     hex_color = hex_color.lstrip("#")
     return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
 
-
 class HandwritingGenerator:
-    # Improved LRU cache with TTL
-    _image_cache: dict = {}  # key -> (image, timestamp)
-    _cache_order: list = []  # LRU order tracking
+    _image_cache: dict = {}  
+    _cache_order: list = []  
     _MAX_CACHE = 5
     _MAX_CACHE_SIZE_MB = 50
-    _CACHE_TTL_SECONDS = 600  # 10 menit TTL
+    _CACHE_TTL_SECONDS = 600  
     _cache_lock = threading.Lock()
     _latex_cache: dict = {}
     _latex_cache_lock = threading.Lock()
@@ -35,7 +32,6 @@ class HandwritingGenerator:
     def __init__(self, config: dict, folio_path_or_url: str, font_path: str) -> None:
         self.config = config
 
-        # Cek apakah ini URL Cloudinary dari internet atau file lokal
         def load_image(path_or_url):
             import time as _time
             mtime = (
@@ -47,7 +43,6 @@ class HandwritingGenerator:
             now = _time.time()
 
             with HandwritingGenerator._cache_lock:
-                # Evict expired entries (TTL)
                 expired = [
                     k for k, (_, ts) in HandwritingGenerator._image_cache.items()
                     if now - ts > HandwritingGenerator._CACHE_TTL_SECONDS
@@ -57,9 +52,7 @@ class HandwritingGenerator:
                     if k in HandwritingGenerator._cache_order:
                         HandwritingGenerator._cache_order.remove(k)
 
-                # Check cache hit
                 if cache_key in HandwritingGenerator._image_cache:
-                    # Move to end (most recently used)
                     if cache_key in HandwritingGenerator._cache_order:
                         HandwritingGenerator._cache_order.remove(cache_key)
                     HandwritingGenerator._cache_order.append(cache_key)
@@ -73,7 +66,6 @@ class HandwritingGenerator:
                 img = Image.open(path_or_url).convert("RGB")
 
             with HandwritingGenerator._cache_lock:
-                # LRU eviction: remove oldest when full
                 while len(HandwritingGenerator._image_cache) >= HandwritingGenerator._MAX_CACHE:
                     if HandwritingGenerator._cache_order:
                         oldest_key = HandwritingGenerator._cache_order.pop(0)
@@ -88,11 +80,9 @@ class HandwritingGenerator:
             return img.copy()
 
         self.folio_odd = load_image(folio_path_or_url)
-        # Folio genap: pakai folio kedua jika ada, fallback ke folio pertama
         folio_even_path = config.get("folioEvenPath")
         if folio_even_path:
             self.folio_even = load_image(folio_even_path)
-            # Pastikan dimensi folio genap SAMA PERSIS dengan folio ganjil agar config tidak meleset
             if self.folio_even.size != self.folio_odd.size:
                 self.folio_even = self.folio_even.resize(
                     self.folio_odd.size, Image.Resampling.BICUBIC
@@ -100,15 +90,10 @@ class HandwritingGenerator:
         else:
             self.folio_even = self.folio_odd
 
-        # === AUTO RESIZE HD FOLIO (MENCEGAH HANG/TIMEOUT) ===
-        # Standar lebar A4 pada layar adalah sekitar 1240 - 1400 pixel.
-        # Jika gambar HD lebih lebar dari 1400px, kompres di memori agar proses instan!
         MAX_WIDTH = 1400
         if self.folio_odd.width > MAX_WIDTH:
             scale_ratio = MAX_WIDTH / float(self.folio_odd.width)
             new_height = int(self.folio_odd.height * scale_ratio)
-
-            # Resize gambar dengan kualitas tinggi (LANCZOS)
             self.folio_odd = self.folio_odd.resize(
                 (MAX_WIDTH, new_height), Image.Resampling.BICUBIC
             )
@@ -120,7 +105,6 @@ class HandwritingGenerator:
             else:
                 self.folio_even = self.folio_odd
 
-            # === SANGAT PENTING: Sesuaikan koordinat Config agar teks tidak meleset ===
             self.config["startX"] = int(self.config.get("startX", 0) * scale_ratio)
             self.config["startY"] = int(self.config.get("startY", 0) * scale_ratio)
             self.config["lineHeight"] = float(self.config.get("lineHeight", 0) * scale_ratio)
@@ -133,7 +117,6 @@ class HandwritingGenerator:
             if "wordSpacing" in self.config:
                 self.config["wordSpacing"] = int(self.config["wordSpacing"] * scale_ratio)
 
-        # --- FIX BUG 1: Konversi Tipe Data & Clamping (Mencegah Teks Off-Canvas) ---
         img_w, img_h = self.folio_odd.size
         
         self.config["startX"] = float(self.config.get("startX", 70))
@@ -141,12 +124,10 @@ class HandwritingGenerator:
         self.config["lineHeight"] = max(15.0, float(self.config.get("lineHeight", 38)))
         self.config["fontSize"] = int(self.config.get("fontSize", 25))
         
-        # JANGAN biarkan setting melebihi lebar dan tinggi gambar asli!
         self.config["maxWidth"] = min(float(img_w - 20), float(self.config.get("maxWidth", 1100)))
         self.config["pageBottom"] = min(float(img_h - 20), float(self.config.get("pageBottom", 1520)))
-        # --------------------------------------------------------------------------
 
-        self.folio_template = self.folio_odd  # default untuk kompatibilitas
+        self.folio_template = self.folio_odd
 
         self.font_path = font_path
         self.font = ImageFont.truetype(font_path, config["fontSize"])
@@ -154,23 +135,19 @@ class HandwritingGenerator:
         self.word_spacing = int(config.get("wordSpacing", 8))
         self.left_handed = config.get("leftHanded", False)
         self.write_speed = float(config.get("writeSpeed", 0.5))
-        self.slant_angle = float(config.get("slantAngle", 0))  # -15 s/d +15 derajat
-        self._word_slant_offset = 0.0  # variasi kemiringan per kata
+        self.slant_angle = float(config.get("slantAngle", 0))
+        self._word_slant_offset = 0.0
         self.enable_drop_cap = bool(config.get("enableDropCap", False))
-        self.tired_mode = bool(config.get("tiredMode", False))  # degradasi per halaman
+        self.tired_mode = bool(config.get("tiredMode", False))
         self.show_page_number = bool(config.get("showPageNumber", False))
         self.page_number_format = config.get("pageNumberFormat", "- {n} -")
         self.session_seed = random.random()
-        self.total_pages = 1  # diupdate saat generate_all_pages
+        self.total_pages = 1
         self._prev_text_layer = None
-        self.font_cache = {}  # Tambahan: Inisialisasi penyimpanan cache font
+        self.font_cache = {}
 
     def get_baseline_wobble(self, line_index: int) -> float:
-        # PINTAR: Kita hanya mengembalikan "Amplitudo" (tinggi maksimal gelombang)
-        # Angka 1.5 sampai 2.5 piksel sangat aman, tidak akan pernah keluar dari garis folio.
         amplitude = random.uniform(1.5, 2.5)
-        
-        # Kadang gelombangnya mulai dengan naik dulu (1), kadang turun dulu (-1)
         direction = random.choice([-1, 1])
         return amplitude * direction
 
@@ -183,22 +160,19 @@ class HandwritingGenerator:
         Minimal 3 karakter agar bisa diacak.
         """
         if len(word) < 3:
-            return word + word[-1]  # double huruf terakhir
+            return word + word[-1]
 
         method = random.choice(["transpose", "insert", "replace"])
 
         if method == "transpose":
-            # Tukar 2 huruf berdekatan di posisi acak
             idx = random.randint(0, len(word) - 2)
             return word[:idx] + word[idx + 1] + word[idx] + word[idx + 2 :]
 
         elif method == "insert":
-            # Sisipkan huruf duplikat di posisi acak
             idx = random.randint(1, len(word) - 1)
             return word[:idx] + word[idx] + word[idx:]
 
-        else:  # replace
-            # Ganti 1 huruf dengan huruf "bertetangga" di alfabet
+        else:
             idx = random.randint(0, len(word) - 1)
             c = word[idx]
             neighbors = chr(ord(c) - 1) if ord(c) > ord("a") else chr(ord(c) + 1)
@@ -210,7 +184,6 @@ class HandwritingGenerator:
         pressure_delta: negatif = tekan lebih kuat (lebih gelap).
         """
         r, g, b = self.base_color_rgb
-        # UBAH: Kurangi jitter dari 5 menjadi 2 agar warna tinta lebih stabil dan tidak pudar
         jitter = random.gauss(0, 2) + pressure_delta
         return (
             max(0, min(255, int(r + jitter))),
@@ -219,43 +192,45 @@ class HandwritingGenerator:
         )
 
     def render_latex_to_image(self, latex_str, color_rgb):
-        """Merender blok LaTeX dengan Sistem Cache Global agar sangat cepat"""
+        """Merender blok LaTeX dengan Sistem Cache Global agar sangat cepat (Anti-Crash)"""
         target_height = int(self.config["fontSize"] * 1.5) 
         
-        # Buat kunci (key) unik berdasarkan teks rumus, warna, dan ukuran target
-        cache_key = (latex_str, color_rgb, target_height)
+        clean_latex = latex_str.strip("$").replace('\xa0', ' ').strip()
+        
+        cache_key = (clean_latex, color_rgb, target_height)
 
-        # Cek apakah rumus ini sudah pernah dirender sebelumnya
         with HandwritingGenerator._latex_cache_lock:
             if cache_key in HandwritingGenerator._latex_cache:
                 return HandwritingGenerator._latex_cache[cache_key].copy()
 
-        # JIKA BELUM ADA DI CACHE, RENDER DENGAN MATPLOTLIB (Proses berat)
-        buf = io.BytesIO()
-        clean_latex = latex_str.strip("$")
-        mathtext.math_to_image(f"${clean_latex}$", buf, dpi=300, format='png', transparent=True)
-        buf.seek(0)
+        try:
+            buf = io.BytesIO()
+            mathtext.math_to_image(f"${clean_latex}$", buf, dpi=300, format='png', transparent=True)
+            buf.seek(0)
 
-        img = Image.open(buf).convert("RGBA")
-        alpha = img.split()[3]
+            img = Image.open(buf).convert("RGBA")
+            alpha = img.split()[3]
 
-        r, g, b = color_rgb[:3]
-        colored_img = Image.new("RGBA", img.size, (r, g, b, 255))
-        colored_img.putalpha(alpha)
+            r, g, b = color_rgb[:3]
+            colored_img = Image.new("RGBA", img.size, (r, g, b, 255))
+            colored_img.putalpha(alpha)
 
-        ratio = target_height / float(img.height)
-        new_width = int(img.width * ratio)
-        final_img = colored_img.resize((new_width, target_height), Image.Resampling.LANCZOS)
+            ratio = target_height / float(img.height)
+            new_width = int(img.width * ratio)
+            final_img = colored_img.resize((new_width, target_height), Image.Resampling.LANCZOS)
 
-        # SIMPAN HASILNYA KE CACHE AGAR NANTI TIDAK PERLU DIRENDER ULANG
-        with HandwritingGenerator._latex_cache_lock:
-            # Batasi maksimal 200 rumus di memori agar RAM aman
-            if len(HandwritingGenerator._latex_cache) > 200:
-                oldest_key = next(iter(HandwritingGenerator._latex_cache))
-                del HandwritingGenerator._latex_cache[oldest_key]
-            HandwritingGenerator._latex_cache[cache_key] = final_img.copy()
+            with HandwritingGenerator._latex_cache_lock:
+                if len(HandwritingGenerator._latex_cache) > 200:
+                    oldest_key = next(iter(HandwritingGenerator._latex_cache))
+                    del HandwritingGenerator._latex_cache[oldest_key]
+                HandwritingGenerator._latex_cache[cache_key] = final_img.copy()
 
-        return final_img
+            return final_img
+
+        except Exception as e:
+            print(f"[Handwrite AI] Peringatan: Gagal merender LaTeX '{clean_latex}'. Error: {e}")
+            fallback_img = Image.new("RGBA", (10, target_height), (0, 0, 0, 0))
+            return fallback_img
 
     def draw_heavy_strikethrough(self, draw, x_start, x_end, y, font_size):
         """
@@ -263,13 +238,10 @@ class HandwritingGenerator:
         Warna = SAMA PERSIS dengan tinta tulisan (hanya variasi tekanan).
         Tiga lapisan: isi rapat → goresan tebal → diagonal cepat.
         """
-        # Area tutup: dari atas sampai bawah huruf
         top_y = y + int(font_size * 0.05)
         bottom_y = y + int(font_size * 0.95)
         x_l = x_start - random.randint(2, 5)
         x_r = x_end + random.randint(2, 5)
-
-        # ── Lapisan 1: garis horizontal rapat mengisi seluruh area ──────────
         step = random.randint(2, 3)
         fill_y = top_y
         while fill_y <= bottom_y:
@@ -283,7 +255,6 @@ class HandwritingGenerator:
             )
             fill_y += step
 
-        # ── Lapisan 2: 4-6 goresan tebal menyapu (gerak tangan aktif) ───────
         num_heavy = random.randint(4, 6)
         for i in range(num_heavy):
             progress = i / max(1, num_heavy - 1)
@@ -299,7 +270,6 @@ class HandwritingGenerator:
                 width=thick,
             )
 
-        # ── Lapisan 3: 2-3 goresan diagonal (coret cepat, tekanan ringan) ───
         num_diag = random.randint(2, 3)
         for _ in range(num_diag):
             dy = random.randint(int(font_size * 0.15), int(font_size * 0.55))
@@ -341,7 +311,6 @@ class HandwritingGenerator:
             full_width = full_bbox[2] - full_bbox[0]
             gap_after = int(self.config["fontSize"] * 0.35)
 
-            # 👇 PASTIKAN BARIS INI SEJAJAR DENGAN gap_after DI ATASNYA
             if cacat_width + gap_after + full_width <= (available_total - 15):
                 draw.text(
                     (x, y),
@@ -360,7 +329,6 @@ class HandwritingGenerator:
 
         is_paragraph_start = line_index == 0
         ink_level = 1.0 if is_paragraph_start else random.uniform(0.65, 1.0)
-        # Drop Cap: huruf pertama paragraf dibuat jauh lebih besar
         _drop_cap_done = False
 
         tokens = []
@@ -368,7 +336,6 @@ class HandwritingGenerator:
 
         for word in words_with_math:
             if word.startswith('$') and word.endswith('$'):
-                # Masukkan blok LaTeX sebagai satu kesatuan
                 tokens.append(("math", word))
             else:
                 for ch in word:
@@ -382,37 +349,23 @@ class HandwritingGenerator:
         current_word_len = len(text.split(" ")[0]) if text.split(" ") else 1
         word_count_seen = 0
         line_drift_y = 0.0
-        # Variasi kemiringan dan ukuran per kata
         self._word_slant_offset = random.gauss(0, 1.2)
         self._word_size_jitter = random.uniform(0.97, 1.03)
 
         for tok_type, char in tokens:
-            # FIX BUG PECAHAN: Pindahkan kalkulasi Jitter Y & X ke PALING ATAS 
-            # agar saat token "math" masuk, koordinat Y sudah tersedia!
             speed = self.write_speed
             progress = max(0.0, (cursor_x - x) / max(1, available_width))
             wave_offset = math.sin(progress * math.pi * 2) * baseline_wobble
             jitter_y = (random.uniform(-0.1 * (1 + speed), 0.1 * (1 + speed)) + wave_offset)
             jitter_x = random.uniform(-1.2 * (1 + speed), 1.2 * (1 + speed))
-            pen_pressure = 0  # default tekanan pena
+            pen_pressure = 0
 
             if tok_type == "math":
-                # 1. Tentukan warna tinta
                 ink_color = self.ink_vary(pressure_delta=-5)
-
-                # 2. Ubah string LaTeX menjadi gambar
                 math_img = self.render_latex_to_image(char, ink_color)
-
-                # 3. Hitung posisi Y menggunakan jitter_y yang sudah aman
                 paste_y = int(y + self.config["fontSize"] * 0.2) + int(jitter_y)
-
-                # 4. Tempel gambar ke folio
                 text_layer.paste(math_img, (int(cursor_x), paste_y), math_img)
-
-                # 5. Geser kursor X ke kanan sesuai lebar rumus
                 cursor_x += math_img.width + random.uniform(2.0, 5.0)
-
-                # Lanjut ke token berikutnya
                 continue
 
             if tok_type == "space":
@@ -420,7 +373,6 @@ class HandwritingGenerator:
                 word_count_seen += 1
                 if word_count_seen < len(words):
                     current_word_len = max(1, len(words[word_count_seen]))
-                # Kemiringan & Ukuran bergeser sedikit tiap kata
                 self._word_slant_offset = float(
                     np.clip(self._word_slant_offset + random.gauss(0, 0.8), -2.5, 2.5)
                 )
@@ -431,12 +383,8 @@ class HandwritingGenerator:
             speed = self.write_speed
             jitter_x = random.uniform(-1.2 * (1 + speed), 1.2 * (1 + speed))
             progress = max(0.0, (cursor_x - x) / max(1, available_width))
-            pen_pressure = 0  # default; dioverride di dalam if char.strip()
+            pen_pressure = 0
 
-            # PINTAR: Gelombang Sinus (Sine Wave)
-            # progress berjalan dari 0.0 (awal) ke 1.0 (akhir baris).
-            # math.pi * 2 memastikan gelombang membentuk 1 siklus penuh (Tengah -> Naik -> Turun -> Tengah)
-            # Hasilnya: Tulisan tidak akan pernah miring ke bawah secara permanen!
             wave_offset = math.sin(progress * math.pi * 2) * baseline_wobble
             
             jitter_y = (
@@ -452,16 +400,11 @@ class HandwritingGenerator:
                 weights=[1, 2, 4, 8, 8, 8, 8, 4, 2, 1],
             )[0]
 
-            # ── UKURAN LEBIH BESAR DI AWAL PARAGRAF ─────────────────────────
-            # Semangat baru saat mulai paragraf → huruf sedikit lebih besar,
-            # lalu menyusut perlahan ke ukuran normal dalam 8 kata pertama
             paragraph_bonus = 0
             if is_paragraph_start and word_count_seen < 8:
-                fade = 1.0 - (word_count_seen / 8.0)  # 1.0 → 0.0 dalam 8 kata
+                fade = 1.0 - (word_count_seen / 8.0)
                 paragraph_bonus = int(random.uniform(1.5, 3.5) * fade)
-            # ────────────────────────────────────────────────────────────────
 
-            # Terapkan jitter per kata pada perhitungan ukuran font
             base_calculated_size = (
                 self.config["fontSize"] + size_delta + cap_bonus + paragraph_bonus
             )
@@ -469,8 +412,6 @@ class HandwritingGenerator:
                 10, int(base_calculated_size * getattr(self, "_word_size_jitter", 1.0))
             )
 
-            # ── DROP CAP ─────────────────────────────────────────────────────
-            # Huruf pertama paragraf dibuat 1.5x lebih besar
             is_drop_cap_char = (
                 self.enable_drop_cap
                 and is_paragraph_start
@@ -482,9 +423,7 @@ class HandwritingGenerator:
             if is_drop_cap_char:
                 font_size = int(self.config["fontSize"] * 1.5)
                 _drop_cap_done = True
-            # ────────────────────────────────────────────────────────────────
 
-            # Gunakan font dari cache, batasi max 30 ukuran agar tidak memory leak
             if font_size not in self.font_cache:
                 if len(self.font_cache) > 30:
                     oldest = next(iter(self.font_cache))
@@ -506,13 +445,11 @@ class HandwritingGenerator:
             if char.strip():
                 word_progress = min(1.0, word_char_idx / max(1, current_word_len))
 
-                # EFEK TINTA HABIS DIHAPUS: Tekanan diatur stabil agar tinta selalu hitam/pekat
                 pen_pressure = -10
 
                 base_jitter = random.gauss(0, 2)
                 shift = int(pen_pressure + base_jitter)
                 
-                # Jaga agar nilai RGB tetap gelap dengan membatasi nilai shift maksimum
                 shift = min(15, shift) 
 
                 r, g, b = self.base_color_rgb
@@ -526,34 +463,27 @@ class HandwritingGenerator:
 
             fill_color = (*char_color, alpha)
 
-            # Titik tumpu baseline
             y_baseline = y + self.config["fontSize"] * 0.82 + jitter_y
 
-            # --- Variasi Tinta Kering & Tekanan Kertas ---
-            # Selalu set default dulu agar spasi (char == " ") tidak error
             r_c, g_c, b_c = (
                 fill_color[:3]
                 if len(fill_color) > 3
                 else (fill_color[0], fill_color[1], fill_color[2])
             )
             dynamic_alpha = random.randint(245, 255)
-            dynamic_fill = fill_color  # default fallback
+            dynamic_fill = fill_color
 
             if char.strip():
-                # Variasi Ketebalan & Tinta Macet (Opacity Fluctuation)
                 r_c, g_c, b_c = fill_color[:3] if len(fill_color) > 3 else fill_color
-
-                # Tinta normal pekat konsisten, tanpa ada kepudaran / kehabisan tinta
                 dynamic_alpha = 255
 
                 dynamic_fill = (r_c, g_c, b_c, dynamic_alpha)
 
-                # Efek Tekanan Kertas (Emboss/Indentation)
                 if pen_pressure > 3:
                     draw.text(
                         (cursor_x + jitter_x, y_baseline + 1),
                         char,
-                        fill=(255, 255, 255, 40),  # Highlight putih
+                        fill=(255, 255, 255, 40),
                         font=char_font,
                         anchor="ls",
                     )
@@ -562,7 +492,6 @@ class HandwritingGenerator:
             paste_x = 0
             paste_y = 0
 
-            # === 1. KEMIRINGAN ASLI (OPTIMASI BUFFER PER KATA) ===
             if getattr(self, "slant_angle", 0) != 0 and char.strip():
                 char_w = int(font_size * 2.5)
                 char_h = int(font_size * 2.5)
@@ -579,7 +508,6 @@ class HandwritingGenerator:
                     anchor="ms",
                 )
 
-                # RUMUS SKEWING DENGAN INTERPOLASI BILINEAR (LEBIH CEPAT DARI BICUBIC)
                 effective_slant = self.slant_angle + self._word_slant_offset
                 slant_rad = math.radians(-effective_slant)
                 m = math.tan(slant_rad)
@@ -614,9 +542,7 @@ class HandwritingGenerator:
                     anchor="ls",
                 )
 
-            # --- FITUR BARU: Efek Bolpoin Realistis (Mblobor & Ketebalan Ekstra) ---
             if char.strip():
-                # 1. Micro-bolding: Jika tekanan tangan sedang kuat, bolpoin sedikit lebih tebal
                 if pen_pressure > 5 and random.random() < 0.25:
                     bold_offset = random.choice([0.5, 1.0])
                     if getattr(self, "slant_angle", 0) != 0 and skewed_img is not None:
@@ -634,7 +560,6 @@ class HandwritingGenerator:
                             anchor="ls",
                         )
 
-            # === 2. UPDATE KERNING (Letter Spacing Variation - Claude Poin 3) ===
             char_width = draw.textlength(char, font=char_font)
 
             if tok_type == "space":
@@ -819,7 +744,6 @@ class HandwritingGenerator:
         arr = np.array(image, dtype=np.float32)
         h, w = arr.shape[:2]
 
-        # === 1. CAHAYA TIDAK RATA (UNEVEN LIGHTING) ===
         light_x = random.uniform(0.1, 0.9)
         light_y = random.uniform(-0.2, 0.3)
         X, Y = np.meshgrid(np.linspace(0, 1, w), np.linspace(0, 1, h))
@@ -832,7 +756,6 @@ class HandwritingGenerator:
         arr[:, :, 1] *= light_map
         arr[:, :, 2] *= light_map
 
-        # === 2. VIGNETTE LENSA KAMERA ===
         cx, cy = w / 2, h / 2
         Y_idx, X_idx = np.ogrid[:h, :w]
         dist_from_center = np.sqrt(((X_idx - cx) / cx) ** 2 + ((Y_idx - cy) / cy) ** 2)
@@ -841,11 +764,9 @@ class HandwritingGenerator:
         arr[:, :, 1] *= vignette_mask
         arr[:, :, 2] *= vignette_mask
 
-        # === 3. SENSOR NOISE (Grain Kamera HP) ===
         noise = np.random.normal(0, 2.5, arr.shape)
         arr = arr + noise
 
-        # === 4. EFEK KERTAS KUSUT / TERLIPAT (Jika diaktifkan di UI) ===
         if self.config.get("paperTexture", False):
             fold_map = np.ones((h, w), dtype=np.float32)
 
@@ -896,7 +817,6 @@ class HandwritingGenerator:
         self._page_margin_offset = 0
         self.session_seed = random.uniform(0, 100)
         
-        # --- FITUR BARU: GRADUAL TIRED MODE ---
         if self.tired_mode and self.total_pages > 1:
             fatigue = (page_number - 1) / max(1, self.total_pages - 1)
             self._tired_fatigue = fatigue
@@ -919,7 +839,6 @@ class HandwritingGenerator:
             self.folio_odd.copy() if page_number % 2 == 1 else self.folio_even.copy()
         )
 
-        # --- [BARU] EFEK TINTA TEMBUS (SHOW-THROUGH) ---
         if (
             page_number % 2 == 0
             and self._prev_text_layer is not None
@@ -953,59 +872,39 @@ class HandwritingGenerator:
 
         text_np = np.array(text_layer)
 
-        # 1. Efek Bleeding normal (tinta sedikit meresap ke serat kertas)
         blurred_np = cv2.GaussianBlur(text_np, (3, 3), 0.5)
         bleeding_np = cv2.addWeighted(text_np, 0.80, blurred_np, 0.20, 0)
 
-        # 2. FITUR BARU: Efek Smudge (Tangan menggesek teks asimetris)
         kernel_size = 9
         kernel_motion_blur = np.zeros((kernel_size, kernel_size))
         
-        # PINTAR: Blur hanya menyapu ke arah kanan (menyimulasikan tangan kanan yang menulis)
         mid = int((kernel_size - 1) / 2)
         kernel_motion_blur[mid, mid:] = np.ones(kernel_size - mid)
         kernel_motion_blur = kernel_motion_blur / np.sum(kernel_motion_blur)
 
         smudge_np = cv2.filter2D(bleeding_np, -1, kernel_motion_blur)
 
-        # Jika mode Kidal aktif, gesekan tangan menyapu teks yang baru ditulis lebih tebal!
         smudge_weight = 0.20 if getattr(self, "left_handed", False) else 0.08
 
-        # Gabungkan lapisan debu tinta (smudge) ke teks utama
         final_text_np = cv2.addWeighted(
             bleeding_np, 1.0 - smudge_weight, smudge_np, smudge_weight, 0
         )
         text_layer = Image.fromarray(final_text_np)
 
-        # 3. MULTIPLY BLEND EFEK TINTA MERESAP (NumPy Matrix Math)
-        # Ubah kertas dan teks menjadi matriks float32 agar presisi saat dihitung
         page_np = np.array(folio.copy().convert("RGB")).astype(np.float32)
         text_rgba_np = np.array(text_layer).astype(np.float32)
-
-        # Pisahkan channel RGB (Warna Tinta) dan A (Transparansi/Goresan)
         text_rgb = text_rgba_np[:, :, :3]
-        text_alpha = text_rgba_np[:, :, 3:4] / 255.0  # Normalisasi alpha ke 0.0 - 1.0
-
-        # Rumus Multiply Blend murni: (Kertas * Tinta) / 255
-        # Ini membuat garis folio yang gelap akan tetap gelap meski ditimpa tinta
+        text_alpha = text_rgba_np[:, :, 3:4] / 255.0
         multiply_effect = (page_np * text_rgb) / 255.0
-
-        # Aplikasikan Multiply Blend HANYA pada area yang ada tintanya (menggunakan Alpha Mask)
-        # Area kosong (alpha=0) = tetap kertas asli. Area tinta (alpha=1) = efek multiply.
         final_blended_np = (page_np * (1.0 - text_alpha)) + (
             multiply_effect * text_alpha
         )
-
-        # Kembalikan matriks ke format gambar standar
         page = Image.fromarray(np.clip(final_blended_np, 0, 255).astype(np.uint8))
 
         if self.show_page_number:
             self._draw_page_number(page, page_number)
-
-        # Simpan text_layer untuk efek tinta tembus di halaman berikutnya
         self._prev_text_layer = text_layer.copy()
 
-        # ── Watermark kustom opsional ────────────────────────────────────────
         watermark_text = self.config.get("watermarkText", "").strip()
         if watermark_text:
             page = self._draw_watermark(page, watermark_text)
@@ -1054,19 +953,14 @@ class HandwritingGenerator:
             except Exception:
                 wm_font = ImageFont.load_default()
 
-            # Ukur lebar teks watermark
             bbox = draw.textbbox((0, 0), text, font=wm_font)
             text_w = bbox[2] - bbox[0]
             text_h = bbox[3] - bbox[1]
-
-            # Buat layer teks watermark lalu rotate diagonal
             text_img = Image.new("RGBA", (text_w + 40, text_h + 40), (0, 0, 0, 0))
             text_drw = ImageDraw.Draw(text_img)
-            # Opacity sangat rendah: alpha = ~13 dari 255 (≈5%)
             text_drw.text((20, 20), text, fill=(80, 80, 80, 25), font=wm_font)
             rotated = text_img.rotate(30, expand=True)
 
-            # Tile watermark agar menutupi seluruh halaman
             tile_w, tile_h = rotated.size
             step_x = max(tile_w, img_w // 2)
             step_y = max(tile_h, img_h // 3)
@@ -1074,7 +968,6 @@ class HandwritingGenerator:
                 for tx in range(-tile_w, img_w + tile_w, step_x):
                     overlay.paste(rotated, (tx, ty), rotated)
 
-            # Composite overlay ke image asli
             result = Image.alpha_composite(image.convert("RGBA"), overlay)
             return result.convert("RGB")
 
