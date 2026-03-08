@@ -29,6 +29,8 @@ class HandwritingGenerator:
     _MAX_CACHE_SIZE_MB = 50
     _CACHE_TTL_SECONDS = 600  # 10 menit TTL
     _cache_lock = threading.Lock()
+    _latex_cache: dict = {}
+    _latex_cache_lock = threading.Lock()
 
     def __init__(self, config: dict, folio_path_or_url: str, font_path: str) -> None:
         self.config = config
@@ -217,11 +219,20 @@ class HandwritingGenerator:
         )
 
     def render_latex_to_image(self, latex_str, color_rgb):
-        """Merender blok LaTeX menjadi gambar RGBA transparan sesuai warna tinta"""
+        """Merender blok LaTeX dengan Sistem Cache Global agar sangat cepat"""
+        target_height = int(self.config["fontSize"] * 1.5) 
+        
+        # Buat kunci (key) unik berdasarkan teks rumus, warna, dan ukuran target
+        cache_key = (latex_str, color_rgb, target_height)
+
+        # Cek apakah rumus ini sudah pernah dirender sebelumnya
+        with HandwritingGenerator._latex_cache_lock:
+            if cache_key in HandwritingGenerator._latex_cache:
+                return HandwritingGenerator._latex_cache[cache_key].copy()
+
+        # JIKA BELUM ADA DI CACHE, RENDER DENGAN MATPLOTLIB (Proses berat)
         buf = io.BytesIO()
-        # Matplotlib merender rumus (hilangkan tanda $ di awal dan akhir untuk mathtext)
         clean_latex = latex_str.strip("$")
-        # Format mathtext butuh r"$...$"
         mathtext.math_to_image(f"${clean_latex}$", buf, dpi=300, format='png', transparent=True)
         buf.seek(0)
 
@@ -232,12 +243,19 @@ class HandwritingGenerator:
         colored_img = Image.new("RGBA", img.size, (r, g, b, 255))
         colored_img.putalpha(alpha)
 
-        # Sesuaikan tinggi equation dengan font
-        target_height = int(self.config["fontSize"] * 1.5) 
         ratio = target_height / float(img.height)
         new_width = int(img.width * ratio)
+        final_img = colored_img.resize((new_width, target_height), Image.Resampling.LANCZOS)
 
-        return colored_img.resize((new_width, target_height), Image.Resampling.LANCZOS)
+        # SIMPAN HASILNYA KE CACHE AGAR NANTI TIDAK PERLU DIRENDER ULANG
+        with HandwritingGenerator._latex_cache_lock:
+            # Batasi maksimal 200 rumus di memori agar RAM aman
+            if len(HandwritingGenerator._latex_cache) > 200:
+                oldest_key = next(iter(HandwritingGenerator._latex_cache))
+                del HandwritingGenerator._latex_cache[oldest_key]
+            HandwritingGenerator._latex_cache[cache_key] = final_img.copy()
+
+        return final_img
 
     def draw_heavy_strikethrough(self, draw, x_start, x_end, y, font_size):
         """
@@ -544,18 +562,15 @@ class HandwritingGenerator:
             paste_x = 0
             paste_y = 0
 
-            # === 1. KEMIRINGAN ASLI (TRUE SKEWING) ===
+            # === 1. KEMIRINGAN ASLI (OPTIMASI BUFFER PER KATA) ===
             if getattr(self, "slant_angle", 0) != 0 and char.strip():
-                # PERBESAR KANVAS jadi 3x lipat agar ekor huruf aman
-                char_w = int(font_size * 3)
-                char_h = int(font_size * 3)
+                char_w = int(font_size * 2.5)
+                char_h = int(font_size * 2.5)
                 temp_img = Image.new("RGBA", (char_w, char_h), (0, 0, 0, 0))
                 temp_draw = ImageDraw.Draw(temp_img)
 
-                # Titik tengah kanvas
                 temp_y = int(char_h * 0.6)
 
-                # Gambar huruf menggunakan tinta dinamis (dynamic_fill)
                 temp_draw.text(
                     (char_w // 2, temp_y),
                     char,
@@ -564,25 +579,24 @@ class HandwritingGenerator:
                     anchor="ms",
                 )
 
-                # Rumus Matrix Affine untuk Skewing X
+                # RUMUS SKEWING DENGAN INTERPOLASI BILINEAR (LEBIH CEPAT DARI BICUBIC)
                 effective_slant = self.slant_angle + self._word_slant_offset
                 slant_rad = math.radians(-effective_slant)
                 m = math.tan(slant_rad)
                 x_shift = temp_y * m
 
-                # Transformasi kemiringan!
                 skewed_img = temp_img.transform(
                     (char_w, char_h),
                     Image.AFFINE,
                     (1, m, -x_shift, 0, 1, 0),
-                    resample=Image.BICUBIC,
+                    resample=Image.Resampling.BILINEAR, 
                 )
 
                 paste_x = int(cursor_x + jitter_x - char_w // 2)
                 paste_y = int(y_baseline - temp_y)
-                text_layer.paste(skewed_img, (paste_x, paste_y), skewed_img)
+                
+                text_layer.alpha_composite(skewed_img, (paste_x, paste_y))
             else:
-                # Jika angle 0, gambar normal menggunakan tinta dinamis
                 draw.text(
                     (cursor_x + jitter_x, y_baseline),
                     char,
@@ -627,25 +641,18 @@ class HandwritingGenerator:
                 extra = self.word_spacing + random.uniform(-1.5, 3.0)
                 cursor_x += char_width + extra
             else:
-                # Variasi jarak antar huruf
                 LONG_TAIL_CHARS = set("frvwy")
 
-                # ── RAPAT DI AKHIR BARIS + End-of-line Lifting ────────────
                 line_fill_ratio = (cursor_x - x) / max(1, available_width)
                 end_squeeze = 0.0
                 if line_fill_ratio > 0.85:
                     squeeze_strength = (line_fill_ratio - 0.85) / 0.15
                     end_squeeze = -random.uniform(0.1, 0.5) * squeeze_strength
 
-                # Dibuang: End-of-line lifting agar tinta tetap tebal di ujung
-                # ────────────────────────────────────────────────────────────
-
                 if char in LONG_TAIL_CHARS:
-                    # Huruf ekor panjang: sedikit rapat tapi tidak terlalu
                     letter_jitter = random.uniform(-1.5, 0.5) + end_squeeze
                     cursor_x += char_width + letter_jitter
                 else:
-                    # Semua huruf lain: jarak normal dengan sedikit variasi
                     letter_jitter = random.uniform(0.5, 2.5) + end_squeeze
                     cursor_x += char_width + letter_jitter
 
@@ -654,10 +661,8 @@ class HandwritingGenerator:
     def calculate_text_width(self, text: str) -> float:
         """Estimasi lebar teks termasuk wordSpacing (Fix untuk Pillow)"""
         try:
-            # getlength jauh lebih akurat dari getbbox karena menghitung 'advance width' (termasuk spasi)
             base_width = self.font.getlength(text)
         except AttributeError:
-            # Fallback jika menggunakan versi Pillow lama
             base_width = self.font.getsize(text)[0]
             
         extra = text.count(" ") * self.word_spacing
@@ -669,7 +674,6 @@ class HandwritingGenerator:
         
         for paragraph in text.split("\n"):
             if not paragraph.strip():
-                # Cegah baris kosong terbuat di awal halaman baru
                 if len(current_lines) == 0:
                     continue
 
@@ -685,7 +689,6 @@ class HandwritingGenerator:
             margin_jitter = 0
             current_line = ""
             
-            # FIX BUG 3: Gunakan paragraph_line_idx agar indentasi tidak reset saat pindah halaman
             paragraph_line_idx = 0 
 
             words_with_math = re.findall(r'\$.*?\$|\S+', paragraph)
@@ -695,7 +698,6 @@ class HandwritingGenerator:
 
                 current_max_w = max_w
                 if paragraph_line_idx == 0:
-                    # Indentasi HANYA berlaku di baris pertama sebuah paragraf
                     current_max_w = max_w - int(self.config["fontSize"] * 2.0)
 
                 if self.calculate_text_width(test_line_exact) > current_max_w and current_line:
@@ -814,26 +816,18 @@ class HandwritingGenerator:
         2. Soft Camera Vignette (Pinggiran lensa sedikit gelap)
         3. Smartphone Sensor Grain (Noise halus)
         """
-        # Ubah ke float32 agar kalkulasi perkalian cahaya lebih presisi
         arr = np.array(image, dtype=np.float32)
         h, w = arr.shape[:2]
 
         # === 1. CAHAYA TIDAK RATA (UNEVEN LIGHTING) ===
-        # Membuat titik cahaya acak (misal lampu dari arah kiri atas atau kanan atas)
         light_x = random.uniform(0.1, 0.9)
         light_y = random.uniform(-0.2, 0.3)
-
-        # Buat grid koordinat
         X, Y = np.meshgrid(np.linspace(0, 1, w), np.linspace(0, 1, h))
 
-        # Hitung jarak tiap pixel ke sumber cahaya
         distance = np.sqrt((X - light_x) ** 2 + (Y - light_y) ** 2)
 
-        # Buat map gradasi cahaya (1.06 = sedikit lebih terang, 0.88 = sedikit gelap)
-        # Bagian yang dekat sumber cahaya akan terang, yang jauh perlahan menggelap
         light_map = np.clip(1.06 - (distance * 0.22), 0.88, 1.1)
 
-        # Aplikasikan cahaya ke semua warna (RGB)
         arr[:, :, 0] *= light_map
         arr[:, :, 1] *= light_map
         arr[:, :, 2] *= light_map
@@ -842,28 +836,22 @@ class HandwritingGenerator:
         cx, cy = w / 2, h / 2
         Y_idx, X_idx = np.ogrid[:h, :w]
         dist_from_center = np.sqrt(((X_idx - cx) / cx) ** 2 + ((Y_idx - cy) / cy) ** 2)
-
-        # Pinggiran pojok akan sedikit lebih gelap natural
         vignette_mask = 1.0 - (np.clip(dist_from_center - 0.55, 0, 0.6) * 0.25)
         arr[:, :, 0] *= vignette_mask
         arr[:, :, 1] *= vignette_mask
         arr[:, :, 2] *= vignette_mask
 
         # === 3. SENSOR NOISE (Grain Kamera HP) ===
-        # Kamera HP yang memotret kertas teks biasanya menghasilkan grain tipis (ISO noise)
         noise = np.random.normal(0, 2.5, arr.shape)
         arr = arr + noise
 
         # === 4. EFEK KERTAS KUSUT / TERLIPAT (Jika diaktifkan di UI) ===
         if self.config.get("paperTexture", False):
-            # Buat shadow map untuk lipatan (1.0 = tidak ada bayangan, < 1.0 = gelap)
             fold_map = np.ones((h, w), dtype=np.float32)
 
-            # a. Lipatan Vertikal Acak
             fold_x = random.randint(int(w * 0.3), int(w * 0.7))
             angle_offset = random.randint(-150, 150)
 
-            # Optimisasi: Gambar garis tebal hitam, lalu blur dengan trik resize (10x lebih cepat)
             cv2.line(
                 fold_map,
                 (fold_x, 0),
@@ -871,14 +859,12 @@ class HandwritingGenerator:
                 0.88,
                 thickness=random.randint(200, 400),
             )
-            # Trik cepat: perkecil ukuran 1/4 -> blur ringan -> kembalikan ke ukuran asli
             small_fold = cv2.resize(
                 fold_map, (w // 4, h // 4), interpolation=cv2.INTER_LINEAR
             )
             small_blur = cv2.GaussianBlur(small_fold, (31, 31), 0)
             fold_map = cv2.resize(small_blur, (w, h), interpolation=cv2.INTER_CUBIC)
 
-            # b. Sesekali tambahkan lipatan Horizontal acak (50% peluang)
             if random.random() > 0.5:
                 fold_h_map = np.ones((h, w), dtype=np.float32)
                 fold_y = random.randint(int(h * 0.3), int(h * 0.7))
@@ -899,36 +885,28 @@ class HandwritingGenerator:
 
                 fold_map *= fold_h_map
 
-            # Aplikasikan bayangan lipatan (fold_map) ke semua channel warna (RGB)
             fold_map = np.clip(fold_map, 0, 1)
             arr[:, :, 0] *= fold_map
             arr[:, :, 1] *= fold_map
             arr[:, :, 2] *= fold_map
-
-        # Kembalikan matriks float32 ke format gambar standar (uint8)
         result = np.clip(arr, 0, 255).astype(np.uint8)
         return Image.fromarray(result)
 
     def generate_page(self, lines: list[str], page_number: int = 1) -> Image.Image:
-        self._page_margin_offset = 0  # Dihapus agar margin halaman konstan
-        # Seed baseline berbeda tiap halaman agar gelombang tidak identik
+        self._page_margin_offset = 0
         self.session_seed = random.uniform(0, 100)
         
         # --- FITUR BARU: GRADUAL TIRED MODE ---
         if self.tired_mode and self.total_pages > 1:
-            # Rasa lelah bertambah PELAN-PELAN dari halaman 1 (0%) sampai halaman terakhir (100%)
             fatigue = (page_number - 1) / max(1, self.total_pages - 1)
             self._tired_fatigue = fatigue
             
-            # 1. Semakin lelah, nulis semakin ngebut & ceroboh
             self.write_speed = min(
                 1.5, self.config.get("writeSpeed", 0.5) + (fatigue * 0.8)
             )
             
-            # 2. Semakin lelah, spasi antar kata makin merenggang/berantakan
             self.word_spacing = int(self.config.get("wordSpacing", 8) + (fatigue * 12))
             
-            # 3. Semakin lelah, kemiringan tulisan makin error/melenceng ke bawah
             base_slant = float(self.config.get("slantAngle", 0))
             self.slant_angle = base_slant + (fatigue * random.uniform(2, 6))
         else:
@@ -949,30 +927,25 @@ class HandwritingGenerator:
         ):
             from PIL import ImageFilter
 
-            # Balik teks halaman sebelumnya dan beri sedikit blur asli PIL
             bleed = self._prev_text_layer.copy().transpose(Image.FLIP_LEFT_RIGHT)
             bleed = bleed.filter(ImageFilter.GaussianBlur(radius=1.5))
 
-            # Kurangi opacity menjadi sangat tipis (~6-8%)
             r, g, b, a = bleed.split()
             a = a.point(lambda x: int(x * 0.08))
             bleed.putalpha(a)
 
-            # Tempel bayangan ke folio genap
             folio.paste(bleed, (0, 0), mask=bleed)
-        # -----------------------------------------------
 
         text_layer = Image.new("RGBA", folio.size, (0, 0, 0, 0))
-        draw = ImageDraw.Draw(text_layer, "RGBA")  # <--- INI YANG TADI HILANG!
+        draw = ImageDraw.Draw(text_layer, "RGBA")
 
         for line in lines:
             if line["text"]:
-                # Margin kiri diset statis sesuai config agar konsisten di setiap halaman
                 x_start = self.config["startX"]
                 self.add_humanizer_effect(
                     text_layer,
                     draw,
-                    line["text"],  # <--- Tambahkan text_layer di sini!
+                    line["text"],
                     x_start,
                     line["y"],
                     line.get("line_index", 0),
