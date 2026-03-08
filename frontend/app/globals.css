@@ -1876,6 +1876,10 @@ html:not(.dark) .sidebar-section-glow::before {
 }
 
 /* Buat elemen palsu (overlay) di atas sidebar untuk meniru efek mask */
+#sidebar-settings {
+  position: relative;
+}
+
 #sidebar-settings::after {
   content: '';
   position: absolute;
@@ -1884,14 +1888,14 @@ html:not(.dark) .sidebar-section-glow::before {
   right: 0;
   height: 60px; /* Tinggi area fade out */
   pointer-events: none; /* Agar elemen di bawahnya tetap bisa diklik */
+  z-index: 50; /* Gunakan 50 agar berada di atas konten sidebar */
   
-  /* Gradien dari transparan ke warna background sidebar */
+  /* Gradien dari transparan ke warna background sidebar Light Mode */
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(250, 248, 255, 0.95) 100% /* Warna light mode Anda */
+    rgba(250, 248, 255, 0.98) 100% 
   );
-  z-index: 10;
 }
 
 /* Penyesuaian gradien untuk Dark Mode */
@@ -1899,7 +1903,7 @@ html:not(.dark) .sidebar-section-glow::before {
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(15, 15, 20, 0.98) 100% /* Warna dark mode Anda */
+    rgba(0, 0, 0, 0.98) 100% 
   );
 }
 
@@ -2618,7 +2622,9 @@ body::after {
    Browser bisa skip repaint section yang tidak berubah
    ═══════════════════════════════════════════════════════════════════ */
 .sidebar-section-glow {
-  contain: content;
+  /* Ganti 'content' dengan 'layout style' agar browser tidak menghapus 
+     elemen dari memori saat sedang di-scroll keluar layar */
+  contain: layout style;
 }
 .mobile-result-page {
   contain: layout style;
