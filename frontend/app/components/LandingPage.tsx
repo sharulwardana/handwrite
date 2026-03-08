@@ -74,9 +74,11 @@ function LandingPage({ isDark, tp, handleLogin, setShowEditor }: LandingPageProp
                 </motion.div>
 
                 {/* 4. Interaktif Before/After Slider */}
-                <motion.div variants={{ hidden: { opacity: 0, scale: 0.95, y: 30 }, show: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 25 } } } as Variants} className="w-full mb-16">
-                    <BeforeAfterSlider />
-                    <p className="text-[11px] text-gray-500 mt-4 uppercase tracking-widest font-bold">Geser slider untuk melihat keajaiban 👆</p>
+                <motion.div variants={{ hidden: { opacity: 0, scale: 0.95, y: 30 }, show: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 25 } } } as Variants} className="w-full mb-16 min-h-[250px] sm:min-h-[350px] flex items-center justify-center">
+                    <div className="w-full flex-col flex items-center">
+                        <BeforeAfterSlider />
+                        <p className="text-[11px] text-gray-500 mt-4 uppercase tracking-widest font-bold">Geser slider untuk melihat keajaiban 👆</p>
+                    </div>
                 </motion.div>
 
                 {/* 5. Tombol Aksi */}

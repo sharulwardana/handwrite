@@ -1,9 +1,15 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useRef } from "react";
+import { motion, useMotionValue, useTransform } from "framer-motion";
 
 function BeforeAfterSliderInner() {
-    const [sliderPosition, setSliderPosition] = useState(50);
+    // INP OPTIMIZATION: Ganti useState dengan useMotionValue (tidak me-render ulang React Tree per piksel)
+    const rawX = useMotionValue(50);
     const containerRef = useRef<HTMLDivElement>(null);
+
+    // Transform rawX (0-100) menjadi string persentase yang aman untuk CSS
+    const sliderWidth = useTransform(rawX, v => `${v}%`);
+    const lineLeft = useTransform(rawX, v => `calc(${v}% - 1px)`);
 
     const handleMouseDown = (e: React.MouseEvent) => {
         if (!containerRef.current) return;
@@ -11,7 +17,7 @@ function BeforeAfterSliderInner() {
 
         const onMouseMove = (me: MouseEvent) => {
             const x = Math.max(0, Math.min(me.clientX - rect.left, rect.width));
-            setSliderPosition((x / rect.width) * 100);
+            rawX.set((x / rect.width) * 100);
         };
 
         const onMouseUp = () => {
@@ -23,7 +29,7 @@ function BeforeAfterSliderInner() {
         window.addEventListener('mouseup', onMouseUp);
 
         const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-        setSliderPosition((x / rect.width) * 100);
+        rawX.set((x / rect.width) * 100);
     };
 
     const handleTouchStart = (e: React.TouchEvent) => {
@@ -32,7 +38,7 @@ function BeforeAfterSliderInner() {
 
         const onTouchMove = (te: TouchEvent) => {
             const x = Math.max(0, Math.min(te.touches[0].clientX - rect.left, rect.width));
-            setSliderPosition((x / rect.width) * 100);
+            rawX.set((x / rect.width) * 100);
         };
 
         const onTouchEnd = () => {
@@ -44,7 +50,7 @@ function BeforeAfterSliderInner() {
         window.addEventListener('touchend', onTouchEnd);
 
         const x = Math.max(0, Math.min(e.touches[0].clientX - rect.left, rect.width));
-        setSliderPosition((x / rect.width) * 100);
+        rawX.set((x / rect.width) * 100);
     };
 
     return (
@@ -65,28 +71,28 @@ function BeforeAfterSliderInner() {
             </div>
 
             {/* Gambar BEFORE (Teks Ketikan) - Lapisan Atas yang Terpotong */}
-            <div
+            <motion.div
                 className="absolute inset-0 bg-[#000000] flex items-center justify-center p-8 sm:p-12 border-r-[3px] border-violet-500 overflow-hidden shadow-[10px_0_20px_rgba(0,0,0,0.5)]"
-                style={{ width: `${sliderPosition}%` }}
+                style={{ width: sliderWidth }}
             >
                 <div className="w-full max-w-3xl absolute left-8 sm:left-12 pr-8">
                     <p className="font-mono text-sm sm:text-lg text-gray-300 leading-relaxed text-left">
                         &quot;Pendidikan adalah senjata paling ampuh yang bisa kamu gunakan untuk mengubah dunia. Setiap huruf yang kamu tulis adalah bukti bahwa kamu peduli pada masa depanmu.&quot;
                     </p>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Garis & Tombol Slider */}
-            <div
+            <motion.div
                 className="absolute top-0 bottom-0 w-0.5 flex items-center justify-center pointer-events-none transition-transform"
-                style={{ left: `calc(${sliderPosition}% - 1px)` }}
+                style={{ left: lineLeft }}
             >
                 <div className="w-10 h-10 bg-white rounded-full shadow-[0_0_20px_rgba(139,92,246,0.5)] flex items-center justify-center text-violet-600 transition-transform group-hover:scale-110">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l-4 4 4 4m8-8l4 4-4 4" />
                     </svg>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 }

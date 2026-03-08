@@ -15,7 +15,7 @@
         "critters": "^0.0.23",
         "docx": "^9.5.3",
         "file-saver": "^2.0.5",
-        "framer-motion": "^12.34.2",
+        "framer-motion": "^12.35.1",
         "jspdf": "^4.1.0",
         "jszip": "^3.10.1",
         "lucide-react": "^0.263.1",
