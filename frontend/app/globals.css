@@ -2543,17 +2543,37 @@ body::after {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   QUICK WIN #2: DISABLE BACKDROP-BLUR ON LOW-END MOBILE
-   Touchscreen + small viewport = likely budget device.
-   backdrop-filter: blur() sangat berat di GPU mobile budget.
+   QUICK WIN #2: DISABLE BACKDROP-BLUR & SHADOWS ON LOW-END MOBILE
+   Matikan total blur dan animasi bayangan berat untuk performa INP maksimal
    ═══════════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) and (hover: none) and (pointer: coarse) {
-  /* Hanya disable blur yang berat (>= xl), biarkan blur ringan tetap */
   .backdrop-blur-xl,
   .backdrop-blur-2xl,
-  .backdrop-blur-3xl {
-    backdrop-filter: blur(8px) !important;
-    -webkit-backdrop-filter: blur(8px) !important;
+  .backdrop-blur-3xl,
+  .glass-panel,
+  .liquid-glass-btn,
+  .liquid-glass-dropdown,
+  header {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  
+  /* Berikan warna solid sebagai pengganti blur agar teks tetap terbaca */
+  .dark .backdrop-blur-xl, .dark .backdrop-blur-2xl, .dark .backdrop-blur-3xl {
+    background-color: rgba(15, 15, 20, 0.98) !important;
+  }
+  html:not(.dark) .backdrop-blur-xl, html:not(.dark) .backdrop-blur-2xl, html:not(.dark) .backdrop-blur-3xl {
+    background-color: rgba(250, 248, 255, 0.98) !important;
+  }
+
+  /* Matikan animasi shadow yang membebani GPU */
+  * {
+    box-shadow: none !important;
+  }
+  
+  /* Pengecualian shadow untuk elemen yang sangat butuh dimensi */
+  .mobile-result-page img, .sheet-overlay {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
   }
 }
 

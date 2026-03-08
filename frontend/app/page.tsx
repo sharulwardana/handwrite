@@ -2224,9 +2224,9 @@ export default function Home() {
   // Landing page tetap tampil (!showEditor && !user) selama auth check berjalan.
   // Saat auth selesai dan user terdeteksi login, setShowEditor(true) otomatis switch ke editor.
 
-  // HYDRATION FIX: Return null saat SSR agar tidak ada mismatch server↔client.
-  // WAJIB ditaruh DI BAWAH semua hooks (Rules of Hooks).
-  if (!mounted) return null;
+  // HYDRATION FIX: Karena kita menggunakan suppressHydrationWarning di <div> root,
+  // kita TIDAK PERLU me-return null yang menyebabkan layar blank (LCP hancur).
+  // Biarkan HTML di-render dari server.
 
   return (
     <div className={`min-h-screen ${c.page} ${platformTheme}`} style={{ fontFamily: "'DM Sans', system-ui, sans-serif", contain: "layout style" }} suppressHydrationWarning>
@@ -3823,12 +3823,11 @@ export default function Home() {
                           setShowSlashMenu(false);
                         }
 
-                        // OPTIMISASI INP
-                        setTimeout(() => {
-                          React.startTransition(() => {
-                            setText(val);
-                          });
-                        }, 50);
+                        // OPTIMISASI INP YANG BENAR
+                        // Biarkan React 18 yang mengatur prioritas tanpa diblokir setTimeout
+                        React.startTransition(() => {
+                          setText(val);
+                        });
                       }}
                       onDragOver={(e: any) => e.preventDefault()}
                       onDrop={async (e: any) => {
@@ -4480,9 +4479,15 @@ export default function Home() {
                       })(),
                     }}
                     onMouseMove={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      e.currentTarget.style.setProperty('--x', `${e.clientX - rect.left}px`);
-                      e.currentTarget.style.setProperty('--y', `${e.clientY - rect.top}px`);
+                      // Gunakan requestAnimationFrame agar tidak spam proses GPU/CPU
+                      const target = e.currentTarget;
+                      const clientX = e.clientX;
+                      const clientY = e.clientY;
+                      requestAnimationFrame(() => {
+                        const rect = target.getBoundingClientRect();
+                        target.style.setProperty('--x', `${clientX - rect.left}px`);
+                        target.style.setProperty('--y', `${clientY - rect.top}px`);
+                      });
                     }}
                   >
 
@@ -5116,8 +5121,10 @@ export default function Home() {
                     onMouseUp={checkTextSelection}
                     onKeyUp={checkTextSelection}
                     onChange={(val: string) => {
-                      setInputText(val);
-                      setText(val);
+                      setInputText(val); // UI input jalan duluan
+                      React.startTransition(() => {
+                        setText(val); // State global berat ditunda prioritasnya
+                      });
                       // KUNCI SLASH COMMAND: Deteksi ketikan garis miring "/"
                       if (val.trim() === "/" || val.endsWith(" /") || val.endsWith("\n/")) {
                         setShowSlashMenu(true);
