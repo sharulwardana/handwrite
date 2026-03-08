@@ -35,7 +35,7 @@ function MobileDock({
     return (
         <div className="fixed bottom-0 left-0 right-0 z-50 hidden max-[767px]:flex pointer-events-none px-3 sm:px-4 safe-area-pb flex justify-center">
             <div className={`w-full flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-2xl pointer-events-auto transition-[transform,opacity] duration-500 ease-in-out ${activeTab === "result" || hideMobileDock || activePagesMemo.length > 0 ? "translate-y-[150%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"} ${isAppleDevice ? (D ? "liquid-glass shadow-2xl" : "glass-panel") : (D ? "bg-[#2c2c35] border border-[#ffffff10] shadow-2xl" : "bg-white border border-gray-200 shadow-xl")}`}>
-                <button onClick={() => setMobileSidebarOpen(true)}
+                <button onClick={() => React.startTransition(() => setMobileSidebarOpen(true))}
                     className={`flex lg:hidden w-8 h-8 rounded-lg items-center justify-center transition-colors ${c.btn}`}>
                     <Menu className="w-3.5 h-3.5" />
                 </button>

@@ -56,12 +56,12 @@ function Header({
 
                 {/* LEFT: toggle + logo */}
                 <div className="flex items-center gap-2 flex-shrink-0">
-                    <button onClick={() => setSidebarOpen(!sidebarOpen)}
+                    <button onClick={() => React.startTransition(() => setSidebarOpen(!sidebarOpen))}
                         className={`hidden lg:flex w-8 h-8 rounded-lg items-center justify-center transition-colors ${c.btn}`}>
                         {sidebarOpen ? <PanelLeftClose className="w-3.5 h-3.5" /> : <PanelLeftOpen className="w-3.5 h-3.5" />}
                     </button>
                     <button
-                        onClick={() => setMobileSidebarOpen(true)}
+                        onClick={() => React.startTransition(() => setMobileSidebarOpen(true))}
                         aria-label="Buka menu pengaturan"
                         className={`flex lg:hidden w-11 h-11 rounded-xl items-center justify-center transition-colors ${c.btn}`}>
                         <Menu className="w-3.5 h-3.5" aria-hidden="true" />
@@ -184,7 +184,7 @@ function Header({
                         {/* Energy / Admin */}
                         {user?.email === (process.env.NEXT_PUBLIC_DEV_EMAIL || "sharulwrdn10@gmail.com") ? (
                             <button
-                                onClick={() => setShowAdminModal(true)}
+                                onClick={() => React.startTransition(() => setShowAdminModal(true))}
                                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border bg-violet-600 border-violet-500 text-white text-[10px] sm:text-[11px] font-bold hover:bg-violet-700 transition-colors flex-shrink-0 shadow-sm"
                                 title="Admin Control Panel">
                                 <Settings className="w-3.5 h-3.5" />
@@ -193,7 +193,7 @@ function Header({
                             </button>
                         ) : (
                             <div className="relative group">
-                                <button onClick={() => setShowQrisModal(true)}
+                                <button onClick={() => React.startTransition(() => setShowQrisModal(true))}
                                     className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-colors ${energy < estimatedPages
                                         ? "bg-rose-500/10 text-rose-500 border-rose-500/30 animate-pulse"
                                         : D ? "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20" : "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
@@ -218,19 +218,21 @@ function Header({
                     {/* GROUP 2: AKSI */}
                     <div className="flex items-center gap-1.5 pl-1">
                         <button
-                            onClick={() => setShowShortcuts(true)}
+                            onClick={() => React.startTransition(() => setShowShortcuts(true))}
                             className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors text-[13px] font-bold ${c.btn}`}
                             title="Keyboard Shortcuts">
                             ?
                         </button>
                         <button
                             onClick={() => {
-                                if (!(document as any).startViewTransition) {
-                                    setIsDark(!isDark);
-                                    return;
-                                }
-                                (document as any).startViewTransition(() => {
-                                    setIsDark(!isDark);
+                                React.startTransition(() => {
+                                    if (!(document as any).startViewTransition) {
+                                        setIsDark(!isDark);
+                                        return;
+                                    }
+                                    (document as any).startViewTransition(() => {
+                                        setIsDark(!isDark);
+                                    });
                                 });
                             }}
                             className={`relative w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden border theme-toggle-btn ${isDark

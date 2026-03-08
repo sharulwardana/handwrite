@@ -83,11 +83,11 @@ function LandingPage({ isDark, tp, handleLogin, setShowEditor }: LandingPageProp
 
                 {/* 5. Tombol Aksi */}
                 <motion.div variants={springUp} className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto px-6">
-                    <button onClick={handleLogin} className={`w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-lg transition-colors hover:scale-105 active:scale-95 flex items-center justify-center gap-2 shadow-lg ${isDark ? "bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]" : "bg-violet-600 text-white shadow-violet-500/40"}`}>
+                    <button onClick={() => React.startTransition(() => handleLogin())} className={`w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-lg transition-colors hover:scale-105 active:scale-95 flex items-center justify-center gap-2 shadow-lg ${isDark ? "bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]" : "bg-violet-600 text-white shadow-violet-500/40"}`}>
                         <LogIn className="w-5 h-5" />
                         Mulai Gratis Sekarang
                     </button>
-                    <button onClick={() => setShowEditor(true)} className={`w-full sm:w-auto px-8 py-4 rounded-2xl border font-bold text-lg transition-colors active:scale-95 flex items-center justify-center gap-2 ${isDark ? "border-[#ffffff15] text-white hover:bg-white/10" : "border-violet-300 text-violet-700 hover:bg-violet-100 bg-white/60"}`}>
+                    <button onClick={() => React.startTransition(() => setShowEditor(true))} className={`w-full sm:w-auto px-8 py-4 rounded-2xl border font-bold text-lg transition-colors active:scale-95 flex items-center justify-center gap-2 ${isDark ? "border-[#ffffff15] text-white hover:bg-white/10" : "border-violet-300 text-violet-700 hover:bg-violet-100 bg-white/60"}`}>
                         <PenTool className="w-5 h-5 opacity-70" />
                         Coba Demo Editor
                     </button>
